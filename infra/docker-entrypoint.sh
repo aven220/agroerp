@@ -13,7 +13,10 @@ echo "🗄️  Pushing schema..."
 pnpm exec prisma db push --accept-data-loss
 
 echo "🌱 Seeding database..."
-pnpm db:seed || echo "Seed skipped"
+if ! pnpm db:seed; then
+  echo "⚠️  Full seed failed — trying minimal auth seed..."
+  pnpm db:seed:minimal || echo "❌ Seed failed — run manually: docker compose exec backend pnpm db:seed:minimal"
+fi
 
 echo "🚀 Starting AGROERP backend..."
 exec "$@"
