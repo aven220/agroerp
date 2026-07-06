@@ -1,0 +1,275 @@
+/* AGROERP Enterprise Design System — Tokens */
+
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  /* Brand */
+  --ds-primary: #1b6b42;
+  --ds-primary-hover: #155a37;
+  --ds-primary-active: #0f4a2d;
+  --ds-primary-subtle: #e8f5ec;
+  --ds-primary-muted: #b8dfc8;
+
+  --ds-secondary: #0f4c5c;
+  --ds-secondary-hover: #0c3d4a;
+  --ds-secondary-subtle: #e6f4f7;
+
+  --ds-accent: #c9a227;
+  --ds-accent-hover: #a8861f;
+  --ds-accent-subtle: #fdf6e3;
+
+  /* Semantic */
+  --ds-success: #15803d;
+  --ds-success-subtle: #dcfce7;
+  --ds-success-border: #86efac;
+
+  --ds-warning: #b45309;
+  --ds-warning-subtle: #fffbeb;
+  --ds-warning-border: #fcd34d;
+
+  --ds-error: #b91c1c;
+  --ds-error-subtle: #fef2f2;
+  --ds-error-border: #fecaca;
+
+  --ds-info: #0369a1;
+  --ds-info-subtle: #eff6ff;
+  --ds-info-border: #bfdbfe;
+
+  /* Surfaces */
+  --ds-bg: #f4f6f9;
+  --ds-bg-subtle: #eef1f6;
+  --ds-surface: #ffffff;
+  --ds-surface-raised: #ffffff;
+  --ds-surface-sunken: #f8fafc;
+  --ds-overlay: rgba(15, 23, 42, 0.48);
+
+  /* Text */
+  --ds-text: #1e293b;
+  --ds-text-secondary: #475569;
+  --ds-text-muted: #64748b;
+  --ds-text-disabled: #94a3b8;
+  --ds-text-inverse: #f8fafc;
+  --ds-text-on-primary: #ffffff;
+
+  /* Borders */
+  --ds-border: #e2e8f0;
+  --ds-border-strong: #cbd5e1;
+  --ds-border-focus: var(--ds-primary);
+
+  /* Shell */
+  --ds-sidebar-bg: #0f172a;
+  --ds-sidebar-text: #e2e8f0;
+  --ds-sidebar-muted: #94a3b8;
+  --ds-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --ds-sidebar-active: rgba(27, 107, 66, 0.35);
+
+  /* Spacing scale (4px base) */
+  --ds-space-0: 0;
+  --ds-space-1: 0.25rem;
+  --ds-space-2: 0.5rem;
+  --ds-space-3: 0.75rem;
+  --ds-space-4: 1rem;
+  --ds-space-5: 1.25rem;
+  --ds-space-6: 1.5rem;
+  --ds-space-8: 2rem;
+  --ds-space-10: 2.5rem;
+  --ds-space-12: 3rem;
+
+  /* Radius */
+  --ds-radius-xs: 4px;
+  --ds-radius-sm: 6px;
+  --ds-radius-md: 8px;
+  --ds-radius-lg: 10px;
+  --ds-radius-xl: 12px;
+  --ds-radius-2xl: 16px;
+  --ds-radius-full: 9999px;
+
+  /* Typography */
+  --ds-font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --ds-font-mono: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
+
+  --ds-text-xs: 0.75rem;
+  --ds-text-sm: 0.8125rem;
+  --ds-text-base: 0.875rem;
+  --ds-text-md: 0.9375rem;
+  --ds-text-lg: 1rem;
+  --ds-text-xl: 1.125rem;
+  --ds-text-2xl: 1.25rem;
+  --ds-text-3xl: 1.5rem;
+  --ds-text-4xl: 1.875rem;
+
+  --ds-leading-tight: 1.25;
+  --ds-leading-normal: 1.5;
+  --ds-leading-relaxed: 1.625;
+
+  --ds-weight-normal: 400;
+  --ds-weight-medium: 500;
+  --ds-weight-semibold: 600;
+  --ds-weight-bold: 700;
+
+  /* Shadows */
+  --ds-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --ds-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --ds-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.1);
+  --ds-shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.14);
+  --ds-shadow-xl: 0 25px 50px rgba(15, 23, 42, 0.2);
+
+  /* Motion */
+  --ds-duration-fast: 120ms;
+  --ds-duration-normal: 200ms;
+  --ds-duration-slow: 320ms;
+  --ds-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ds-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ds-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Layout */
+  --sidebar-w: 280px;
+  --shell-bar-h: 56px;
+  --ds-touch-min: 44px;
+  --ds-content-max: 1600px;
+
+  /* Breakpoints (reference) */
+  --ds-bp-sm: 640px;
+  --ds-bp-md: 768px;
+  --ds-bp-lg: 1024px;
+  --ds-bp-xl: 1280px;
+  --ds-bp-2xl: 1536px;
+
+  /* Legacy aliases (backward compatible) */
+  --bg: var(--ds-bg);
+  --surface: var(--ds-surface);
+  --border: var(--ds-border);
+  --text: var(--ds-text);
+  --muted: var(--ds-text-muted);
+  --primary: var(--ds-primary);
+  --primary-hover: var(--ds-primary-hover);
+  --primary-light: var(--ds-primary-subtle);
+  --danger: var(--ds-error);
+  --warn: var(--ds-warning);
+  --info: var(--ds-info);
+  --accent: var(--ds-accent);
+  --shadow: var(--ds-shadow-sm);
+  --radius: var(--ds-radius-lg);
+  --font: var(--ds-font-sans);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ds-primary: #3d9b6a;
+  --ds-primary-hover: #4db07c;
+  --ds-primary-active: #2d8559;
+  --ds-primary-subtle: #132a1f;
+  --ds-primary-muted: #1e4d35;
+
+  --ds-secondary: #3d8a9b;
+  --ds-secondary-hover: #4da0b3;
+  --ds-secondary-subtle: #0f2228;
+
+  --ds-accent: #d4b04a;
+  --ds-accent-hover: #e0c05e;
+  --ds-accent-subtle: #2a2410;
+
+  --ds-success: #4ade80;
+  --ds-success-subtle: #14532d;
+  --ds-success-border: #166534;
+
+  --ds-warning: #fbbf24;
+  --ds-warning-subtle: #451a03;
+  --ds-warning-border: #92400e;
+
+  --ds-error: #f87171;
+  --ds-error-subtle: #450a0a;
+  --ds-error-border: #991b1b;
+
+  --ds-info: #38bdf8;
+  --ds-info-subtle: #0c4a6e;
+  --ds-info-border: #0369a1;
+
+  --ds-bg: #0b1120;
+  --ds-bg-subtle: #0f172a;
+  --ds-surface: #1e293b;
+  --ds-surface-raised: #243044;
+  --ds-surface-sunken: #0f172a;
+  --ds-overlay: rgba(0, 0, 0, 0.65);
+
+  --ds-text: #f1f5f9;
+  --ds-text-secondary: #cbd5e1;
+  --ds-text-muted: #94a3b8;
+  --ds-text-disabled: #64748b;
+
+  --ds-border: #334155;
+  --ds-border-strong: #475569;
+
+  --ds-sidebar-bg: #070d18;
+  --ds-sidebar-hover: rgba(255, 255, 255, 0.05);
+  --ds-sidebar-active: rgba(61, 155, 106, 0.25);
+
+  --ds-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --ds-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --ds-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --ds-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --ds-shadow-xl: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --ds-primary: #3d9b6a;
+    --ds-primary-hover: #4db07c;
+    --ds-primary-active: #2d8559;
+    --ds-primary-subtle: #132a1f;
+    --ds-primary-muted: #1e4d35;
+
+    --ds-secondary: #3d8a9b;
+    --ds-secondary-hover: #4da0b3;
+    --ds-secondary-subtle: #0f2228;
+
+    --ds-accent: #d4b04a;
+    --ds-accent-hover: #e0c05e;
+    --ds-accent-subtle: #2a2410;
+
+    --ds-success: #4ade80;
+    --ds-success-subtle: #14532d;
+    --ds-success-border: #166534;
+
+    --ds-warning: #fbbf24;
+    --ds-warning-subtle: #451a03;
+    --ds-warning-border: #92400e;
+
+    --ds-error: #f87171;
+    --ds-error-subtle: #450a0a;
+    --ds-error-border: #991b1b;
+
+    --ds-info: #38bdf8;
+    --ds-info-subtle: #0c4a6e;
+    --ds-info-border: #0369a1;
+
+    --ds-bg: #0b1120;
+    --ds-bg-subtle: #0f172a;
+    --ds-surface: #1e293b;
+    --ds-surface-raised: #243044;
+    --ds-surface-sunken: #0f172a;
+    --ds-overlay: rgba(0, 0, 0, 0.65);
+
+    --ds-text: #f1f5f9;
+    --ds-text-secondary: #cbd5e1;
+    --ds-text-muted: #94a3b8;
+    --ds-text-disabled: #64748b;
+
+    --ds-border: #334155;
+    --ds-border-strong: #475569;
+
+    --ds-sidebar-bg: #070d18;
+    --ds-sidebar-hover: rgba(255, 255, 255, 0.05);
+    --ds-sidebar-active: rgba(61, 155, 106, 0.25);
+
+    --ds-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --ds-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --ds-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --ds-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.4);
+    --ds-shadow-xl: 0 25px 50px rgba(0, 0, 0, 0.5);
+  }
+}

@@ -1,0 +1,2 @@
+sdk.dir=/path/to/Android/sdk
+AGROERP_API_BASE_URL=http://10.0.2.2:3080/api/v1/

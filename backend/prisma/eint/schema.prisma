@@ -1,0 +1,391 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@agroerp/prisma-eint-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_EINT")
+}
+
+enum EintStatus {
+  draft
+  active
+  inactive
+  archived
+}
+
+enum EintEtlMode {
+  full
+  incremental
+}
+
+enum EintRunStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+enum EintReportFormat {
+  pdf
+  excel
+  csv
+}
+
+enum EintNotificationChannel {
+  email
+  push
+  sms
+  in_app
+  enterprise_messaging
+}
+
+enum EintAuditAction {
+  ai_invoked
+  ai_provider_changed
+  assistant_created
+  query_executed
+  report_generated
+  report_scheduled
+  dashboard_viewed
+  etl_started
+  etl_completed
+  etl_failed
+  notification_sent
+  dwh_loaded
+  bootstrap
+  config_changed
+}
+
+model EintAiProvider {
+  id             String    @id @default(uuid())
+  organizationId String
+  providerKey    String
+  name           String
+  vendor         String
+  environment    String    @default("production")
+  modelDefault   String?
+  credentialsRef String?
+  costPer1kTokens Float    @default(0)
+  quotaDaily     Int       @default(100000)
+  quotaMonthly   Int       @default(3000000)
+  version        Int       @default(1)
+  fallbackOrder  Int       @default(100)
+  status         EintStatus @default(draft)
+  config         Json      @default("{}")
+  metadata       Json      @default("{}")
+  createdBy      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  consumptions   EintAiConsumption[]
+
+  @@unique([organizationId, providerKey])
+  @@index([organizationId, environment, status])
+}
+
+model EintAiConsumption {
+  id             String   @id @default(uuid())
+  organizationId String
+  providerId     String
+  consumptionKey String
+  serviceType    String
+  tokensIn       Int      @default(0)
+  tokensOut      Int      @default(0)
+  costUsd        Float    @default(0)
+  userId         String?
+  moduleRef      String?
+  success        Boolean  @default(true)
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  provider       EintAiProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, consumptionKey])
+  @@index([organizationId, createdAt])
+}
+
+model EintAssistant {
+  id             String    @id @default(uuid())
+  organizationId String
+  assistantKey   String
+  name           String
+  moduleRef      String
+  domain         String
+  systemPrompt   String?
+  serviceTypes   String[]  @default([])
+  status         EintStatus @default(active)
+  metadata       Json      @default("{}")
+  createdBy      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([organizationId, assistantKey])
+  @@index([organizationId, moduleRef])
+}
+
+model EintDwhDimension {
+  id             String    @id @default(uuid())
+  organizationId String
+  dimensionKey   String
+  name           String
+  category       String
+  sourceModule   String
+  attributes     Json      @default("{}")
+  version        Int       @default(1)
+  status         EintStatus @default(active)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([organizationId, dimensionKey])
+}
+
+model EintDwhFact {
+  id             String    @id @default(uuid())
+  organizationId String
+  factKey        String
+  name           String
+  category       String
+  sourceModule   String
+  measures       Json      @default("{}")
+  partitionKey   String?
+  version        Int       @default(1)
+  status         EintStatus @default(active)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  snapshots      EintDwhSnapshot[]
+
+  @@unique([organizationId, factKey])
+}
+
+model EintDwhSnapshot {
+  id             String   @id @default(uuid())
+  organizationId String
+  factId         String
+  snapshotKey    String
+  payload        Json     @default("{}")
+  recordCount    Int      @default(0)
+  capturedAt     DateTime @default(now())
+  fact           EintDwhFact @relation(fields: [factId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, snapshotKey])
+}
+
+model EintEtlJob {
+  id             String      @id @default(uuid())
+  organizationId String
+  jobKey         String
+  name           String
+  sourceModule   String
+  targetFactKey  String?
+  mode           EintEtlMode @default(incremental)
+  schedule       String?
+  transform      Json        @default("{}")
+  status         EintStatus  @default(draft)
+  version        Int         @default(1)
+  metadata       Json        @default("{}")
+  createdBy      String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  runs           EintEtlRun[]
+
+  @@unique([organizationId, jobKey])
+}
+
+model EintEtlRun {
+  id             String        @id @default(uuid())
+  organizationId String
+  jobId          String
+  runKey         String
+  status         EintRunStatus @default(pending)
+  mode           EintEtlMode
+  recordsIn      Int           @default(0)
+  recordsOut     Int           @default(0)
+  recordsFailed  Int           @default(0)
+  durationMs     Int?
+  errorMessage   String?
+  startedAt      DateTime      @default(now())
+  completedAt    DateTime?
+  job            EintEtlJob    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, runKey])
+  @@index([organizationId, status, startedAt])
+}
+
+model EintKpiBinding {
+  id             String    @id @default(uuid())
+  organizationId String
+  kpiKey         String
+  name           String
+  category       String
+  moduleRef      String
+  formula        String?
+  targetValue    Float?
+  status         EintStatus @default(active)
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([organizationId, kpiKey])
+  @@index([organizationId, category])
+}
+
+model EintReportTemplate {
+  id             String    @id @default(uuid())
+  organizationId String
+  templateKey    String
+  name           String
+  category       String
+  definition     Json      @default("{}")
+  filters        Json      @default("{}")
+  groupings      Json      @default("[]")
+  subreports     Json      @default("[]")
+  version        Int       @default(1)
+  status         EintStatus @default(draft)
+  createdBy      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  runs           EintReportRun[]
+  schedules      EintReportSchedule[]
+
+  @@unique([organizationId, templateKey])
+}
+
+model EintReportRun {
+  id             String           @id @default(uuid())
+  organizationId String
+  templateId     String
+  runKey         String
+  format         EintReportFormat @default(pdf)
+  status         EintRunStatus    @default(pending)
+  filters        Json             @default("{}")
+  outputUrl      String?
+  errorMessage   String?
+  userId         String?
+  createdAt      DateTime         @default(now())
+  completedAt    DateTime?
+  template       EintReportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, runKey])
+}
+
+model EintReportSchedule {
+  id             String    @id @default(uuid())
+  organizationId String
+  templateId     String
+  scheduleKey    String
+  cron           String
+  recipients     String[]  @default([])
+  channel        EintNotificationChannel @default(email)
+  status         EintStatus @default(active)
+  lastRunAt      DateTime?
+  createdAt      DateTime  @default(now())
+  template       EintReportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, scheduleKey])
+}
+
+model EintDashboardBinding {
+  id             String    @id @default(uuid())
+  organizationId String
+  dashboardKey   String
+  name           String
+  category       String
+  layout         Json      @default("{}")
+  widgets        Json      @default("[]")
+  isCustom       Boolean   @default(false)
+  status         EintStatus @default(active)
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([organizationId, dashboardKey])
+  @@index([organizationId, category])
+}
+
+model EintNotificationRule {
+  id             String    @id @default(uuid())
+  organizationId String
+  ruleKey        String
+  name           String
+  eventType      String
+  priority       Int       @default(100)
+  channels       EintNotificationChannel[] @default([in_app])
+  filterExpr     String?
+  isPredictive   Boolean   @default(false)
+  status         EintStatus @default(active)
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deliveries     EintNotificationDelivery[]
+
+  @@unique([organizationId, ruleKey])
+}
+
+model EintNotificationDelivery {
+  id             String                  @id @default(uuid())
+  organizationId String
+  ruleId         String
+  deliveryKey    String
+  channel        EintNotificationChannel
+  status         EintRunStatus           @default(pending)
+  payload        Json                    @default("{}")
+  errorMessage   String?
+  sentAt         DateTime?
+  createdAt      DateTime                @default(now())
+  rule           EintNotificationRule    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, deliveryKey])
+}
+
+model EintQueryLog {
+  id             String   @id @default(uuid())
+  organizationId String
+  queryKey       String
+  source         String
+  sqlHash        String?
+  durationMs     Int?
+  rowCount       Int?
+  userId         String?
+  success        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, queryKey])
+  @@index([organizationId, createdAt])
+}
+
+model EintIndicatorSnapshot {
+  id             String   @id @default(uuid())
+  organizationId String
+  snapshotKey    String
+  indicators     Json     @default("{}")
+  capturedAt     DateTime @default(now())
+
+  @@unique([organizationId, snapshotKey])
+}
+
+model EintOfflineBatch {
+  id             String   @id @default(uuid())
+  organizationId String
+  batchKey       String
+  deviceId       String
+  status         String   @default("pending")
+  payload        Json     @default("[]")
+  createdBy      String?
+  syncedAt       DateTime?
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, batchKey])
+}
+
+model EintAuditLog {
+  id             String          @id @default(uuid())
+  organizationId String
+  entityType     String
+  entityKey      String
+  action         EintAuditAction
+  userId         String?
+  details        Json            @default("{}")
+  createdAt      DateTime        @default(now())
+
+  @@index([organizationId, entityType, createdAt])
+}

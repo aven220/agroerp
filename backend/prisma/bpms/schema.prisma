@@ -1,0 +1,382 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@agroerp/prisma-bpms-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_BPMS")
+}
+
+enum BpmsProcessStatus {
+  draft
+  published
+  archived
+}
+
+enum BpmsElementType {
+  start
+  end
+  user_task
+  service_task
+  exclusive_gateway
+  parallel_gateway
+  event
+  timer
+  subprocess
+  service_call
+  external_api
+}
+
+enum BpmsInstanceStatus {
+  running
+  suspended
+  completed
+  failed
+  cancelled
+}
+
+enum BpmsTaskStatus {
+  pending
+  claimed
+  completed
+  delegated
+  cancelled
+  escalated
+}
+
+enum BpmsTaskPriority {
+  low
+  medium
+  high
+  critical
+}
+
+enum BpmsAutomationType {
+  scheduled
+  data_change
+  webhook
+  module_event
+}
+
+enum BpmsAuditAction {
+  process_created
+  process_published
+  process_duplicated
+  process_imported
+  process_exported
+  instance_started
+  instance_resumed
+  instance_cancelled
+  instance_completed
+  task_assigned
+  task_delegated
+  task_completed
+  task_approved
+  task_rejected
+  variable_changed
+  automation_triggered
+  webhook_invoked
+  rule_evaluated
+}
+
+enum BpmsOfflineStatus {
+  pending
+  synced
+  failed
+}
+
+model BpmsProcess {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @map("organization_id") @db.Uuid
+  processKey     String            @map("process_key") @db.VarChar(80)
+  name           String            @db.VarChar(200)
+  description    String?           @db.Text
+  moduleTarget   String?           @map("module_target") @db.VarChar(80)
+  status         BpmsProcessStatus @default(draft)
+  metadata       Json              @default("{}")
+  createdBy      String?           @map("created_by") @db.Uuid
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  versions  BpmsProcessVersion[]
+  instances BpmsProcessInstance[]
+
+  @@unique([organizationId, processKey])
+  @@map("bpms_processes")
+}
+
+model BpmsProcessVersion {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @map("organization_id") @db.Uuid
+  versionKey     String            @map("version_key") @db.VarChar(80)
+  processKey     String            @map("process_key") @db.VarChar(80)
+  versionNumber  Int               @map("version_number")
+  status         BpmsProcessStatus @default(draft)
+  bpmnModel      Json              @default("{}") @map("bpmn_model")
+  publishedAt    DateTime?         @map("published_at") @db.Timestamptz
+  publishedBy    String?           @map("published_by") @db.Uuid
+  createdBy      String?           @map("created_by") @db.Uuid
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  process   BpmsProcess @relation(fields: [organizationId, processKey], references: [organizationId, processKey])
+  elements  BpmsProcessElement[]
+  flows     BpmsProcessFlow[]
+  instances BpmsProcessInstance[]
+
+  @@unique([organizationId, versionKey])
+  @@unique([organizationId, processKey, versionNumber])
+  @@map("bpms_process_versions")
+}
+
+model BpmsProcessElement {
+  id             String          @id @default(uuid()) @db.Uuid
+  organizationId String          @map("organization_id") @db.Uuid
+  elementKey     String          @map("element_key") @db.VarChar(80)
+  versionKey     String          @map("version_key") @db.VarChar(80)
+  elementType    BpmsElementType @map("element_type")
+  name           String          @db.VarChar(200)
+  config         Json            @default("{}")
+  posX           Float           @default(0) @map("pos_x")
+  posY           Float           @default(0) @map("pos_y")
+  metadata       Json            @default("{}")
+
+  version BpmsProcessVersion @relation(fields: [organizationId, versionKey], references: [organizationId, versionKey])
+
+  @@unique([organizationId, elementKey])
+  @@map("bpms_process_elements")
+}
+
+model BpmsProcessFlow {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  flowKey        String  @map("flow_key") @db.VarChar(80)
+  versionKey     String  @map("version_key") @db.VarChar(80)
+  fromElementKey String  @map("from_element_key") @db.VarChar(80)
+  toElementKey   String  @map("to_element_key") @db.VarChar(80)
+  condition      String? @db.Text
+  metadata       Json    @default("{}")
+
+  version BpmsProcessVersion @relation(fields: [organizationId, versionKey], references: [organizationId, versionKey])
+
+  @@unique([organizationId, flowKey])
+  @@map("bpms_process_flows")
+}
+
+model BpmsProcessInstance {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  instanceKey    String             @map("instance_key") @db.VarChar(80)
+  processKey     String             @map("process_key") @db.VarChar(80)
+  versionKey     String             @map("version_key") @db.VarChar(80)
+  status         BpmsInstanceStatus @default(running)
+  currentElement String?            @map("current_element") @db.VarChar(80)
+  context        Json               @default("{}")
+  startedBy      String?            @map("started_by") @db.Uuid
+  startedAt      DateTime           @default(now()) @map("started_at") @db.Timestamptz
+  completedAt    DateTime?          @map("completed_at") @db.Timestamptz
+  retryCount     Int                @default(0) @map("retry_count")
+  metadata       Json               @default("{}")
+
+  process   BpmsProcess @relation(fields: [organizationId, processKey], references: [organizationId, processKey])
+  version   BpmsProcessVersion @relation(fields: [organizationId, versionKey], references: [organizationId, versionKey])
+  variables BpmsInstanceVariable[]
+  tasks     BpmsTask[]
+  logs      BpmsExecutionLog[]
+
+  @@unique([organizationId, instanceKey])
+  @@index([organizationId, status])
+  @@map("bpms_process_instances")
+}
+
+model BpmsInstanceVariable {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  variableKey    String   @map("variable_key") @db.VarChar(80)
+  instanceKey    String   @map("instance_key") @db.VarChar(80)
+  name           String   @db.VarChar(120)
+  value          Json     @default("null")
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  instance BpmsProcessInstance @relation(fields: [organizationId, instanceKey], references: [organizationId, instanceKey])
+
+  @@unique([organizationId, variableKey])
+  @@unique([organizationId, instanceKey, name])
+  @@map("bpms_instance_variables")
+}
+
+model BpmsTask {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  taskKey        String           @map("task_key") @db.VarChar(80)
+  instanceKey    String           @map("instance_key") @db.VarChar(80)
+  elementKey     String           @map("element_key") @db.VarChar(80)
+  title          String           @db.VarChar(200)
+  status         BpmsTaskStatus   @default(pending)
+  priority       BpmsTaskPriority @default(medium)
+  assigneeId     String?          @map("assignee_id") @db.Uuid
+  teamKey        String?          @map("team_key") @db.VarChar(80)
+  dueAt          DateTime?        @map("due_at") @db.Timestamptz
+  claimedAt      DateTime?        @map("claimed_at") @db.Timestamptz
+  completedAt    DateTime?        @map("completed_at") @db.Timestamptz
+  signatureUrl   String?          @map("signature_url") @db.VarChar(500)
+  metadata       Json             @default("{}")
+
+  instance    BpmsProcessInstance @relation(fields: [organizationId, instanceKey], references: [organizationId, instanceKey])
+  comments    BpmsTaskComment[]
+  attachments BpmsTaskAttachment[]
+
+  @@unique([organizationId, taskKey])
+  @@index([organizationId, assigneeId, status])
+  @@index([organizationId, teamKey, status])
+  @@map("bpms_tasks")
+}
+
+model BpmsTaskComment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  commentKey     String   @map("comment_key") @db.VarChar(80)
+  taskKey        String   @map("task_key") @db.VarChar(80)
+  body           String   @db.Text
+  authorId       String?  @map("author_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  task BpmsTask @relation(fields: [organizationId, taskKey], references: [organizationId, taskKey])
+
+  @@unique([organizationId, commentKey])
+  @@map("bpms_task_comments")
+}
+
+model BpmsTaskAttachment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  attachmentKey  String   @map("attachment_key") @db.VarChar(80)
+  taskKey        String   @map("task_key") @db.VarChar(80)
+  title          String   @db.VarChar(200)
+  storageUrl     String   @map("storage_url") @db.VarChar(500)
+  uploadedBy     String?  @map("uploaded_by") @db.Uuid
+  uploadedAt     DateTime @default(now()) @map("uploaded_at") @db.Timestamptz
+
+  task BpmsTask @relation(fields: [organizationId, taskKey], references: [organizationId, taskKey])
+
+  @@unique([organizationId, attachmentKey])
+  @@map("bpms_task_attachments")
+}
+
+model BpmsRule {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  ruleKey        String   @map("rule_key") @db.VarChar(80)
+  name           String   @db.VarChar(200)
+  expression     String   @db.Text
+  variables      Json     @default("[]")
+  isActive       Boolean  @default(true) @map("is_active")
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([organizationId, ruleKey])
+  @@map("bpms_rules")
+}
+
+model BpmsAutomation {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  automationKey  String             @map("automation_key") @db.VarChar(80)
+  name           String             @db.VarChar(200)
+  automationType BpmsAutomationType @map("automation_type")
+  processKey     String?            @map("process_key") @db.VarChar(80)
+  triggerConfig  Json               @default("{}") @map("trigger_config")
+  actionConfig   Json               @default("{}") @map("action_config")
+  isActive       Boolean            @default(true) @map("is_active")
+  lastRunAt      DateTime?          @map("last_run_at") @db.Timestamptz
+  metadata       Json               @default("{}")
+
+  @@unique([organizationId, automationKey])
+  @@map("bpms_automations")
+}
+
+model BpmsWebhook {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  webhookKey     String  @map("webhook_key") @db.VarChar(80)
+  name           String  @db.VarChar(200)
+  endpointUrl    String  @map("endpoint_url") @db.VarChar(500)
+  secret         String? @db.VarChar(200)
+  isActive       Boolean @default(true) @map("is_active")
+  metadata       Json    @default("{}")
+
+  @@unique([organizationId, webhookKey])
+  @@map("bpms_webhooks")
+}
+
+model BpmsExecutionLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  logKey         String   @map("log_key") @db.VarChar(80)
+  instanceKey    String   @map("instance_key") @db.VarChar(80)
+  elementKey     String?  @map("element_key") @db.VarChar(80)
+  eventType      String   @map("event_type") @db.VarChar(80)
+  details        Json     @default("{}")
+  recordedAt     DateTime @default(now()) @map("recorded_at") @db.Timestamptz
+
+  instance BpmsProcessInstance @relation(fields: [organizationId, instanceKey], references: [organizationId, instanceKey])
+
+  @@unique([organizationId, logKey])
+  @@index([organizationId, instanceKey])
+  @@map("bpms_execution_logs")
+}
+
+model BpmsTemplate {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  templateKey    String   @map("template_key") @db.VarChar(80)
+  name           String   @db.VarChar(200)
+  category       String   @db.VarChar(80)
+  bpmnModel      Json     @default("{}") @map("bpmn_model")
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([organizationId, templateKey])
+  @@map("bpms_templates")
+}
+
+model BpmsIndicatorSnapshot {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  snapshotKey    String   @map("snapshot_key") @db.VarChar(80)
+  indicators     Json     @default("{}")
+  computedAt     DateTime @default(now()) @map("computed_at") @db.Timestamptz
+
+  @@unique([organizationId, snapshotKey])
+  @@map("bpms_indicator_snapshots")
+}
+
+model BpmsOfflineBatch {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @map("organization_id") @db.Uuid
+  batchKey       String            @map("batch_key") @db.VarChar(80)
+  deviceId       String?           @map("device_id") @db.VarChar(120)
+  status         BpmsOfflineStatus @default(pending)
+  payload        Json              @default("[]")
+  errorMessage   String?           @map("error_message") @db.Text
+  createdBy      String?           @map("created_by") @db.Uuid
+  syncedAt       DateTime?         @map("synced_at") @db.Timestamptz
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([organizationId, batchKey])
+  @@map("bpms_offline_batches")
+}
+
+model BpmsAuditLog {
+  id             String          @id @default(uuid()) @db.Uuid
+  organizationId String          @map("organization_id") @db.Uuid
+  entityType     String          @map("entity_type") @db.VarChar(80)
+  entityKey      String          @map("entity_key") @db.VarChar(80)
+  action         BpmsAuditAction
+  userId         String?         @map("user_id") @db.Uuid
+  details        Json            @default("{}")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([organizationId, entityType])
+  @@map("bpms_audit_logs")
+}

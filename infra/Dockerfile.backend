@@ -1,0 +1,60 @@
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+WORKDIR /app
+
+# ─── Dependencies ────────────────────────────────────────────────────────────
+FROM base AS deps
+COPY package.json pnpm-workspace.yaml ./
+COPY shared/package.json ./shared/
+COPY backend/package.json ./backend/
+RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+
+# ─── Build shared ────────────────────────────────────────────────────────────
+FROM deps AS build-shared
+COPY shared/ ./shared/
+RUN pnpm --filter @agroerp/shared build
+
+# ─── Build backend ───────────────────────────────────────────────────────────
+FROM build-shared AS build-backend
+COPY backend/ ./backend/
+WORKDIR /app/backend
+RUN pnpm db:generate
+RUN pnpm build
+
+# ─── Production ──────────────────────────────────────────────────────────────
+FROM node:20-alpine AS production
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml ./
+COPY shared/package.json ./shared/
+COPY backend/package.json ./backend/
+RUN pnpm install --prod --frozen-lockfile 2>/dev/null || pnpm install --prod
+
+COPY --from=build-shared /app/shared/dist ./shared/dist
+COPY --from=build-backend /app/backend/dist ./backend/dist
+COPY --from=build-backend /app/backend/prisma ./backend/prisma
+COPY --from=build-backend /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build-backend /app/backend/node_modules/.prisma ./backend/node_modules/.prisma
+
+WORKDIR /app/backend
+EXPOSE 3080
+
+COPY infra/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["node", "dist/main"]
+
+# ─── Development target ──────────────────────────────────────────────────────
+FROM build-shared AS development
+COPY backend/ ./backend/
+WORKDIR /app/backend
+RUN pnpm db:generate
+EXPOSE 3080
+
+COPY infra/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["pnpm", "dev"]

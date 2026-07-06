@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/nav_eacc"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <Button
+        android:id="@+id/btnSync"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/eacc_sync_status" />
+
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:textSize="14sp" />
+
+    <EditText
+        android:id="@+id/itemInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="@string/eacc_item_hint" />
+
+    <Button
+        android:id="@+id/btnCompleteItem"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/eacc_complete_item" />
+
+    <EditText
+        android:id="@+id/evidenceInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="@string/eacc_evidence_hint" />
+
+    <Button
+        android:id="@+id/btnEvidence"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/eacc_upload_evidence" />
+
+    <Button
+        android:id="@+id/btnAudit"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/eacc_record_audit" />
+
+    <Button
+        android:id="@+id/btnInspection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/eacc_record_inspection" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/eacc_checklists_label"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/checklistsText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textSize="13sp" />
+</LinearLayout>

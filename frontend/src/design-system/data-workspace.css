@@ -1,0 +1,363 @@
+/* AGROERP — Enterprise Data Workspace */
+
+.edw-grid-wrap {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--ds-shadow-sm);
+}
+
+.edw-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--ds-surface);
+}
+
+.edw-toolbar-left,
+.edw-toolbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.edw-quick-search {
+  min-width: 220px;
+  max-width: 360px;
+  flex: 1;
+}
+
+.edw-density-select,
+.edw-page-size {
+  width: auto !important;
+  min-height: 32px !important;
+  padding: var(--ds-space-1) var(--ds-space-2) !important;
+  font-size: var(--ds-text-sm) !important;
+}
+
+.edw-bulk-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-2) var(--ds-space-4);
+  background: var(--ds-primary-subtle);
+  border-bottom: 1px solid var(--ds-border);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-semibold);
+}
+
+.edw-table-scroll {
+  overflow: auto;
+  max-height: min(70vh, 640px);
+}
+
+.edw-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.edw-table th {
+  position: relative;
+  user-select: none;
+}
+
+.edw-th-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 8px;
+}
+
+.edw-col-resize {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+}
+
+.edw-col-resize:hover {
+  background: var(--ds-primary-muted);
+}
+
+.edw-frozen-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--ds-surface-sunken);
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
+}
+
+.edw-frozen-col-right {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: var(--ds-surface);
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.06);
+}
+
+.edw-totals-row td {
+  font-weight: var(--ds-weight-bold);
+  background: var(--ds-surface-sunken);
+  border-top: 2px solid var(--ds-border);
+}
+
+.edw-pagination {
+  position: sticky;
+  bottom: 0;
+}
+
+.edw-filter-panel,
+.edw-column-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1100;
+  width: min(520px, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+  box-shadow: var(--ds-shadow-xl);
+}
+
+.edw-filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3);
+}
+
+.edw-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: var(--ds-space-1) var(--ds-space-2);
+  background: var(--ds-surface-sunken);
+  border-radius: var(--ds-radius-full);
+  font-size: var(--ds-text-sm);
+}
+
+.edw-filter-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3);
+  border-top: 1px solid var(--ds-border);
+}
+
+.edw-filter-actions {
+  padding: var(--ds-space-2) var(--ds-space-3) var(--ds-space-3);
+}
+
+.edw-column-list {
+  list-style: none;
+  padding: var(--ds-space-3);
+  max-height: 360px;
+  overflow: auto;
+}
+
+.edw-column-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-2);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.edw-column-item.dragging {
+  opacity: 0.5;
+}
+
+.edw-column-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-text-sm);
+}
+
+.edw-views-menu {
+  position: relative;
+}
+
+.edw-views-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: var(--ds-space-1);
+  min-width: 280px;
+  z-index: 100;
+  padding: var(--ds-space-2);
+}
+
+.edw-views-list {
+  list-style: none;
+  margin-bottom: var(--ds-space-2);
+}
+
+.edw-views-save {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  padding-top: var(--ds-space-2);
+  border-top: 1px solid var(--ds-border);
+}
+
+.edw-group-row td {
+  background: var(--ds-surface-sunken);
+  font-weight: var(--ds-weight-semibold);
+  border-top: 1px solid var(--ds-border);
+}
+
+.edw-group-toggle {
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-weight: var(--ds-weight-semibold);
+  cursor: pointer;
+  padding: var(--ds-space-1) 0;
+  color: var(--ds-text);
+}
+
+.edw-group-agg {
+  margin-left: var(--ds-space-3);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-normal);
+  color: var(--ds-text-muted);
+}
+
+.edw-empty-cell {
+  padding: var(--ds-space-8) !important;
+  text-align: center;
+}
+
+.edw-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1050;
+}
+
+.edw-legacy-wrap .data-table {
+  width: 100%;
+}
+
+.edw-legacy-title {
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border);
+  margin: 0;
+}
+
+.edw-legacy-scroll {
+  max-height: min(60vh, 520px);
+}
+
+.card > .edw-grid-wrap,
+section.card > .edw-grid-wrap {
+  margin: calc(-1 * var(--ds-space-4));
+  border: none;
+  border-radius: 0;
+}
+
+.card table.data-table,
+section.card table.data-table {
+  width: 100%;
+}
+
+.edw-context-menu {
+  min-width: 160px;
+  padding: var(--ds-space-1);
+}
+
+.edw-detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+  min-height: 100%;
+}
+
+.edw-detail-footer {
+  margin-top: auto;
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-border);
+}
+
+/* Enterprise Form */
+.edw-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.edw-form-title {
+  margin-bottom: 0;
+}
+
+.edw-form-progress {
+  max-width: 400px;
+}
+
+.edw-form-dirty-banner {
+  margin: 0;
+}
+
+.edw-form-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.edw-form-section-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0;
+  margin-bottom: var(--ds-space-3);
+  border: none;
+  background: transparent;
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.edw-form-section-body {
+  padding-top: var(--ds-space-2);
+}
+
+.edw-form-actions {
+  position: sticky;
+  bottom: 0;
+  background: var(--ds-surface);
+  z-index: 5;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .edw-filter-form {
+    grid-template-columns: 1fr;
+  }
+
+  .edw-quick-search {
+    min-width: 100%;
+  }
+
+  .edw-table-scroll {
+    max-height: 55vh;
+  }
+
+  .edw-frozen-col,
+  .edw-frozen-col-right {
+    position: static;
+    box-shadow: none;
+  }
+}

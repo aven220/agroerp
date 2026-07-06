@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_sync"
+        android:title="@string/sync_now"
+        app:showAsAction="ifRoom" />
+
+    <item android:title="@string/nav_cat_my_work">
+        <menu>
+            <item android:id="@+id/action_workflow" android:title="@string/nav_workflow" />
+            <item android:id="@+id/action_notifications" android:title="@string/nav_notifications" />
+            <item android:id="@+id/action_scheduler" android:title="@string/nav_scheduler" />
+            <item android:id="@+id/action_portal" android:title="@string/nav_portal" />
+            <item android:id="@+id/action_hpa" android:title="@string/nav_hpa" />
+        </menu>
+    </item>
+
+    <item android:title="@string/nav_cat_agriculture">
+        <menu>
+            <item android:id="@+id/action_producers" android:title="@string/nav_producers" />
+            <item android:id="@+id/action_farms" android:title="@string/nav_farms" />
+            <item android:id="@+id/action_lots" android:title="@string/nav_lots" />
+            <item android:id="@+id/action_gis" android:title="@string/nav_gis" />
+            <item android:id="@+id/action_eatp" android:title="@string/nav_eatp" />
+            <item android:id="@+id/action_eapp" android:title="@string/nav_eapp" />
+            <item android:id="@+id/action_eiwp" android:title="@string/nav_eiwp" />
+            <item android:id="@+id/action_ephp" android:title="@string/nav_ephp" />
+            <item android:id="@+id/action_eatr" android:title="@string/nav_eatr" />
+            <item android:id="@+id/action_eacc" android:title="@string/nav_eacc" />
+            <item android:id="@+id/action_effm" android:title="@string/nav_effm" />
+            <item android:id="@+id/action_eaip" android:title="@string/nav_eaip" />
+            <item android:id="@+id/action_eace" android:title="@string/nav_eace" />
+            <item android:id="@+id/action_coffee" android:title="@string/nav_coffee" />
+        </menu>
+    </item>
+
+    <item android:title="@string/nav_cat_logistics">
+        <menu>
+            <item android:id="@+id/action_eims" android:title="@string/nav_eims" />
+            <item android:id="@+id/action_epscm" android:title="@string/nav_epscm" />
+        </menu>
+    </item>
+
+    <item android:title="@string/nav_cat_commercial">
+        <menu>
+            <item android:id="@+id/action_escm" android:title="@string/nav_escm" />
+        </menu>
+    </item>
+
+    <item android:title="@string/nav_cat_production">
+        <menu>
+            <item android:id="@+id/action_emfg" android:title="@string/nav_emfg" />
+        </menu>
+    </item>
+
+    <item android:title="@string/nav_cat_assets">
+        <menu>
+            <item android:id="@+id/action_eam" android:title="@string/nav_eam" />
+            <item android:id="@+id/action_iot" android:title="@string/nav_iot" />
+        </menu>
+    </item>
+
+    <item android:title="@string/nav_cat_hr">
+        <menu>
+            <item android:id="@+id/action_hcm" android:title="@string/nav_hcm" />
+            <item android:id="@+id/action_hed" android:title="@string/nav_hed" />
+        </menu>
+    </item>
+
+    <item android:title="@string/nav_cat_finance">
+        <menu>
+            <item android:id="@+id/action_efm" android:title="@string/nav_efm" />
+        </menu>
+    </item>
+
+    <item android:title="@string/nav_cat_intelligence">
+        <menu>
+            <item android:id="@+id/action_bi" android:title="@string/nav_bi" />
+            <item android:id="@+id/action_ai" android:title="@string/nav_ai" />
+            <item android:id="@+id/action_eint" android:title="@string/nav_eint" />
+            <item android:id="@+id/action_rules" android:title="@string/nav_rules" />
+        </menu>
+    </item>
+
+    <item android:title="@string/nav_cat_ecosystem">
+        <menu>
+            <item android:id="@+id/action_integration" android:title="@string/nav_integration" />
+            <item android:id="@+id/action_eip" android:title="@string/nav_eip" />
+            <item android:id="@+id/action_plugins" android:title="@string/nav_plugins" />
+        </menu>
+    </item>
+
+    <item android:title="@string/nav_cat_admin">
+        <menu>
+            <item android:id="@+id/action_eops" android:title="@string/nav_eops" />
+            <item android:id="@+id/action_observability" android:title="@string/nav_observability" />
+            <item android:id="@+id/action_performance" android:title="@string/nav_performance" />
+        </menu>
+    </item>
+
+    <item
+        android:id="@+id/action_logout"
+        android:title="@string/logout"
+        app:showAsAction="never" />
+</menu>

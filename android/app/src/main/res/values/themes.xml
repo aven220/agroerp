@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.AgroERP" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">#1b5e3b</item>
+        <item name="colorPrimaryVariant">#164d31</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+    </style>
+</resources>

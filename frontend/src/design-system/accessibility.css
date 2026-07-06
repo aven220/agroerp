@@ -1,0 +1,56 @@
+/* AGROERP — Accessibility enhancements */
+
+:focus-visible {
+  outline: 2px solid var(--ds-primary);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: var(--ds-space-4);
+  z-index: 99999;
+  padding: var(--ds-space-2) var(--ds-space-4);
+  background: var(--ds-primary);
+  color: var(--ds-text-on-primary);
+  border-radius: var(--ds-radius-md);
+  text-decoration: none;
+  font-weight: var(--ds-weight-semibold);
+}
+
+.skip-link:focus {
+  top: var(--ds-space-4);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+[aria-busy='true'] {
+  cursor: progress;
+}
+
+@media (prefers-contrast: more) {
+  .btn {
+    border-width: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-skeleton {
+    animation: none;
+    background: var(--ds-surface-sunken);
+  }
+}

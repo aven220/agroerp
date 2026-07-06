@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2022",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@/*": ["src/*"],
+      "@agroerp/prisma-bpms-client": ["node_modules/@agroerp/prisma-bpms-client"],
+      "@agroerp/prisma-eip-client": ["node_modules/@agroerp/prisma-eip-client"],
+      "@agroerp/prisma-eint-client": ["node_modules/@agroerp/prisma-eint-client"],
+      "@agroerp/prisma-eops-client": ["node_modules/@agroerp/prisma-eops-client"],
+      "@agroerp/prisma-eatp-client": ["node_modules/@agroerp/prisma-eatp-client"],
+      "@agroerp/prisma-eapp-client": ["node_modules/@agroerp/prisma-eapp-client"],
+      "@agroerp/prisma-eiwp-client": ["node_modules/@agroerp/prisma-eiwp-client"],
+      "@agroerp/prisma-ephp-client": ["node_modules/@agroerp/prisma-ephp-client"],
+      "@agroerp/prisma-eatr-client": ["node_modules/@agroerp/prisma-eatr-client"],
+      "@agroerp/prisma-eacc-client": ["node_modules/@agroerp/prisma-eacc-client"],
+      "@agroerp/prisma-effm-client": ["node_modules/@agroerp/prisma-effm-client"],
+      "@agroerp/prisma-eaip-client": ["node_modules/@agroerp/prisma-eaip-client"],
+      "@agroerp/prisma-eace-client": ["node_modules/@agroerp/prisma-eace-client"]
+    }
+  },
+  "include": ["src/**/*", "prisma/seed.ts"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,179 @@
+/* AGROERP Design System — Feedback (Toast, Modal) */
+
+/* Modal */
+.modal-overlay,
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--ds-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--ds-space-4);
+}
+
+.modal,
+.modal-panel {
+  background: var(--ds-surface);
+  border-radius: var(--ds-radius-xl);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: var(--ds-shadow-xl);
+  border: 1px solid var(--ds-border);
+}
+
+.modal-wide,
+.modal-panel.wide {
+  max-width: 720px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--ds-space-4) var(--ds-space-5);
+  border-bottom: 1px solid var(--ds-border);
+  position: sticky;
+  top: 0;
+  background: var(--ds-surface);
+  z-index: 1;
+}
+
+.modal-header h2 {
+  font-size: var(--ds-text-xl);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+}
+
+.modal-body {
+  padding: var(--ds-space-5);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-4) var(--ds-space-5);
+  border-top: 1px solid var(--ds-border);
+  background: var(--ds-surface-sunken);
+}
+
+/* Toast container */
+.ds-toast-container {
+  position: fixed;
+  top: var(--ds-space-4);
+  right: var(--ds-space-4);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  max-width: min(400px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.ds-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-lg);
+  pointer-events: auto;
+  font-size: var(--ds-text-base);
+  color: var(--ds-text);
+}
+
+.ds-toast-icon {
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+
+.ds-toast-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ds-toast-title {
+  font-weight: var(--ds-weight-semibold);
+  margin-bottom: 2px;
+}
+
+.ds-toast-message {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-secondary);
+}
+
+.ds-toast-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--ds-text-muted);
+  cursor: pointer;
+  padding: var(--ds-space-1);
+  border-radius: var(--ds-radius-sm);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.ds-toast-close:hover {
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text);
+}
+
+.ds-toast-success { border-left: 4px solid var(--ds-success); }
+.ds-toast-success .ds-toast-icon { color: var(--ds-success); }
+
+.ds-toast-error { border-left: 4px solid var(--ds-error); }
+.ds-toast-error .ds-toast-icon { color: var(--ds-error); }
+
+.ds-toast-warning { border-left: 4px solid var(--ds-warning); }
+.ds-toast-warning .ds-toast-icon { color: var(--ds-warning); }
+
+.ds-toast-info { border-left: 4px solid var(--ds-info); }
+.ds-toast-info .ds-toast-icon { color: var(--ds-info); }
+
+/* Confirm dialog */
+.ds-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--ds-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  padding: var(--ds-space-4);
+}
+
+.ds-confirm {
+  background: var(--ds-surface);
+  border-radius: var(--ds-radius-xl);
+  padding: var(--ds-space-6);
+  max-width: 400px;
+  width: 100%;
+  box-shadow: var(--ds-shadow-xl);
+  border: 1px solid var(--ds-border);
+  animation: ds-scale-in var(--ds-duration-normal) var(--ds-ease-spring);
+}
+
+.ds-confirm-title {
+  font-size: var(--ds-text-xl);
+  font-weight: var(--ds-weight-semibold);
+  margin-bottom: var(--ds-space-2);
+}
+
+.ds-confirm-message {
+  font-size: var(--ds-text-base);
+  color: var(--ds-text-secondary);
+  margin-bottom: var(--ds-space-5);
+}
+
+.ds-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ds-space-2);
+}

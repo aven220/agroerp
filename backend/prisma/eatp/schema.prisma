@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@agroerp/prisma-eatp-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_EATP")
+}
+
+enum EatpStatus {
+  draft
+  active
+  inactive
+  completed
+  archived
+}
+
+enum EatpRunStatus {
+  pending
+  scheduled
+  in_progress
+  completed
+  cancelled
+  failed
+}
+
+enum EatpAuditAction {
+  bootstrap
+  campaign_created
+  campaign_updated
+  crop_updated
+  labor_recorded
+  labor_scheduled
+  schedule_changed
+  input_consumed
+  sync_completed
+  config_changed
+}
+
+model EatpCampaign {
+  id             String     @id @default(uuid())
+  organizationId String
+  campaignKey    String
+  name           String
+  seasonKey      String?
+  startDate      DateTime?
+  endDate        DateTime?
+  budgetAmount   Float      @default(0)
+  currencyCode   String     @default("COP")
+  objectives     Json       @default("[]")
+  responsibleId  String?
+  status         EatpStatus @default(draft)
+  metadata       Json       @default("{}")
+  createdBy      String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  tasks          EatpFieldTask[]
+  schedules      EatpScheduleEntry[]
+
+  @@unique([organizationId, campaignKey])
+  @@index([organizationId, status])
+}
+
+model EatpSeason {
+  id             String     @id @default(uuid())
+  organizationId String
+  seasonKey      String
+  name           String
+  yearFrom       Int
+  yearTo         Int?
+  status         EatpStatus @default(active)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, seasonKey])
+}
+
+model EatpFieldTask {
+  id              String        @id @default(uuid())
+  organizationId  String
+  taskKey         String
+  campaignId      String?
+  fieldLotId      String?
+  ftipLotId       String?
+  farmUnitId      String?
+  laborType       String
+  title           String
+  scheduledDate   DateTime?
+  completedDate   DateTime?
+  status          EatpRunStatus @default(pending)
+  crewIds         String[]      @default([])
+  equipmentIds    String[]      @default([])
+  inputsPlanned   Json          @default("[]")
+  inputsUsed      Json          @default("[]")
+  areaTreatedHa   Float?
+  notes           String?
+  photoRefs       String[]      @default([])
+  qrCode          String?
+  fieldOperationId String?
+  externalId      String?
+  recordedBy      String?
+  metadata        Json          @default("{}")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  campaign        EatpCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, taskKey])
+  @@index([organizationId, fieldLotId, status])
+  @@index([organizationId, scheduledDate])
+}
+
+model EatpScheduleEntry {
+  id             String        @id @default(uuid())
+  organizationId String
+  entryKey       String
+  campaignId     String?
+  title          String
+  entryType      String
+  startsAt       DateTime
+  endsAt         DateTime?
+  fieldLotId     String?
+  farmUnitId     String?
+  crewIds        String[]      @default([])
+  equipmentIds   String[]      @default([])
+  resourceRefs   Json          @default("[]")
+  status         EatpRunStatus @default(scheduled)
+  createdBy      String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  campaign       EatpCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, entryKey])
+  @@index([organizationId, startsAt])
+}
+
+model EatpCropRegistry {
+  id             String     @id @default(uuid())
+  organizationId String
+  registryKey    String
+  fieldLotId     String?
+  ftipCropStandId String?
+  cropCode       String
+  varietyCode    String?
+  speciesCode    String?
+  seedLotRef     String?
+  plantingDate   DateTime?
+  harvestEstDate DateTime?
+  phenoStage     String?
+  densityPlantsHa Int?
+  plantingPattern String?
+  status         EatpStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, registryKey])
+  @@index([organizationId, fieldLotId])
+}
+
+model EatpInputBinding {
+  id             String     @id @default(uuid())
+  organizationId String
+  bindingKey     String
+  category       String
+  eimsItemId     String?
+  itemCode       String?
+  unitCode       String?
+  taskId         String?
+  quantity       Float      @default(0)
+  status         EatpStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+
+  @@unique([organizationId, bindingKey])
+  @@index([organizationId, category])
+}
+
+model EatpQrRegistry {
+  id             String   @id @default(uuid())
+  organizationId String
+  qrCode         String
+  entityType     String
+  entityId       String
+  payload        Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, qrCode])
+}
+
+model EatpAuditLog {
+  id             String          @id @default(uuid())
+  organizationId String
+  entityType     String
+  entityKey      String
+  action         EatpAuditAction
+  userId         String?
+  details        Json            @default("{}")
+  createdAt      DateTime        @default(now())
+
+  @@index([organizationId, entityType, createdAt])
+}
+
+model EatpOfflineBatch {
+  id             String        @id @default(uuid())
+  organizationId String
+  userId         String
+  batchKey       String
+  payload        Json          @default("{}")
+  status         EatpRunStatus @default(pending)
+  syncedAt       DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, batchKey])
+}

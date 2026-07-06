@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:title="Inicio" />
+    <item
+        android:id="@+id/nav_producers"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="Productores" />
+    <item
+        android:id="@+id/nav_work"
+        android:icon="@android:drawable/ic_menu_send"
+        android:title="Tareas" />
+    <item
+        android:id="@+id/nav_notifications"
+        android:icon="@android:drawable/ic_popup_reminder"
+        android:title="Alertas" />
+    <item
+        android:id="@+id/nav_more"
+        android:icon="@android:drawable/ic_menu_more"
+        android:title="Más" />
+</menu>

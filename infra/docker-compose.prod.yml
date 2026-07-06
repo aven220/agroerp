@@ -1,0 +1,119 @@
+# Producción — servidor Ubuntu (IP pública 20.231.96.53)
+# Uso: docker compose -f infra/docker-compose.prod.yml --env-file .env up -d --build
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: agroerp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agroerp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agroerp_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-agroerp}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agroerp} -d ${POSTGRES_DB:-agroerp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - agroerp
+
+  redis:
+    image: redis:7-alpine
+    container_name: agroerp-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - agroerp
+
+  minio:
+    image: minio/minio:latest
+    container_name: agroerp-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-agroerp}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-agroerp_secret}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agroerp
+
+  backend:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.backend
+      target: production
+    container_name: agroerp-backend
+    restart: unless-stopped
+    ports:
+      - "3080:3080"
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      PORT: 3080
+      API_PREFIX: api/v1
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=public
+      DATABASE_URL_BPMS: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=bpms
+      DATABASE_URL_EIP: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=eip
+      DATABASE_URL_EINT: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=eint
+      DATABASE_URL_EOPS: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=eops
+      DATABASE_URL_EATP: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=eatp
+      DATABASE_URL_EAPP: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=eapp
+      DATABASE_URL_EIWP: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=eiwp
+      DATABASE_URL_EPHP: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=ephp
+      DATABASE_URL_EATR: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=eatr
+      DATABASE_URL_EACC: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=eacc
+      DATABASE_URL_EFFM: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=effm
+      DATABASE_URL_EAIP: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=eaip
+      DATABASE_URL_EACE: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=eace
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      FRONTEND_URL: ${FRONTEND_URL:-http://20.231.96.53}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - agroerp
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.frontend
+    container_name: agroerp-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - agroerp
+
+networks:
+  agroerp:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

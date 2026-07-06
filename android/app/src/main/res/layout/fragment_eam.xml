@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nav_eam"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnEamSync"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/eam_sync" />
+
+        <Button
+            android:id="@+id/btnEamAssets"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/eam_assets" />
+
+        <Button
+            android:id="@+id/btnEamScan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/eam_scan" />
+
+        <Button
+            android:id="@+id/btnEamCmms"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/eam_cmms_sync" />
+
+        <Button
+            android:id="@+id/btnEamCmmsOrders"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/eam_cmms_orders" />
+
+        <Button
+            android:id="@+id/btnEamRelSync"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/eam_rel_sync" />
+
+        <Button
+            android:id="@+id/btnEamRelReading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/eam_rel_reading" />
+
+        <Button
+            android:id="@+id/btnEamRelAlerts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/eam_rel_alerts" />
+
+        <TextView
+            android:id="@+id/eamSummaryText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textSize="14sp" />
+    </LinearLayout>
+</ScrollView>

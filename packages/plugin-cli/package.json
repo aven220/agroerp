@@ -1,0 +1,10 @@
+{
+  "name": "@agroerp/plugin-cli",
+  "version": "1.0.0",
+  "description": "AGROERP Plugin SDK CLI — validate, package and sign extension manifests",
+  "bin": {
+    "agroerp-plugin": "./bin/agroerp-plugin.js"
+  },
+  "files": ["bin", "templates"],
+  "license": "UNLICENSED"
+}

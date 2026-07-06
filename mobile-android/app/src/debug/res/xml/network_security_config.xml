@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug: permite HTTP en red local (LAN) para pruebas con IP del Mac/PC -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

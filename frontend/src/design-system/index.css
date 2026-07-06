@@ -1,0 +1,77 @@
+@import './tokens.css';
+@import './typography.css';
+@import './animations.css';
+@import './primitives.css';
+@import './forms.css';
+@import './tables.css';
+@import './feedback.css';
+@import './dashboard.css';
+@import './data-workspace.css';
+@import './mobile.css';
+@import './polish.css';
+@import './accessibility.css';
+
+/* AGROERP Design System — Shell overrides for theme */
+
+.sidebar {
+  background: var(--ds-sidebar-bg);
+  color: var(--ds-sidebar-text);
+}
+
+.app-shell-bar {
+  background: color-mix(in srgb, var(--ds-surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.global-search-trigger {
+  background: var(--ds-surface-sunken);
+  border-color: var(--ds-border);
+  color: var(--ds-text-muted);
+}
+
+.global-search-panel {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+}
+
+.global-search-input {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+}
+
+.code-sm,
+.code-block {
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text-secondary);
+}
+
+.kpi-card {
+  background: var(--ds-surface);
+  border-color: var(--ds-border);
+}
+
+.quick-link {
+  background: var(--ds-primary-subtle);
+  color: var(--ds-primary);
+}
+
+.quick-link:hover {
+  background: var(--ds-primary-muted);
+}
+
+.user-chip strong {
+  color: var(--ds-text);
+}
+
+.user-chip small {
+  color: var(--ds-text-muted);
+}
+
+.breadcrumbs a {
+  color: var(--ds-primary);
+}
+
+.breadcrumbs li span {
+  color: var(--ds-text-muted);
+}

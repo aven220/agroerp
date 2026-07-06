@@ -1,0 +1,403 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@agroerp/prisma-eip-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_EIP")
+}
+
+enum EipStatus {
+  draft
+  active
+  inactive
+  archived
+}
+
+enum EipWebhookDirection {
+  incoming
+  outgoing
+}
+
+enum EipMessageStatus {
+  pending
+  processing
+  completed
+  failed
+  dlq
+}
+
+enum EipProviderType {
+  rabbitmq
+  kafka
+  azure_service_bus
+  aws_sqs
+  google_pubsub
+  in_memory
+}
+
+enum EipConnectorProtocol {
+  rest
+  graphql
+  soap
+  grpc
+  sftp
+  ftp
+  email
+  csv
+  excel
+  xml
+  json
+}
+
+enum EipEventKind {
+  domain
+  system
+  custom
+}
+
+enum EipAuditAction {
+  rule_binding_created
+  rule_binding_updated
+  rule_simulated
+  rule_published
+  api_policy_created
+  api_policy_updated
+  webhook_created
+  webhook_activated
+  webhook_deactivated
+  webhook_delivered
+  webhook_failed
+  esb_route_created
+  esb_route_published
+  esb_message_routed
+  event_published
+  event_subscribed
+  event_retried
+  event_dlq
+  connector_registered
+  connector_activated
+  messaging_slot_configured
+  config_changed
+  bridge_invoked
+  offline_synced
+  bootstrap
+}
+
+model EipRuleBinding {
+  id             String    @id @default(uuid())
+  organizationId String
+  bindingKey     String
+  ruleKey        String
+  moduleRef      String
+  scope          String    @default("module")
+  priority       Int       @default(100)
+  version        Int       @default(1)
+  status         EipStatus @default(draft)
+  conditions     Json      @default("{}")
+  variables      Json      @default("{}")
+  metadata       Json      @default("{}")
+  createdBy      String?
+  updatedBy      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([organizationId, bindingKey])
+  @@index([organizationId, moduleRef, status])
+  @@index([organizationId, ruleKey])
+}
+
+model EipApiPolicy {
+  id             String    @id @default(uuid())
+  organizationId String
+  policyKey      String
+  apiKey         String
+  version        String    @default("v1")
+  ratePerMinute  Int       @default(120)
+  ratePerDay     Int       @default(50000)
+  throttleMs     Int       @default(0)
+  loadBalance    String    @default("round_robin")
+  authRequired   Boolean   @default(true)
+  transformReq   Json      @default("{}")
+  transformRes   Json      @default("{}")
+  status         EipStatus @default(draft)
+  metadata       Json      @default("{}")
+  createdBy      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([organizationId, policyKey])
+  @@index([organizationId, apiKey])
+}
+
+model EipWebhookEndpoint {
+  id             String              @id @default(uuid())
+  organizationId String
+  webhookKey     String
+  name           String
+  direction      EipWebhookDirection
+  targetUrl      String?
+  secret         String?
+  signatureAlgo  String              @default("hmac-sha256")
+  originHosts    String[]            @default([])
+  maxRetries     Int                 @default(5)
+  retryBackoffMs Int                 @default(2000)
+  status         EipStatus           @default(draft)
+  eventTypes     String[]            @default([])
+  metadata       Json                @default("{}")
+  createdBy      String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  deliveries     EipWebhookDelivery[]
+
+  @@unique([organizationId, webhookKey])
+  @@index([organizationId, direction, status])
+}
+
+model EipWebhookDelivery {
+  id             String           @id @default(uuid())
+  organizationId String
+  webhookId      String
+  deliveryKey    String
+  status         EipMessageStatus @default(pending)
+  attempt        Int              @default(0)
+  payload        Json             @default("{}")
+  responseCode   Int?
+  responseBody   String?
+  signature      String?
+  errorMessage   String?
+  nextRetryAt    DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime         @default(now())
+  webhook        EipWebhookEndpoint @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, deliveryKey])
+  @@index([organizationId, status, createdAt])
+}
+
+model EipEsbRoute {
+  id             String    @id @default(uuid())
+  organizationId String
+  routeKey       String
+  name           String
+  sourceType     String
+  targetType     String
+  sourceRef      String
+  targetRef      String
+  transform      Json      @default("{}")
+  orchestration  Json      @default("[]")
+  syncMode       String    @default("async")
+  priority       Int       @default(100)
+  version        Int       @default(1)
+  status         EipStatus @default(draft)
+  metadata       Json      @default("{}")
+  createdBy      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  messages       EipEsbMessage[]
+
+  @@unique([organizationId, routeKey])
+  @@index([organizationId, status])
+}
+
+model EipEsbMessage {
+  id             String           @id @default(uuid())
+  organizationId String
+  routeId        String
+  messageKey     String
+  status         EipMessageStatus @default(pending)
+  direction      String           @default("inbound")
+  payload        Json             @default("{}")
+  transformed    Json?
+  durationMs     Int?
+  errorMessage   String?
+  createdAt      DateTime         @default(now())
+  completedAt    DateTime?
+  route          EipEsbRoute      @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, messageKey])
+  @@index([organizationId, status, createdAt])
+}
+
+model EipEventTopic {
+  id             String    @id @default(uuid())
+  organizationId String
+  topicKey       String
+  name           String
+  eventKind      EipEventKind @default(custom)
+  persist        Boolean   @default(true)
+  status         EipStatus @default(active)
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  subscriptions  EipEventSubscription[]
+  messages       EipEventMessage[]
+
+  @@unique([organizationId, topicKey])
+}
+
+model EipEventSubscription {
+  id             String    @id @default(uuid())
+  organizationId String
+  subscriptionKey String
+  topicId        String
+  subscriberRef  String
+  filterExpr     String?
+  status         EipStatus @default(active)
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  topic          EipEventTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, subscriptionKey])
+  @@index([organizationId, subscriberRef])
+}
+
+model EipEventMessage {
+  id             String           @id @default(uuid())
+  organizationId String
+  topicId        String
+  messageKey     String
+  eventType      String
+  eventKind      EipEventKind     @default(custom)
+  status         EipMessageStatus @default(pending)
+  payload        Json             @default("{}")
+  retryCount     Int              @default(0)
+  errorMessage   String?
+  publishedAt    DateTime         @default(now())
+  processedAt    DateTime?
+  topic          EipEventTopic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, messageKey])
+  @@index([organizationId, eventType, status])
+}
+
+model EipEventDlq {
+  id             String   @id @default(uuid())
+  organizationId String
+  dlqKey         String
+  messageKey     String
+  eventType      String
+  payload        Json     @default("{}")
+  errorMessage   String
+  retryCount     Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, dlqKey])
+  @@index([organizationId, createdAt])
+}
+
+model EipConnectorSlot {
+  id             String             @id @default(uuid())
+  organizationId String
+  connectorKey   String
+  name           String
+  protocol       EipConnectorProtocol
+  category       String             @default("generic")
+  endpointUrl    String?
+  authType       String             @default("none")
+  config         Json               @default("{}")
+  status         EipStatus          @default(draft)
+  tags           String[]           @default([])
+  metadata       Json               @default("{}")
+  createdBy      String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([organizationId, connectorKey])
+  @@index([organizationId, protocol, status])
+}
+
+model EipMessagingProvider {
+  id             String         @id @default(uuid())
+  organizationId String
+  providerKey    String
+  providerType   EipProviderType
+  name           String
+  config         Json           @default("{}")
+  status         EipStatus      @default(inactive)
+  isPrimary      Boolean        @default(false)
+  metadata       Json           @default("{}")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([organizationId, providerKey])
+  @@index([organizationId, providerType])
+}
+
+model EipInvocationLog {
+  id             String   @id @default(uuid())
+  organizationId String
+  invocationKey  String
+  channel        String
+  targetRef      String
+  method         String?
+  statusCode     Int?
+  durationMs     Int?
+  success        Boolean  @default(true)
+  requestMeta    Json     @default("{}")
+  responseMeta   Json     @default("{}")
+  errorMessage   String?
+  userId         String?
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, invocationKey])
+  @@index([organizationId, channel, createdAt])
+}
+
+model EipConfigChange {
+  id             String   @id @default(uuid())
+  organizationId String
+  changeKey      String
+  entityType     String
+  entityKey      String
+  version        Int      @default(1)
+  changeType     String
+  before         Json?
+  after          Json?
+  userId         String?
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, changeKey])
+  @@index([organizationId, entityType, createdAt])
+}
+
+model EipIndicatorSnapshot {
+  id             String   @id @default(uuid())
+  organizationId String
+  snapshotKey    String
+  indicators     Json     @default("{}")
+  capturedAt     DateTime @default(now())
+
+  @@unique([organizationId, snapshotKey])
+  @@index([organizationId, capturedAt])
+}
+
+model EipOfflineBatch {
+  id             String   @id @default(uuid())
+  organizationId String
+  batchKey       String
+  deviceId       String
+  status         String   @default("pending")
+  payload        Json     @default("[]")
+  errorMessage   String?
+  createdBy      String?
+  syncedAt       DateTime?
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, batchKey])
+}
+
+model EipAuditLog {
+  id             String         @id @default(uuid())
+  organizationId String
+  entityType     String
+  entityKey      String
+  action         EipAuditAction
+  userId         String?
+  details        Json           @default("{}")
+  createdAt      DateTime       @default(now())
+
+  @@index([organizationId, entityType, createdAt])
+  @@index([organizationId, action])
+}

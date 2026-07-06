@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nav_emfg"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnSyncEmfg"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/emfg_sync" />
+
+        <Button
+            android:id="@+id/btnMesStart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/emfg_mes_start" />
+
+        <Button
+            android:id="@+id/btnMesProduce"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emfg_mes_produce" />
+
+        <Button
+            android:id="@+id/btnMesConsume"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emfg_mes_consume" />
+
+        <Button
+            android:id="@+id/btnMesScan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emfg_mes_scan" />
+
+        <Button
+            android:id="@+id/btnMesFlush"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emfg_mes_flush" />
+
+        <Button
+            android:id="@+id/btnQmsInspect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/emfg_qms_inspect" />
+
+        <Button
+            android:id="@+id/btnQmsScanLot"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emfg_qms_scan_lot" />
+
+        <Button
+            android:id="@+id/btnQmsFlush"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emfg_qms_flush" />
+
+        <Button
+            android:id="@+id/btnResEquip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/emfg_res_equip" />
+
+        <Button
+            android:id="@+id/btnResMaint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emfg_res_maint" />
+
+        <Button
+            android:id="@+id/btnResScan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emfg_res_scan" />
+
+        <Button
+            android:id="@+id/btnResFlush"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emfg_res_flush" />
+
+        <Button
+            android:id="@+id/btnCostDash"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/emfg_cost_dash" />
+
+        <Button
+            android:id="@+id/btnCostWip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emfg_cost_wip" />
+
+        <Button
+            android:id="@+id/btnIntelDash"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/emfg_intel_dash" />
+
+        <Button
+            android:id="@+id/btnIntelKpi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emfg_intel_kpi" />
+
+        <Button
+            android:id="@+id/btnIntelOee"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emfg_intel_oee" />
+
+        <Button
+            android:id="@+id/btnIntelAlerts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emfg_intel_alerts" />
+
+        <TextView
+            android:id="@+id/emfgSummaryText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/emfgOrdersText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textSize="14sp" />
+    </LinearLayout>
+</ScrollView>

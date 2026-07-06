@@ -1,0 +1,505 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@agroerp/prisma-eacc-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_EACC")
+}
+
+enum EaccStatus {
+  draft
+  active
+  inactive
+  pending
+  expired
+  suspended
+  closed
+  archived
+}
+
+enum EaccSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+enum EaccRunStatus {
+  pending
+  scheduled
+  in_progress
+  completed
+  cancelled
+  failed
+}
+
+enum EaccAuditAction {
+  bootstrap
+  certification_registered
+  certification_renewed
+  requirement_updated
+  checklist_completed
+  evidence_uploaded
+  audit_scheduled
+  audit_completed
+  finding_recorded
+  corrective_action_opened
+  corrective_action_closed
+  document_linked
+  sustainability_recorded
+  esg_objective_set
+  esg_report_generated
+  safety_incident_recorded
+  footprint_recorded
+  alert_generated
+  sync_completed
+}
+
+model EaccComplianceFramework {
+  id             String     @id @default(uuid())
+  organizationId String
+  frameworkKey   String
+  code           String
+  name           String
+  frameworkType  String
+  description    String?
+  status         EaccStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  certifications EaccCertification[]
+  requirements   EaccRequirement[]
+
+  @@unique([organizationId, frameworkKey])
+}
+
+model EaccCertification {
+  id             String     @id @default(uuid())
+  organizationId String
+  certKey        String
+  frameworkId    String?
+  certType       String
+  name           String
+  certNumber     String?
+  issuedAt       DateTime?
+  expiresAt      DateTime?
+  renewedAt      DateTime?
+  status         EaccStatus @default(active)
+  fieldLotId     String?
+  responsibleId  String?
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  framework      EaccComplianceFramework? @relation(fields: [frameworkId], references: [id], onDelete: SetNull)
+  requirements   EaccRequirement[]
+  audits         EaccAudit[]
+  renewals       EaccCertificationRenewal[]
+
+  @@unique([organizationId, certKey])
+  @@index([organizationId, status, expiresAt])
+}
+
+model EaccCertificationRenewal {
+  id             String     @id @default(uuid())
+  organizationId String
+  renewalKey     String
+  certificationId String
+  requestedAt    DateTime   @default(now())
+  completedAt    DateTime?
+  status         EaccRunStatus @default(pending)
+  notes          String?
+  metadata       Json       @default("{}")
+  certification  EaccCertification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, renewalKey])
+}
+
+model EaccRequirement {
+  id             String     @id @default(uuid())
+  organizationId String
+  requirementKey String
+  frameworkId    String?
+  certificationId String?
+  code           String
+  title          String
+  description    String?
+  responsibleId  String?
+  dueDate        DateTime?
+  compliancePct  Float      @default(0)
+  isCompliant    Boolean    @default(false)
+  status         EaccStatus @default(active)
+  metadata       Json       @default("{}")
+  framework      EaccComplianceFramework? @relation(fields: [frameworkId], references: [id], onDelete: SetNull)
+  certification  EaccCertification? @relation(fields: [certificationId], references: [id], onDelete: SetNull)
+  evidences      EaccEvidence[]
+  checklistItems EaccChecklistItem[]
+
+  @@unique([organizationId, requirementKey])
+}
+
+model EaccChecklist {
+  id             String     @id @default(uuid())
+  organizationId String
+  checklistKey   String
+  name           String
+  certType       String?
+  auditType      String?
+  status         EaccStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  items          EaccChecklistItem[]
+
+  @@unique([organizationId, checklistKey])
+}
+
+model EaccChecklistItem {
+  id             String     @id @default(uuid())
+  organizationId String
+  itemKey        String
+  checklistId    String
+  requirementId  String?
+  question       String
+  isCompleted    Boolean    @default(false)
+  completedAt    DateTime?
+  completedBy    String?
+  signatureRef   String?
+  photoRefs      String[]   @default([])
+  metadata       Json       @default("{}")
+  checklist      EaccChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  requirement    EaccRequirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, itemKey])
+}
+
+model EaccEvidence {
+  id             String     @id @default(uuid())
+  organizationId String
+  evidenceKey    String
+  requirementId  String?
+  auditId        String?
+  documentRef    String?
+  photoRef       String?
+  signatureRef   String?
+  title          String
+  uploadedBy     String?
+  uploadedAt     DateTime   @default(now())
+  metadata       Json       @default("{}")
+  requirement    EaccRequirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
+  audit          EaccAudit? @relation(fields: [auditId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, evidenceKey])
+}
+
+model EaccAlert {
+  id             String     @id @default(uuid())
+  organizationId String
+  alertKey       String
+  alertType      String
+  severity       EaccSeverity @default(medium)
+  title          String
+  entityType     String?
+  entityKey      String?
+  dueDate        DateTime?
+  isActive       Boolean    @default(true)
+  triggeredAt    DateTime   @default(now())
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, alertKey])
+  @@index([organizationId, isActive, dueDate])
+}
+
+model EaccAuditPlan {
+  id             String     @id @default(uuid())
+  organizationId String
+  planKey        String
+  name           String
+  auditType      String
+  plannedStart   DateTime?
+  plannedEnd     DateTime?
+  auditorName    String?
+  status         EaccRunStatus @default(scheduled)
+  metadata       Json       @default("{}")
+  audits         EaccAudit[]
+
+  @@unique([organizationId, planKey])
+}
+
+model EaccAudit {
+  id             String     @id @default(uuid())
+  organizationId String
+  auditKey       String
+  planId         String?
+  certificationId String?
+  auditType      String
+  auditorName    String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  status         EaccRunStatus @default(scheduled)
+  score          Float?
+  metadata       Json       @default("{}")
+  plan           EaccAuditPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  certification  EaccCertification? @relation(fields: [certificationId], references: [id], onDelete: SetNull)
+  findings       EaccFinding[]
+  evidences      EaccEvidence[]
+
+  @@unique([organizationId, auditKey])
+}
+
+model EaccFinding {
+  id             String     @id @default(uuid())
+  organizationId String
+  findingKey     String
+  auditId        String
+  findingType    String
+  severity       EaccSeverity @default(medium)
+  description    String
+  status         EaccStatus @default(active)
+  closedAt       DateTime?
+  metadata       Json       @default("{}")
+  audit          EaccAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  actions        EaccCorrectiveAction[]
+
+  @@unique([organizationId, findingKey])
+}
+
+model EaccCorrectiveAction {
+  id             String     @id @default(uuid())
+  organizationId String
+  actionKey      String
+  findingId      String
+  actionType     String
+  description    String
+  responsibleId  String?
+  dueDate        DateTime?
+  completedAt    DateTime?
+  status         EaccRunStatus @default(pending)
+  metadata       Json       @default("{}")
+  finding        EaccFinding @relation(fields: [findingId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, actionKey])
+}
+
+model EaccDocumentLink {
+  id             String     @id @default(uuid())
+  organizationId String
+  linkKey        String
+  documentRef    String
+  docType        String
+  title          String
+  version        String?
+  entityType     String?
+  entityKey      String?
+  signatureRef   String?
+  status         EaccStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+
+  @@unique([organizationId, linkKey])
+  @@index([organizationId, docType])
+}
+
+model EaccSustainabilityIndicator {
+  id             String     @id @default(uuid())
+  organizationId String
+  indicatorKey   String
+  category       String
+  name           String
+  unit           String?
+  targetValue    Float?
+  status         EaccStatus @default(active)
+  metadata       Json       @default("{}")
+  records        EaccSustainabilityRecord[]
+
+  @@unique([organizationId, indicatorKey])
+}
+
+model EaccSustainabilityRecord {
+  id             String     @id @default(uuid())
+  organizationId String
+  recordKey      String
+  indicatorId    String
+  fieldLotId     String?
+  value          Float
+  recordedAt     DateTime   @default(now())
+  recordedBy     String?
+  metadata       Json       @default("{}")
+  indicator      EaccSustainabilityIndicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, recordKey])
+}
+
+model EaccEsgIndicator {
+  id             String     @id @default(uuid())
+  organizationId String
+  indicatorKey   String
+  pillar         String
+  name           String
+  unit           String?
+  targetValue    Float?
+  currentValue   Float?
+  status         EaccStatus @default(active)
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, indicatorKey])
+}
+
+model EaccEsgObjective {
+  id             String     @id @default(uuid())
+  organizationId String
+  objectiveKey   String
+  pillar         String
+  title          String
+  targetValue    Float?
+  currentValue   Float?
+  dueDate        DateTime?
+  status         EaccRunStatus @default(in_progress)
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, objectiveKey])
+}
+
+model EaccEsgReport {
+  id             String     @id @default(uuid())
+  organizationId String
+  reportKey      String
+  title          String
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  generatedAt    DateTime   @default(now())
+  generatedBy    String?
+  results        Json       @default("{}")
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, reportKey])
+}
+
+model EaccSafetyTraining {
+  id             String     @id @default(uuid())
+  organizationId String
+  trainingKey    String
+  title          String
+  trainerName    String?
+  trainedCount   Int        @default(0)
+  conductedAt    DateTime   @default(now())
+  status         EaccStatus @default(active)
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, trainingKey])
+}
+
+model EaccPpeDelivery {
+  id             String     @id @default(uuid())
+  organizationId String
+  deliveryKey    String
+  employeeRef    String?
+  ppeType        String
+  quantity       Int        @default(1)
+  deliveredAt    DateTime   @default(now())
+  deliveredBy    String?
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, deliveryKey])
+}
+
+model EaccSafetyIncident {
+  id             String     @id @default(uuid())
+  organizationId String
+  incidentKey    String
+  incidentType   String
+  severity       EaccSeverity @default(medium)
+  description    String
+  fieldLotId     String?
+  occurredAt     DateTime   @default(now())
+  reportedBy     String?
+  status         EaccStatus @default(active)
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, incidentKey])
+}
+
+model EaccSafetyInspection {
+  id             String     @id @default(uuid())
+  organizationId String
+  inspectionKey  String
+  inspectorName  String?
+  score          Float?
+  inspectedAt    DateTime   @default(now())
+  signatureRef   String?
+  photoRefs      String[]   @default([])
+  status         EaccStatus @default(active)
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, inspectionKey])
+}
+
+model EaccWorkPermit {
+  id             String     @id @default(uuid())
+  organizationId String
+  permitKey      String
+  workType       String
+  authorizedBy   String?
+  validFrom      DateTime?
+  validUntil     DateTime?
+  status         EaccStatus @default(active)
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, permitKey])
+}
+
+model EaccFootprintConfig {
+  id             String     @id @default(uuid())
+  organizationId String
+  configKey      String
+  footprintType  String
+  name           String
+  calculationRef String?
+  unit           String?
+  status         EaccStatus @default(active)
+  metadata       Json       @default("{}")
+  records        EaccFootprintRecord[]
+
+  @@unique([organizationId, configKey])
+}
+
+model EaccFootprintRecord {
+  id             String     @id @default(uuid())
+  organizationId String
+  recordKey      String
+  configId       String
+  fieldLotId     String?
+  value          Float
+  offsetValue    Float?
+  recordedAt     DateTime   @default(now())
+  recordedBy     String?
+  metadata       Json       @default("{}")
+  config         EaccFootprintConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, recordKey])
+}
+
+model EaccAuditLog {
+  id             String          @id @default(uuid())
+  organizationId String
+  entityType     String
+  entityKey      String
+  action         EaccAuditAction
+  userId         String?
+  details        Json            @default("{}")
+  createdAt      DateTime        @default(now())
+
+  @@index([organizationId, entityType, createdAt])
+}
+
+model EaccOfflineBatch {
+  id             String        @id @default(uuid())
+  organizationId String
+  userId         String
+  batchKey       String
+  payload        Json          @default("{}")
+  status         EaccRunStatus @default(pending)
+  syncedAt       DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, batchKey])
+}

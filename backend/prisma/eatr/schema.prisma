@@ -1,0 +1,319 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@agroerp/prisma-eatr-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_EATR")
+}
+
+enum EatrStatus {
+  draft
+  active
+  in_transit
+  completed
+  merged
+  split
+  archived
+}
+
+enum EatrRunStatus {
+  pending
+  scheduled
+  in_progress
+  completed
+  cancelled
+  failed
+}
+
+enum EatrAuditAction {
+  bootstrap
+  trace_event_recorded
+  lot_created
+  lot_merged
+  lot_split
+  custody_transferred
+  harvest_recorded
+  postharvest_step
+  quality_inspected
+  package_labeled
+  export_prepared
+  sync_completed
+}
+
+model EatrTraceEvent {
+  id             String   @id @default(uuid())
+  organizationId String
+  eventKey       String
+  eventType      String
+  fieldLotId     String?
+  productionLotId String?
+  sourceModule   String?
+  sourceRef      String?
+  occurredAt     DateTime @default(now())
+  recordedBy     String?
+  payload        Json     @default("{}")
+  metadata       Json     @default("{}")
+
+  @@unique([organizationId, eventKey])
+  @@index([organizationId, fieldLotId, occurredAt])
+}
+
+model EatrProductionLot {
+  id             String     @id @default(uuid())
+  organizationId String
+  lotKey         String
+  lotType        String     @default("agricultural")
+  parentLotId    String?
+  fieldLotId     String?
+  cropCode       String?
+  quantityKg     Float?
+  status         EatrStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  harvestLots    EatrHarvestLot[]
+  commercialLots EatrCommercialLot[]
+  custodyMoves   EatrCustodyTransfer[]
+
+  @@unique([organizationId, lotKey])
+}
+
+model EatrHarvestLot {
+  id              String     @id @default(uuid())
+  organizationId  String
+  harvestLotKey   String
+  productionLotId String?
+  fieldLotId      String?
+  harvestedKg     Float?
+  lossKg          Float?
+  wasteKg         Float?
+  yieldPct        Float?
+  harvestedAt     DateTime   @default(now())
+  status          EatrStatus @default(active)
+  metadata        Json       @default("{}")
+  productionLot   EatrProductionLot? @relation(fields: [productionLotId], references: [id], onDelete: SetNull)
+  weighings       EatrWeighing[]
+
+  @@unique([organizationId, harvestLotKey])
+}
+
+model EatrCommercialLot {
+  id              String     @id @default(uuid())
+  organizationId  String
+  commercialKey   String
+  productionLotId String?
+  presentation    String?
+  packageType     String?
+  quantityUnits   Int?
+  quantityKg      Float?
+  qrCode          String?
+  barcode         String?
+  status          EatrStatus @default(active)
+  metadata        Json       @default("{}")
+  createdAt       DateTime   @default(now())
+  productionLot   EatrProductionLot? @relation(fields: [productionLotId], references: [id], onDelete: SetNull)
+  packages        EatrPackageUnit[]
+
+  @@unique([organizationId, commercialKey])
+}
+
+model EatrLotOperation {
+  id             String   @id @default(uuid())
+  organizationId String
+  operationKey   String
+  operationType  String
+  sourceLotKey   String
+  targetLotKeys  String[] @default([])
+  performedBy    String?
+  performedAt    DateTime @default(now())
+  metadata       Json     @default("{}")
+
+  @@unique([organizationId, operationKey])
+}
+
+model EatrCustodyTransfer {
+  id              String     @id @default(uuid())
+  organizationId  String
+  transferKey     String
+  productionLotId String?
+  fromParty       String?
+  toParty         String?
+  fromLocation    String?
+  toLocation      String?
+  transferType    String     @default("transfer")
+  status          EatrStatus @default(in_transit)
+  transferredAt   DateTime   @default(now())
+  receivedAt      DateTime?
+  metadata        Json       @default("{}")
+  productionLot   EatrProductionLot? @relation(fields: [productionLotId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, transferKey])
+}
+
+model EatrHarvestSchedule {
+  id             String        @id @default(uuid())
+  organizationId String
+  scheduleKey    String
+  fieldLotId     String?
+  plannedDate    DateTime
+  crewName       String?
+  machinery      String?
+  status         EatrRunStatus @default(scheduled)
+  metadata       Json          @default("{}")
+  createdAt      DateTime      @default(now())
+  records        EatrHarvestRecord[]
+
+  @@unique([organizationId, scheduleKey])
+}
+
+model EatrHarvestRecord {
+  id             String   @id @default(uuid())
+  organizationId String
+  recordKey      String
+  scheduleId     String?
+  harvestLotId   String?
+  producedKg     Float?
+  lossKg         Float?
+  wasteKg        Float?
+  yieldPct       Float?
+  recordedAt     DateTime @default(now())
+  recordedBy     String?
+  metadata       Json     @default("{}")
+  schedule       EatrHarvestSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, recordKey])
+}
+
+model EatrWeighing {
+  id             String   @id @default(uuid())
+  organizationId String
+  weighingKey    String
+  harvestLotId   String?
+  grossKg        Float
+  tareKg         Float?
+  netKg          Float
+  recordedAt     DateTime @default(now())
+  recordedBy     String?
+  metadata       Json     @default("{}")
+  harvestLot     EatrHarvestLot? @relation(fields: [harvestLotId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, weighingKey])
+}
+
+model EatrPostharvestStep {
+  id             String        @id @default(uuid())
+  organizationId String
+  stepKey        String
+  stepType       String
+  commercialLotId String?
+  fieldLotId     String?
+  status         EatrRunStatus @default(completed)
+  startedAt      DateTime?
+  completedAt    DateTime      @default(now())
+  metadata       Json          @default("{}")
+  recordedBy     String?
+
+  @@unique([organizationId, stepKey])
+}
+
+model EatrQualityInspection {
+  id             String   @id @default(uuid())
+  organizationId String
+  inspectionKey  String
+  commercialLotId String?
+  caliber        String?
+  weightKg       Float?
+  colorGrade     String?
+  maturityGrade  String?
+  moisturePct    Float?
+  defectsPct     Float?
+  sampleRef      String?
+  isConforming   Boolean  @default(true)
+  nonConformance String?
+  photoRefs      String[] @default([])
+  inspectedAt    DateTime @default(now())
+  inspectedBy    String?
+  results        Json     @default("{}")
+  metadata       Json     @default("{}")
+
+  @@unique([organizationId, inspectionKey])
+}
+
+model EatrPackageUnit {
+  id              String   @id @default(uuid())
+  organizationId  String
+  packageKey      String
+  commercialLotId String?
+  packageType     String
+  presentation    String?
+  labelCode       String?
+  qrCode          String?
+  barcode         String?
+  logisticUnit    String?
+  quantity        Int      @default(1)
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now())
+  commercialLot   EatrCommercialLot? @relation(fields: [commercialLotId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, packageKey])
+}
+
+model EatrExportMarket {
+  id             String     @id @default(uuid())
+  organizationId String
+  marketKey      String
+  countryCode    String
+  marketName     String
+  requirements   Json       @default("[]")
+  status         EatrStatus @default(active)
+  metadata       Json       @default("{}")
+  shipments      EatrExportShipment[]
+
+  @@unique([organizationId, marketKey])
+}
+
+model EatrExportShipment {
+  id             String        @id @default(uuid())
+  organizationId String
+  shipmentKey    String
+  marketId       String?
+  containerRef   String?
+  coldChain      Boolean       @default(false)
+  documents      Json          @default("[]")
+  certificates   Json          @default("[]")
+  status         EatrRunStatus @default(pending)
+  shippedAt      DateTime?
+  metadata       Json          @default("{}")
+  createdAt      DateTime      @default(now())
+  market         EatrExportMarket? @relation(fields: [marketId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, shipmentKey])
+}
+
+model EatrAuditLog {
+  id             String          @id @default(uuid())
+  organizationId String
+  entityType     String
+  entityKey      String
+  action         EatrAuditAction
+  userId         String?
+  details        Json            @default("{}")
+  createdAt      DateTime        @default(now())
+
+  @@index([organizationId, entityType, createdAt])
+}
+
+model EatrOfflineBatch {
+  id             String        @id @default(uuid())
+  organizationId String
+  userId         String
+  batchKey       String
+  payload        Json          @default("{}")
+  status         EatrRunStatus @default(pending)
+  syncedAt       DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, batchKey])
+}

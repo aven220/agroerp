@@ -1,0 +1,286 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@agroerp/prisma-effm-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_EFFM")
+}
+
+enum EffmStatus {
+  draft
+  active
+  inactive
+  maintenance
+  idle
+  in_use
+  unavailable
+  archived
+}
+
+enum EffmRunStatus {
+  pending
+  scheduled
+  in_progress
+  completed
+  cancelled
+  failed
+}
+
+enum EffmAuditAction {
+  bootstrap
+  machine_registered
+  implement_registered
+  coupling_attached
+  coupling_detached
+  operation_started
+  operation_completed
+  operator_assigned
+  fuel_recorded
+  telemetry_received
+  alarm_triggered
+  auto_labor_synced
+  incident_recorded
+  sync_completed
+}
+
+model EffmMachine {
+  id             String     @id @default(uuid())
+  organizationId String
+  machineKey     String
+  machineType    String
+  code           String
+  name           String
+  brand          String?
+  model          String?
+  serialNumber   String?
+  qrCode         String?
+  status         EffmStatus @default(active)
+  hourMeter      Float?
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  operations     EffmOperationSession[]
+  fuelRecords    EffmFuelRecord[]
+  couplings      EffmCoupling[]
+  telemetry      EffmTelemetryReading[]
+  assignments    EffmOperatorAssignment[]
+
+  @@unique([organizationId, machineKey])
+  @@index([organizationId, machineType, status])
+}
+
+model EffmImplement {
+  id             String     @id @default(uuid())
+  organizationId String
+  implementKey   String
+  implementType  String
+  code           String
+  name           String
+  status         EffmStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  compatibilities EffmImplementCompatibility[]
+  couplings      EffmCoupling[]
+
+  @@unique([organizationId, implementKey])
+}
+
+model EffmImplementCompatibility {
+  id             String     @id @default(uuid())
+  organizationId String
+  implementId    String
+  machineType    String
+  metadata       Json       @default("{}")
+  implement      EffmImplement @relation(fields: [implementId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, implementId, machineType])
+}
+
+model EffmCoupling {
+  id             String     @id @default(uuid())
+  organizationId String
+  couplingKey    String
+  machineId      String
+  implementId    String
+  action         String
+  performedAt    DateTime   @default(now())
+  performedBy    String?
+  metadata       Json       @default("{}")
+  machine        EffmMachine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  implement      EffmImplement @relation(fields: [implementId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, couplingKey])
+}
+
+model EffmOperatorAssignment {
+  id             String     @id @default(uuid())
+  organizationId String
+  assignmentKey  String
+  machineId      String?
+  employeeRef    String
+  shiftRef       String?
+  licenseType    String?
+  certRef        String?
+  assignedAt     DateTime   @default(now())
+  releasedAt     DateTime?
+  status         EffmStatus @default(active)
+  metadata       Json       @default("{}")
+  machine        EffmMachine? @relation(fields: [machineId], references: [id], onDelete: SetNull)
+  operations     EffmOperationSession[]
+
+  @@unique([organizationId, assignmentKey])
+}
+
+model EffmOperationSession {
+  id             String     @id @default(uuid())
+  organizationId String
+  sessionKey     String
+  machineId      String
+  assignmentId   String?
+  laborTaskRef   String?
+  fieldLotId     String?
+  cropCode       String?
+  startedAt      DateTime   @default(now())
+  endedAt        DateTime?
+  hoursWorked    Float?
+  areaCoveredHa  Float?
+  distanceKm     Float?
+  avgSpeedKmh    Float?
+  idleMinutes    Float?
+  unproductiveMinutes Float?
+  status         EffmRunStatus @default(in_progress)
+  metadata       Json       @default("{}")
+  machine        EffmMachine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  assignment     EffmOperatorAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, sessionKey])
+  @@index([organizationId, fieldLotId, startedAt])
+}
+
+model EffmFuelRecord {
+  id             String     @id @default(uuid())
+  organizationId String
+  fuelKey        String
+  machineId      String
+  sessionId      String?
+  liters         Float
+  cost           Float?
+  efficiencyLph  Float?
+  litersPerHa    Float?
+  cropCode       String?
+  laborTaskRef   String?
+  recordedAt     DateTime   @default(now())
+  recordedBy     String?
+  metadata       Json       @default("{}")
+  machine        EffmMachine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, fuelKey])
+}
+
+model EffmTelemetryConfig {
+  id             String     @id @default(uuid())
+  organizationId String
+  configKey      String
+  protocol       String
+  machineId      String?
+  controllerRef  String?
+  status         EffmStatus @default(active)
+  metadata       Json       @default("{}")
+  readings       EffmTelemetryReading[]
+  alarms         EffmTelemetryAlarm[]
+
+  @@unique([organizationId, configKey])
+}
+
+model EffmTelemetryReading {
+  id             String     @id @default(uuid())
+  organizationId String
+  readingKey     String
+  configId       String?
+  machineId      String?
+  source         String
+  engineHours    Float?
+  rpm            Float?
+  speedKmh       Float?
+  payload        Json       @default("{}")
+  recordedAt     DateTime   @default(now())
+  config         EffmTelemetryConfig? @relation(fields: [configId], references: [id], onDelete: SetNull)
+  machine        EffmMachine? @relation(fields: [machineId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, readingKey])
+  @@index([organizationId, machineId, recordedAt])
+}
+
+model EffmTelemetryAlarm {
+  id             String     @id @default(uuid())
+  organizationId String
+  alarmKey       String
+  configId       String?
+  machineId      String?
+  alarmType      String
+  severity       String
+  message        String
+  isActive       Boolean    @default(true)
+  triggeredAt    DateTime   @default(now())
+  config         EffmTelemetryConfig? @relation(fields: [configId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, alarmKey])
+}
+
+model EffmAutoLaborEvent {
+  id             String     @id @default(uuid())
+  organizationId String
+  eventKey       String
+  machineId      String?
+  sessionId      String?
+  eventType      String
+  source         String
+  payload        Json       @default("{}")
+  syncedAt       DateTime   @default(now())
+
+  @@unique([organizationId, eventKey])
+}
+
+model EffmIncident {
+  id             String     @id @default(uuid())
+  organizationId String
+  incidentKey    String
+  machineId      String?
+  incidentType   String
+  description    String
+  photoRefs      String[]   @default([])
+  reportedBy     String?
+  reportedAt     DateTime   @default(now())
+  status         EffmStatus @default(active)
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, incidentKey])
+}
+
+model EffmAuditLog {
+  id             String          @id @default(uuid())
+  organizationId String
+  entityType     String
+  entityKey      String
+  action         EffmAuditAction
+  userId         String?
+  details        Json            @default("{}")
+  createdAt      DateTime        @default(now())
+
+  @@index([organizationId, entityType, createdAt])
+}
+
+model EffmOfflineBatch {
+  id             String        @id @default(uuid())
+  organizationId String
+  userId         String
+  batchKey       String
+  payload        Json          @default("{}")
+  status         EffmRunStatus @default(pending)
+  syncedAt       DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, batchKey])
+}

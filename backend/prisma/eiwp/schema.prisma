@@ -1,0 +1,372 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@agroerp/prisma-eiwp-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_EIWP")
+}
+
+enum EiwpStatus {
+  draft
+  active
+  inactive
+  suspended
+  archived
+}
+
+enum EiwpRunStatus {
+  pending
+  scheduled
+  running
+  completed
+  cancelled
+  failed
+}
+
+enum EiwpAlertSeverity {
+  info
+  warning
+  critical
+}
+
+enum EiwpAuditAction {
+  bootstrap
+  irrigation_scheduled
+  irrigation_started
+  irrigation_completed
+  irrigation_suspended
+  irrigation_rescheduled
+  rainfall_recorded
+  consumption_logged
+  alert_generated
+  forecast_ingested
+  balance_computed
+  automation_command
+  incident_recorded
+  sync_completed
+}
+
+model EiwpWaterSource {
+  id             String     @id @default(uuid())
+  organizationId String
+  sourceKey      String
+  name           String
+  sourceType     String
+  capacityM3     Float?
+  currentLevelM3 Float?
+  farmUnitId     String?
+  status         EiwpStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  consumptions   EiwpWaterConsumption[]
+
+  @@unique([organizationId, sourceKey])
+}
+
+model EiwpDistributionNetwork {
+  id             String     @id @default(uuid())
+  organizationId String
+  networkKey     String
+  name           String
+  networkType    String
+  sourceId       String?
+  status         EiwpStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  sectors        EiwpIrrigationSector[]
+
+  @@unique([organizationId, networkKey])
+}
+
+model EiwpIrrigationSector {
+  id             String     @id @default(uuid())
+  organizationId String
+  sectorKey      String
+  name           String
+  fieldLotId     String?
+  networkId      String?
+  areaHa         Float?
+  method         String     @default("drip")
+  status         EiwpStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  network        EiwpDistributionNetwork? @relation(fields: [networkId], references: [id], onDelete: SetNull)
+  schedules      EiwpIrrigationSchedule[]
+  balances       EiwpWaterBalance[]
+
+  @@unique([organizationId, sectorKey])
+}
+
+model EiwpIrrigationSchedule {
+  id             String        @id @default(uuid())
+  organizationId String
+  scheduleKey    String
+  sectorId       String?
+  fieldLotId     String?
+  method         String
+  mode           String        @default("manual")
+  plannedStart   DateTime
+  plannedEnd     DateTime?
+  volumeM3       Float?
+  status         EiwpRunStatus @default(scheduled)
+  isSuspended    Boolean       @default(false)
+  metadata       Json          @default("{}")
+  createdBy      String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  sector         EiwpIrrigationSector? @relation(fields: [sectorId], references: [id], onDelete: SetNull)
+  events         EiwpIrrigationEvent[]
+
+  @@unique([organizationId, scheduleKey])
+  @@index([organizationId, plannedStart])
+}
+
+model EiwpIrrigationEvent {
+  id             String          @id @default(uuid())
+  organizationId String
+  eventKey       String
+  scheduleId     String?
+  eventType      String
+  volumeM3       Float?
+  durationMin    Int?
+  recordedAt     DateTime        @default(now())
+  recordedBy     String?
+  metadata       Json            @default("{}")
+  schedule       EiwpIrrigationSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, eventKey])
+}
+
+model EiwpWaterConsumption {
+  id             String   @id @default(uuid())
+  organizationId String
+  consumptionKey String
+  sourceId       String?
+  fieldLotId     String?
+  sectorId       String?
+  volumeM3       Float
+  recordedAt     DateTime @default(now())
+  sourceType     String   @default("irrigation")
+  metadata       Json     @default("{}")
+  source         EiwpWaterSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, consumptionKey])
+  @@index([organizationId, recordedAt])
+}
+
+model EiwpWeatherStation {
+  id             String     @id @default(uuid())
+  organizationId String
+  stationKey     String
+  name           String
+  stationOrigin  String     @default("own")
+  farmUnitId     String?
+  fieldLotId     String?
+  latitude       Float?
+  longitude      Float?
+  status         EiwpStatus @default(active)
+  lastReadingAt  DateTime?
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  readings       EiwpWeatherReading[]
+
+  @@unique([organizationId, stationKey])
+}
+
+model EiwpWeatherReading {
+  id             String   @id @default(uuid())
+  organizationId String
+  stationId      String
+  readingKey     String
+  metric         String
+  value          Float
+  unit           String?
+  recordedAt     DateTime @default(now())
+  metadata       Json     @default("{}")
+  station        EiwpWeatherStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, readingKey])
+  @@index([organizationId, recordedAt])
+}
+
+model EiwpForecastProvider {
+  id             String     @id @default(uuid())
+  organizationId String
+  providerKey    String
+  name           String
+  vendor         String     @default("generic")
+  capabilities   Json       @default("[]")
+  status         EiwpStatus @default(active)
+  metadata       Json       @default("{}")
+  forecasts      EiwpForecast[]
+
+  @@unique([organizationId, providerKey])
+}
+
+model EiwpForecast {
+  id             String          @id @default(uuid())
+  organizationId String
+  forecastKey    String
+  providerId     String?
+  horizon        String
+  fieldLotId     String?
+  farmUnitId     String?
+  validFrom      DateTime
+  validTo        DateTime
+  payload        Json            @default("{}")
+  status         EiwpRunStatus   @default(pending)
+  createdAt      DateTime        @default(now())
+  provider       EiwpForecastProvider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, forecastKey])
+}
+
+model EiwpWaterBalance {
+  id             String   @id @default(uuid())
+  organizationId String
+  balanceKey     String
+  fieldLotId     String?
+  sectorId       String?
+  periodStart    DateTime
+  periodEnd      DateTime
+  appliedWaterMm Float    @default(0)
+  rainfallMm     Float    @default(0)
+  etMm           Float    @default(0)
+  cropDemandMm   Float    @default(0)
+  deficitMm      Float    @default(0)
+  excessMm       Float    @default(0)
+  availabilityM3 Float    @default(0)
+  computedAt     DateTime @default(now())
+  metadata       Json     @default("{}")
+  sector         EiwpIrrigationSector? @relation(fields: [sectorId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, balanceKey])
+  @@index([organizationId, fieldLotId, periodEnd])
+}
+
+model EiwpAlert {
+  id             String            @id @default(uuid())
+  organizationId String
+  alertKey       String
+  alertType      String
+  severity       EiwpAlertSeverity @default(warning)
+  fieldLotId     String?
+  sectorId       String?
+  title          String
+  message        String?
+  isActive       Boolean           @default(true)
+  triggeredAt    DateTime          @default(now())
+  resolvedAt     DateTime?
+  metadata       Json              @default("{}")
+
+  @@unique([organizationId, alertKey])
+  @@index([organizationId, isActive, triggeredAt])
+}
+
+model EiwpAutomationDevice {
+  id             String     @id @default(uuid())
+  organizationId String
+  deviceKey      String
+  name           String
+  deviceType     String
+  sectorId       String?
+  vendor         String     @default("generic")
+  status         EiwpStatus @default(active)
+  lastCommandAt  DateTime?
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  commands       EiwpAutomationCommand[]
+
+  @@unique([organizationId, deviceKey])
+}
+
+model EiwpAutomationCommand {
+  id             String        @id @default(uuid())
+  organizationId String
+  commandKey     String
+  deviceId       String
+  commandType    String
+  payload        Json          @default("{}")
+  status         EiwpRunStatus @default(pending)
+  issuedAt       DateTime      @default(now())
+  executedAt     DateTime?
+  device         EiwpAutomationDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, commandKey])
+}
+
+model EiwpAgronomicRecommendation {
+  id             String     @id @default(uuid())
+  organizationId String
+  recKey         String
+  fieldLotId     String?
+  sectorId       String?
+  phenologyStage String?
+  soilType       String?
+  recommendation String
+  priority       String     @default("medium")
+  status         EiwpStatus @default(active)
+  generatedAt    DateTime   @default(now())
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, recKey])
+}
+
+model EiwpRainfallEvent {
+  id             String   @id @default(uuid())
+  organizationId String
+  eventKey       String
+  fieldLotId     String?
+  farmUnitId     String?
+  depthMm        Float
+  recordedAt     DateTime @default(now())
+  recordedBy     String?
+  photoRefs      String[] @default([])
+  metadata       Json     @default("{}")
+
+  @@unique([organizationId, eventKey])
+}
+
+model EiwpFieldIncident {
+  id             String   @id @default(uuid())
+  organizationId String
+  incidentKey    String
+  fieldLotId     String?
+  incidentType   String
+  description    String?
+  photoRefs      String[] @default([])
+  recordedAt     DateTime @default(now())
+  recordedBy     String?
+  metadata       Json     @default("{}")
+
+  @@unique([organizationId, incidentKey])
+}
+
+model EiwpAuditLog {
+  id             String          @id @default(uuid())
+  organizationId String
+  entityType     String
+  entityKey      String
+  action         EiwpAuditAction
+  userId         String?
+  details        Json            @default("{}")
+  createdAt      DateTime        @default(now())
+
+  @@index([organizationId, entityType, createdAt])
+}
+
+model EiwpOfflineBatch {
+  id             String        @id @default(uuid())
+  organizationId String
+  userId         String
+  batchKey       String
+  payload        Json          @default("{}")
+  status         EiwpRunStatus @default(pending)
+  syncedAt       DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, batchKey])
+}

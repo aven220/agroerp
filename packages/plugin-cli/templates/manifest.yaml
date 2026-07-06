@@ -1,0 +1,21 @@
+apiVersion: agroerp.platform/v1
+pluginKey: agro.coffee.procurement
+name: Coffee Procurement Engine
+version: 1.0.0
+vendor: AGROERP Official
+pluginType: business_module
+minPlatformVersion: 1.0.0
+dependencies: []
+permissions:
+  - key: plugin:coffee.procurement:read
+    description: Consultar compras café
+    scope: org
+extensionPoints:
+  - pointKey: core.workflow.actions
+    handler: coffee.procurement.workflow
+events:
+  subscribe:
+    - HarvestRecorded
+    - ProducerCreated
+  publish:
+    - PurchaseOrderCreated

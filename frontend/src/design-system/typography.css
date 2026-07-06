@@ -1,0 +1,110 @@
+/* AGROERP Design System — Typography */
+
+.ds-display {
+  font-size: var(--ds-text-4xl);
+  font-weight: var(--ds-weight-bold);
+  line-height: var(--ds-leading-tight);
+  letter-spacing: -0.02em;
+  color: var(--ds-text);
+}
+
+.ds-h1, h1.ds-heading {
+  font-size: var(--ds-text-3xl);
+  font-weight: var(--ds-weight-bold);
+  line-height: var(--ds-leading-tight);
+  color: var(--ds-text);
+}
+
+.ds-h2, h2.ds-heading {
+  font-size: var(--ds-text-2xl);
+  font-weight: var(--ds-weight-semibold);
+  line-height: var(--ds-leading-tight);
+  color: var(--ds-text);
+}
+
+.ds-h3, h3.ds-heading {
+  font-size: var(--ds-text-xl);
+  font-weight: var(--ds-weight-semibold);
+  line-height: var(--ds-leading-tight);
+  color: var(--ds-text);
+}
+
+.ds-h4, h4.ds-heading {
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+}
+
+.ds-body {
+  font-size: var(--ds-text-base);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-text);
+}
+
+.ds-body-sm {
+  font-size: var(--ds-text-sm);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-text-secondary);
+}
+
+.ds-caption {
+  font-size: var(--ds-text-xs);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-text-muted);
+}
+
+.ds-label {
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-secondary);
+  line-height: var(--ds-leading-tight);
+}
+
+.ds-overline {
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-text-muted);
+}
+
+.ds-mono {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-sm);
+}
+
+.ds-text-muted { color: var(--ds-text-muted); }
+.ds-text-success { color: var(--ds-success); }
+.ds-text-warning { color: var(--ds-warning); }
+.ds-text-error { color: var(--ds-error); }
+.ds-text-info { color: var(--ds-info); }
+
+.muted { color: var(--ds-text-muted); }
+.small { font-size: var(--ds-text-sm); }
+
+.topbar h1 {
+  font-size: var(--ds-text-2xl);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+}
+
+.topbar-sub {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+  margin-top: var(--ds-space-1);
+}
+
+.panel h3,
+.card h3 {
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-semibold);
+  margin-bottom: var(--ds-space-4);
+  color: var(--ds-text);
+}
+
+.form-section-title {
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+  margin: var(--ds-space-4) 0 var(--ds-space-2);
+}

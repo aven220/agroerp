@@ -1,0 +1,331 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@agroerp/prisma-ephp-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_EPHP")
+}
+
+enum EphpStatus {
+  draft
+  active
+  inactive
+  resolved
+  archived
+}
+
+enum EphpSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+enum EphpRunStatus {
+  pending
+  scheduled
+  in_progress
+  completed
+  cancelled
+  failed
+}
+
+enum EphpAuditAction {
+  bootstrap
+  pest_recorded
+  disease_recorded
+  monitoring_recorded
+  treatment_scheduled
+  treatment_applied
+  application_recorded
+  ipm_evaluated
+  interval_alert
+  mrl_violation
+  compliance_checked
+  sync_completed
+}
+
+model EphpPestCatalog {
+  id             String     @id @default(uuid())
+  organizationId String
+  pestKey        String
+  code           String
+  name           String
+  classification String
+  biologicalCycle String?
+  affectedCrops  String[]   @default([])
+  status         EphpStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  records        EphpPestRecord[]
+
+  @@unique([organizationId, pestKey])
+}
+
+model EphpPestRecord {
+  id             String       @id @default(uuid())
+  organizationId String
+  recordKey      String
+  pestId         String
+  fieldLotId     String?
+  infestationLevel String
+  latitude       Float?
+  longitude      Float?
+  status         EphpStatus   @default(active)
+  observedAt     DateTime     @default(now())
+  recordedBy     String?
+  metadata       Json         @default("{}")
+  pest           EphpPestCatalog @relation(fields: [pestId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, recordKey])
+  @@index([organizationId, fieldLotId, observedAt])
+}
+
+model EphpDiseaseCatalog {
+  id             String     @id @default(uuid())
+  organizationId String
+  diseaseKey     String
+  code           String
+  name           String
+  causalAgent    String?
+  symptoms       String?
+  affectedCrops  String[]   @default([])
+  status         EphpStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  records        EphpDiseaseRecord[]
+
+  @@unique([organizationId, diseaseKey])
+}
+
+model EphpDiseaseRecord {
+  id             String          @id @default(uuid())
+  organizationId String
+  recordKey      String
+  diseaseId      String
+  fieldLotId     String?
+  severity       EphpSeverity    @default(medium)
+  incidenceMap   Json            @default("{}")
+  latitude       Float?
+  longitude      Float?
+  observedAt     DateTime        @default(now())
+  recordedBy     String?
+  metadata       Json            @default("{}")
+  disease        EphpDiseaseCatalog @relation(fields: [diseaseId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, recordKey])
+}
+
+model EphpFieldMonitoring {
+  id             String       @id @default(uuid())
+  organizationId String
+  monitoringKey  String
+  fieldLotId     String?
+  monitoringType String       @default("inspection")
+  latitude       Float?
+  longitude      Float?
+  severityScale  Int?
+  photoRefs      String[]     @default([])
+  videoRefs      String[]     @default([])
+  observations   String?
+  findings       Json         @default("[]")
+  monitoredAt    DateTime     @default(now())
+  recordedBy     String?
+  metadata       Json         @default("{}")
+
+  @@unique([organizationId, monitoringKey])
+  @@index([organizationId, fieldLotId, monitoredAt])
+}
+
+model EphpTreatment {
+  id             String        @id @default(uuid())
+  organizationId String
+  treatmentKey   String
+  name           String
+  treatmentType  String
+  targetType     String?
+  targetKey      String?
+  fieldLotId     String?
+  scheduledAt    DateTime?
+  status         EphpRunStatus @default(scheduled)
+  isPreventive   Boolean       @default(false)
+  metadata       Json          @default("{}")
+  createdBy      String?
+  createdAt      DateTime      @default(now())
+  applications   EphpApplication[]
+
+  @@unique([organizationId, treatmentKey])
+}
+
+model EphpApplication {
+  id                String   @id @default(uuid())
+  organizationId    String
+  applicationKey    String
+  treatmentId       String?
+  productName       String
+  activeIngredient  String?
+  dose              Float?
+  doseUnit          String?
+  volumeL           Float?
+  equipment         String?
+  operatorId        String?
+  climateConditions Json     @default("{}")
+  appliedAt         DateTime @default(now())
+  fieldLotId        String?
+  cropCode          String?
+  metadata          Json     @default("{}")
+  treatment         EphpTreatment? @relation(fields: [treatmentId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, applicationKey])
+  @@index([organizationId, fieldLotId, appliedAt])
+}
+
+model EphpIpmPlan {
+  id             String     @id @default(uuid())
+  organizationId String
+  planKey        String
+  name           String
+  fieldLotId     String?
+  cropCode       String?
+  actionThreshold Float?
+  methods        Json       @default("[]")
+  status         EphpStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  evaluations    EphpIpmEvaluation[]
+
+  @@unique([organizationId, planKey])
+}
+
+model EphpIpmEvaluation {
+  id             String   @id @default(uuid())
+  organizationId String
+  evaluationKey  String
+  planId         String
+  effectiveness  Float?
+  notes          String?
+  evaluatedAt    DateTime @default(now())
+  evaluatedBy    String?
+  metadata       Json     @default("{}")
+  plan           EphpIpmPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, evaluationKey])
+}
+
+model EphpIntervalRule {
+  id             String     @id @default(uuid())
+  organizationId String
+  ruleKey        String
+  productName    String
+  activeIngredient String?
+  preHarvestDays Int        @default(0)
+  reEntryHours   Int        @default(0)
+  harvestBlocked Boolean    @default(false)
+  accessBlocked  Boolean    @default(false)
+  status         EphpStatus @default(active)
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, ruleKey])
+}
+
+model EphpIntervalAlert {
+  id             String       @id @default(uuid())
+  organizationId String
+  alertKey       String
+  fieldLotId     String?
+  applicationId  String?
+  alertType      String
+  expiresAt      DateTime?
+  isActive       Boolean      @default(true)
+  triggeredAt    DateTime     @default(now())
+  metadata       Json         @default("{}")
+
+  @@unique([organizationId, alertKey])
+}
+
+model EphpMrlRegulation {
+  id             String     @id @default(uuid())
+  organizationId String
+  regulationKey  String
+  countryCode    String
+  marketType     String     @default("export")
+  activeIngredient String
+  cropCode       String?
+  maxResiduePpm  Float
+  status         EphpStatus @default(active)
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, regulationKey])
+}
+
+model EphpComplianceFramework {
+  id             String     @id @default(uuid())
+  organizationId String
+  frameworkKey   String
+  name           String
+  frameworkType  String
+  status         EphpStatus @default(active)
+  metadata       Json       @default("{}")
+  checklists     EphpComplianceChecklist[]
+
+  @@unique([organizationId, frameworkKey])
+}
+
+model EphpComplianceChecklist {
+  id             String     @id @default(uuid())
+  organizationId String
+  checklistKey   String
+  frameworkId    String
+  title          String
+  items          Json       @default("[]")
+  completedPct   Float      @default(0)
+  status         EphpStatus @default(active)
+  updatedAt      DateTime   @updatedAt
+  framework      EphpComplianceFramework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, checklistKey])
+}
+
+model EphpAlert {
+  id             String       @id @default(uuid())
+  organizationId String
+  alertKey       String
+  alertType      String
+  severity       EphpSeverity @default(medium)
+  fieldLotId     String?
+  title          String
+  message        String?
+  isActive       Boolean      @default(true)
+  triggeredAt    DateTime     @default(now())
+  metadata       Json         @default("{}")
+
+  @@unique([organizationId, alertKey])
+}
+
+model EphpAuditLog {
+  id             String          @id @default(uuid())
+  organizationId String
+  entityType     String
+  entityKey      String
+  action         EphpAuditAction
+  userId         String?
+  details        Json            @default("{}")
+  createdAt      DateTime        @default(now())
+
+  @@index([organizationId, entityType, createdAt])
+}
+
+model EphpOfflineBatch {
+  id             String        @id @default(uuid())
+  organizationId String
+  userId         String
+  batchKey       String
+  payload        Json          @default("{}")
+  status         EphpRunStatus @default(pending)
+  syncedAt       DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, batchKey])
+}

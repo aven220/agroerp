@@ -1,0 +1,43 @@
+{
+  "name": "agroerp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AGROERP - Agro Enterprise Platform",
+  "scripts": {
+    "dev": "pnpm port:free && pnpm --filter @agroerp/backend dev",
+    "dev:frontend": "pnpm --filter @agroerp/frontend dev",
+    "dev:lan": "pnpm --filter @agroerp/frontend dev:lan",
+    "port:free": "lsof -ti :3080 | xargs kill -9 2>/dev/null || true",
+    "build": "pnpm -r build",
+    "docker:up": "docker compose -f infra/docker-compose.yml up -d",
+    "docker:infra": "docker compose -f infra/docker-compose.yml up -d postgres redis minio",
+    "docker:prod": "docker compose -f infra/docker-compose.prod.yml up -d --build",
+    "docker:prod:down": "docker compose -f infra/docker-compose.prod.yml down",
+    "docker:down": "docker compose -f infra/docker-compose.yml down",
+    "docker:logs": "docker compose -f infra/docker-compose.yml logs -f",
+    "db:migrate": "pnpm --filter @agroerp/backend db:migrate",
+    "db:migrate:deploy": "pnpm --filter @agroerp/backend db:migrate:deploy",
+    "db:push": "pnpm --filter @agroerp/backend exec prisma db push",
+    "db:seed": "pnpm --filter @agroerp/backend db:seed",
+    "db:studio": "pnpm --filter @agroerp/backend db:studio",
+    "setup": "pnpm install && pnpm --filter @agroerp/shared build && pnpm --filter @agroerp/backend db:generate",
+    "setup:db": "pnpm db:push && pnpm --filter @agroerp/backend db:push:bpms && pnpm db:seed",
+    "health": "curl -sf http://localhost:3080/api/v1/health",
+    "preflight": "node scripts/preflight.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "bcrypt",
+      "esbuild",
+      "prisma"
+    ]
+  }
+}

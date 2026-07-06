@@ -1,0 +1,319 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@agroerp/prisma-eapp-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_EAPP")
+}
+
+enum EappStatus {
+  draft
+  active
+  inactive
+  archived
+}
+
+enum EappRunStatus {
+  pending
+  scheduled
+  in_progress
+  completed
+  failed
+  cancelled
+}
+
+enum EappAuditAction {
+  bootstrap
+  map_edited
+  polygon_edited
+  layer_changed
+  subdivision_created
+  flight_registered
+  telemetry_ingested
+  index_recorded
+  inspection_recorded
+  poi_created
+  sync_completed
+}
+
+model EappSatelliteProvider {
+  id             String     @id @default(uuid())
+  organizationId String
+  providerKey    String
+  name           String
+  vendor         String
+  capabilities   Json       @default("[]")
+  status         EappStatus @default(active)
+  config         Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  scenes         EappSatelliteScene[]
+
+  @@unique([organizationId, providerKey])
+}
+
+model EappSatelliteScene {
+  id             String        @id @default(uuid())
+  organizationId String
+  providerId     String?
+  sceneKey       String
+  sourceVendor   String
+  capturedAt     DateTime?
+  bbox           Json          @default("{}")
+  cloudCoverPct  Float?
+  status         EappRunStatus @default(pending)
+  metadata       Json          @default("{}")
+  createdAt      DateTime      @default(now())
+  provider       EappSatelliteProvider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, sceneKey])
+}
+
+model EappDroneAsset {
+  id             String     @id @default(uuid())
+  organizationId String
+  assetKey       String
+  name           String
+  vendor         String     @default("generic")
+  model          String?
+  status         EappStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  missions       EappDroneMission[]
+
+  @@unique([organizationId, assetKey])
+}
+
+model EappDroneMission {
+  id             String        @id @default(uuid())
+  organizationId String
+  missionKey     String
+  name           String
+  fieldLotId     String?
+  farmUnitId     String?
+  assetId        String?
+  plannedAt      DateTime?
+  status         EappRunStatus @default(scheduled)
+  objectives     Json          @default("[]")
+  metadata       Json          @default("{}")
+  createdBy      String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  asset          EappDroneAsset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  flights        EappDroneFlight[]
+
+  @@unique([organizationId, missionKey])
+}
+
+model EappDroneFlight {
+  id             String        @id @default(uuid())
+  organizationId String
+  flightKey      String
+  missionId      String?
+  startedAt      DateTime?
+  endedAt        DateTime?
+  status         EappRunStatus @default(pending)
+  photoCount     Int           @default(0)
+  hasOrtomosaic  Boolean       @default(false)
+  hasDem         Boolean       @default(false)
+  hasPointCloud  Boolean       @default(false)
+  metadata       Json          @default("{}")
+  createdAt      DateTime      @default(now())
+  mission        EappDroneMission? @relation(fields: [missionId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, flightKey])
+}
+
+model EappThematicMap {
+  id             String     @id @default(uuid())
+  organizationId String
+  mapKey         String
+  name           String
+  mapType        String
+  fieldLotId     String?
+  campaignKey    String?
+  effectiveDate  DateTime?
+  geometry       Json       @default("{}")
+  style          Json       @default("{}")
+  isHistorical   Boolean    @default(false)
+  status         EappStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, mapKey])
+  @@index([organizationId, mapType])
+}
+
+model EappAgIndex {
+  id             String     @id @default(uuid())
+  organizationId String
+  indexKey       String
+  code           String
+  name           String
+  formula        String?
+  isCustom       Boolean    @default(false)
+  status         EappStatus @default(active)
+  metadata       Json       @default("{}")
+  readings       EappAgIndexReading[]
+
+  @@unique([organizationId, indexKey])
+}
+
+model EappAgIndexReading {
+  id             String   @id @default(uuid())
+  organizationId String
+  indexId        String
+  fieldLotId     String?
+  capturedAt     DateTime @default(now())
+  value          Float?
+  rasterRef      String?
+  sourceType     String   @default("computed")
+  metadata       Json     @default("{}")
+  index          EappAgIndex @relation(fields: [indexId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, fieldLotId, capturedAt])
+}
+
+model EappTelemetryDevice {
+  id             String     @id @default(uuid())
+  organizationId String
+  deviceKey      String
+  name           String
+  deviceType     String
+  fieldLotId     String?
+  farmUnitId     String?
+  vendor         String     @default("generic")
+  status         EappStatus @default(active)
+  lastReadingAt  DateTime?
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  readings       EappTelemetryReading[]
+
+  @@unique([organizationId, deviceKey])
+}
+
+model EappTelemetryReading {
+  id             String   @id @default(uuid())
+  organizationId String
+  deviceId       String
+  readingKey     String
+  metric         String
+  value          Float
+  unit           String?
+  recordedAt     DateTime @default(now())
+  metadata       Json     @default("{}")
+  device         EappTelemetryDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, readingKey])
+  @@index([organizationId, recordedAt])
+}
+
+model EappPoi {
+  id             String     @id @default(uuid())
+  organizationId String
+  poiKey         String
+  name           String
+  poiType        String
+  latitude       Float
+  longitude      Float
+  altitudeM      Float?
+  fieldLotId     String?
+  farmUnitId     String?
+  metadata       Json       @default("{}")
+  status         EappStatus @default(active)
+  createdAt      DateTime   @default(now())
+
+  @@unique([organizationId, poiKey])
+}
+
+model EappGeoInfrastructure {
+  id             String     @id @default(uuid())
+  organizationId String
+  infraKey       String
+  name           String
+  infraType      String
+  geometry       Json       @default("{}")
+  fieldLotId     String?
+  farmUnitId     String?
+  status         EappStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+
+  @@unique([organizationId, infraKey])
+}
+
+model EappLotSubdivision {
+  id             String     @id @default(uuid())
+  organizationId String
+  subdivisionKey String
+  parentLotId    String
+  childLotCode   String
+  name           String
+  areaHa         Float?
+  geometry       Json       @default("{}")
+  status         EappStatus @default(active)
+  createdBy      String?
+  createdAt      DateTime   @default(now())
+
+  @@unique([organizationId, subdivisionKey])
+}
+
+model EappFieldInspection {
+  id             String   @id @default(uuid())
+  organizationId String
+  inspectionKey  String
+  fieldLotId     String?
+  inspectorId    String?
+  latitude       Float?
+  longitude      Float?
+  notes          String?
+  photoRefs      String[] @default([])
+  findings       Json     @default("[]")
+  inspectedAt    DateTime @default(now())
+  metadata       Json     @default("{}")
+
+  @@unique([organizationId, inspectionKey])
+}
+
+model EappMapEditLog {
+  id             String          @id @default(uuid())
+  organizationId String
+  entityType     String
+  entityKey      String
+  action         EappAuditAction
+  userId         String?
+  before         Json            @default("{}")
+  after          Json            @default("{}")
+  createdAt      DateTime        @default(now())
+
+  @@index([organizationId, createdAt])
+}
+
+model EappAuditLog {
+  id             String          @id @default(uuid())
+  organizationId String
+  entityType     String
+  entityKey      String
+  action         EappAuditAction
+  userId         String?
+  details        Json            @default("{}")
+  createdAt      DateTime        @default(now())
+
+  @@index([organizationId, entityType, createdAt])
+}
+
+model EappOfflineBatch {
+  id             String        @id @default(uuid())
+  organizationId String
+  userId         String
+  batchKey       String
+  payload        Json          @default("{}")
+  status         EappRunStatus @default(pending)
+  syncedAt       DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, batchKey])
+}

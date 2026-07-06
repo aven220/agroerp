@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nav_epscm"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnEpscmSync"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/epscm_sync" />
+
+        <Button
+            android:id="@+id/btnEpscmAlerts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/epscm_alerts" />
+
+        <Button
+            android:id="@+id/btnEpscmDemand"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/epscm_demand" />
+
+        <Button
+            android:id="@+id/btnEpscmInventory"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/epscm_inventory" />
+
+        <Button
+            android:id="@+id/btnEpscmSupply"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/epscm_supply" />
+
+        <Button
+            android:id="@+id/btnEpscmWms"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/epscm_wms_sync" />
+
+        <Button
+            android:id="@+id/btnEpscmWmsPick"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/epscm_wms_pick" />
+
+        <Button
+            android:id="@+id/btnEpscmTms"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/epscm_tms_sync" />
+
+        <Button
+            android:id="@+id/btnEpscmTmsTrips"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/epscm_tms_trips" />
+
+        <Button
+            android:id="@+id/btnEpscmCollab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/epscm_collab_sync" />
+
+        <Button
+            android:id="@+id/btnEpscmCollabTasks"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/epscm_collab_tasks" />
+
+        <TextView
+            android:id="@+id/epscmSummaryText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textSize="14sp" />
+    </LinearLayout>
+</ScrollView>

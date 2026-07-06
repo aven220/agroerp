@@ -1,0 +1,203 @@
+/* AGROERP Design System — Tables */
+
+.table-wrap {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--ds-shadow-sm);
+}
+
+.data-table,
+.ds-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-text-base);
+}
+
+.data-table th,
+.ds-table th {
+  text-align: left;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text-muted);
+  font-weight: var(--ds-weight-semibold);
+  font-size: var(--ds-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--ds-border);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.data-table th.sortable,
+.ds-table th.sortable {
+  cursor: pointer;
+}
+
+.data-table th.sortable:hover,
+.ds-table th.sortable:hover {
+  color: var(--ds-text);
+  background: var(--ds-bg-subtle);
+}
+
+.data-table th.sorted-asc::after,
+.ds-table th.sorted-asc::after {
+  content: ' ↑';
+  color: var(--ds-primary);
+}
+
+.data-table th.sorted-desc::after,
+.ds-table th.sorted-desc::after {
+  content: ' ↓';
+  color: var(--ds-primary);
+}
+
+.data-table td,
+.ds-table td {
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border);
+  color: var(--ds-text);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td,
+.ds-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tr.clickable,
+.ds-table tr.clickable {
+  cursor: pointer;
+}
+
+.data-table tbody tr:hover,
+.ds-table tbody tr:hover {
+  background: var(--ds-surface-sunken);
+}
+
+.data-table tr.selected,
+.ds-table tr.selected {
+  background: var(--ds-primary-subtle);
+}
+
+.data-table tr.selected td {
+  color: var(--ds-text);
+}
+
+/* Density */
+.data-table.density-compact th,
+.data-table.density-compact td,
+.ds-table-compact th,
+.ds-table-compact td {
+  padding: var(--ds-space-2) var(--ds-space-3);
+  font-size: var(--ds-text-sm);
+}
+
+.data-table.density-comfortable th,
+.data-table.density-comfortable td,
+.ds-table-comfortable th,
+.ds-table-comfortable td {
+  padding: var(--ds-space-4) var(--ds-space-5);
+}
+
+/* Expandable rows */
+.data-table tr.expandable {
+  cursor: pointer;
+}
+
+.data-table tr.expanded + tr.detail-row td {
+  background: var(--ds-surface-sunken);
+  padding: var(--ds-space-4);
+}
+
+/* Table toolbar */
+.ds-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border);
+  background: var(--ds-surface);
+}
+
+.ds-table-toolbar-left,
+.ds-table-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  flex-wrap: wrap;
+}
+
+/* Pagination */
+.pagination-bar,
+.ds-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-top: 1px solid var(--ds-border);
+  background: var(--ds-surface-sunken);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.ds-pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+
+.ds-pagination-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--ds-space-2);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-size: var(--ds-text-sm);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ds-pagination-btn:hover:not(:disabled) {
+  background: var(--ds-surface-sunken);
+  border-color: var(--ds-border-strong);
+}
+
+.ds-pagination-btn.active {
+  background: var(--ds-primary);
+  border-color: var(--ds-primary);
+  color: var(--ds-text-on-primary);
+}
+
+.ds-pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Selection column */
+.data-table .col-select,
+.ds-table .col-select {
+  width: 40px;
+  text-align: center;
+}
+
+/* Actions column */
+.data-table .col-actions,
+.ds-table .col-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.ds-table-actions {
+  display: flex;
+  gap: var(--ds-space-1);
+  justify-content: flex-end;
+}

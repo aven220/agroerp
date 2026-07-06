@@ -1,0 +1,520 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@agroerp/prisma-eace-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_EACE")
+}
+
+enum EaceStatus {
+  draft
+  active
+  inactive
+  pending
+  expired
+  suspended
+  closed
+  archived
+}
+
+enum EaceRunStatus {
+  pending
+  scheduled
+  in_progress
+  completed
+  cancelled
+  failed
+}
+
+enum EaceAuditAction {
+  bootstrap
+  producer_registered
+  cooperative_created
+  contract_signed
+  contract_amended
+  visit_recorded
+  recommendation_issued
+  marketplace_listing_created
+  api_key_issued
+  knowledge_published
+  notification_sent
+  document_linked
+  evaluation_recorded
+  compliance_updated
+  sync_completed
+}
+
+enum EaceOrgType {
+  cooperative
+  association
+  producer_group
+}
+
+enum EaceListingType {
+  input_purchase
+  product_sale
+  ag_service
+  tech_service
+  machinery_rental
+  labor_hire
+}
+
+enum EaceKnowledgeType {
+  manual
+  best_practice
+  course
+  training
+  news
+  bulletin
+  multimedia
+}
+
+enum EaceContractorType {
+  contractor_company
+  service_provider
+  machinery_operator
+  applicator
+  transporter
+  consultant
+  specialist
+}
+
+model EaceProducerProfile {
+  id             String     @id @default(uuid())
+  organizationId String
+  profileKey     String
+  producerRef    String
+  displayName    String
+  contactEmail   String?
+  contactPhone   String?
+  region         String?
+  status         EaceStatus @default(active)
+  indicators     Json       @default("{}")
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  farms          EaceProducerFarmAuth[]
+  documents      EaceProducerDocument[]
+  history        EaceProducerHistory[]
+
+  @@unique([organizationId, profileKey])
+  @@index([organizationId, producerRef])
+}
+
+model EaceProducerFarmAuth {
+  id             String     @id @default(uuid())
+  organizationId String
+  farmAuthKey    String
+  profileId      String
+  farmRef        String
+  farmName       String?
+  authorizedAt   DateTime   @default(now())
+  status         EaceStatus @default(active)
+  crops          Json       @default("[]")
+  campaigns      Json       @default("[]")
+  metadata       Json       @default("{}")
+  profile        EaceProducerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, farmAuthKey])
+}
+
+model EaceProducerDocument {
+  id             String     @id @default(uuid())
+  organizationId String
+  documentKey    String
+  profileId      String
+  docType        String
+  title          String
+  fileRef        String?
+  status         EaceStatus @default(active)
+  metadata       Json       @default("{}")
+  uploadedAt     DateTime   @default(now())
+  profile        EaceProducerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, documentKey])
+}
+
+model EaceProducerHistory {
+  id             String   @id @default(uuid())
+  organizationId String
+  historyKey     String
+  profileId      String
+  eventType      String
+  summary        String
+  payload        Json     @default("{}")
+  recordedAt     DateTime @default(now())
+  profile        EaceProducerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, historyKey])
+}
+
+model EaceCollaborativeOrg {
+  id             String      @id @default(uuid())
+  organizationId String
+  orgKey         String
+  orgType        EaceOrgType
+  name           String
+  taxId          String?
+  region         String?
+  status         EaceStatus  @default(active)
+  indicators     Json        @default("{}")
+  metadata       Json        @default("{}")
+  createdAt      DateTime    @default(now())
+  members        EaceGroupMember[]
+  representatives EaceRepresentative[]
+  programs       EaceProgram[]
+  agreements     EaceAgreement[]
+
+  @@unique([organizationId, orgKey])
+}
+
+model EaceProducerGroup {
+  id             String     @id @default(uuid())
+  organizationId String
+  groupKey       String
+  name           String
+  parentOrgId    String?
+  status         EaceStatus @default(active)
+  metadata       Json       @default("{}")
+  members        EaceGroupMember[]
+
+  @@unique([organizationId, groupKey])
+}
+
+model EaceGroupMember {
+  id             String     @id @default(uuid())
+  organizationId String
+  memberKey      String
+  orgId          String?
+  groupId        String?
+  producerRef    String
+  role           String     @default("member")
+  joinedAt       DateTime   @default(now())
+  status         EaceStatus @default(active)
+  org            EaceCollaborativeOrg? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  group          EaceProducerGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, memberKey])
+}
+
+model EaceRepresentative {
+  id             String     @id @default(uuid())
+  organizationId String
+  representativeKey String
+  orgId          String
+  name           String
+  role           String
+  contactEmail   String?
+  status         EaceStatus @default(active)
+  org            EaceCollaborativeOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, representativeKey])
+}
+
+model EaceProgram {
+  id             String     @id @default(uuid())
+  organizationId String
+  programKey     String
+  orgId          String
+  name           String
+  description    String?
+  startDate      DateTime?
+  endDate        DateTime?
+  status         EaceStatus @default(active)
+  metadata       Json       @default("{}")
+  org            EaceCollaborativeOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, programKey])
+}
+
+model EaceAgreement {
+  id             String     @id @default(uuid())
+  organizationId String
+  agreementKey   String
+  orgId          String
+  title          String
+  signedAt       DateTime?
+  expiresAt      DateTime?
+  status         EaceStatus @default(active)
+  terms          Json       @default("{}")
+  org            EaceCollaborativeOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, agreementKey])
+}
+
+model EaceAgContract {
+  id             String     @id @default(uuid())
+  organizationId String
+  contractKey    String
+  contractNumber String?
+  producerRef    String
+  buyerRef       String?
+  title          String
+  startDate      DateTime?
+  endDate        DateTime?
+  status         EaceStatus @default(draft)
+  conditions     Json       @default("{}")
+  pricing        Json       @default("{}")
+  compliancePct  Float      @default(0)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  crops          EaceContractCrop[]
+  schedules      EaceContractSchedule[]
+  compliance     EaceContractCompliance[]
+
+  @@unique([organizationId, contractKey])
+}
+
+model EaceContractCrop {
+  id             String     @id @default(uuid())
+  organizationId String
+  cropKey        String
+  contractId     String
+  cropCode       String
+  variety        String?
+  committedVolume Float?
+  unit           String?
+  qualitySpecs   Json       @default("{}")
+  contract       EaceAgContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, cropKey])
+}
+
+model EaceContractSchedule {
+  id             String        @id @default(uuid())
+  organizationId String
+  scheduleKey    String
+  contractId     String
+  milestone      String
+  dueDate        DateTime?
+  status         EaceRunStatus @default(pending)
+  metadata       Json          @default("{}")
+  contract       EaceAgContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, scheduleKey])
+}
+
+model EaceContractCompliance {
+  id             String     @id @default(uuid())
+  organizationId String
+  complianceKey  String
+  contractId     String
+  metric         String
+  targetValue    Float?
+  actualValue    Float?
+  isCompliant    Boolean    @default(false)
+  recordedAt     DateTime   @default(now())
+  contract       EaceAgContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, complianceKey])
+}
+
+model EaceContractor {
+  id             String             @id @default(uuid())
+  organizationId String
+  contractorKey  String
+  contractorType EaceContractorType
+  name           String
+  taxId          String?
+  contactEmail   String?
+  contactPhone   String?
+  rating         Float?
+  status         EaceStatus         @default(active)
+  services       Json               @default("[]")
+  metadata       Json               @default("{}")
+  evaluations    EaceContractorEvaluation[]
+
+  @@unique([organizationId, contractorKey])
+}
+
+model EaceContractorEvaluation {
+  id             String     @id @default(uuid())
+  organizationId String
+  evaluationKey  String
+  contractorId   String
+  score          Float
+  comments       String?
+  evaluatedAt    DateTime   @default(now())
+  evaluatedBy    String?
+  contractor     EaceContractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, evaluationKey])
+}
+
+model EaceAdvisor {
+  id             String     @id @default(uuid())
+  organizationId String
+  advisorKey     String
+  name           String
+  specialty      String?
+  contactEmail   String?
+  status         EaceStatus @default(active)
+  metadata       Json       @default("{}")
+  assignments    EaceAdvisorAssignment[]
+  visits         EaceTechnicalVisit[]
+
+  @@unique([organizationId, advisorKey])
+}
+
+model EaceAdvisorAssignment {
+  id             String     @id @default(uuid())
+  organizationId String
+  assignmentKey  String
+  advisorId      String
+  producerRef    String
+  fieldLotRef    String?
+  assignedAt     DateTime   @default(now())
+  status         EaceStatus @default(active)
+  advisor        EaceAdvisor @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, assignmentKey])
+}
+
+model EaceTechnicalVisit {
+  id             String        @id @default(uuid())
+  organizationId String
+  visitKey       String
+  advisorId      String
+  producerRef    String
+  fieldLotRef    String?
+  visitDate      DateTime
+  status         EaceRunStatus @default(scheduled)
+  summary        String?
+  recommendations Json         @default("[]")
+  observations   Json         @default("[]")
+  photos         Json         @default("[]")
+  report         Json         @default("{}")
+  advisor        EaceAdvisor @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, visitKey])
+}
+
+model EaceMarketplaceListing {
+  id             String          @id @default(uuid())
+  organizationId String
+  listingKey     String
+  listingType    EaceListingType
+  title          String
+  description    String?
+  sellerRef      String?
+  priceRef       Json            @default("{}")
+  status         EaceStatus      @default(active)
+  metadata       Json            @default("{}")
+  publishedAt    DateTime        @default(now())
+
+  @@unique([organizationId, listingKey])
+}
+
+model EaceApiCredential {
+  id             String     @id @default(uuid())
+  organizationId String
+  credentialKey  String
+  name           String
+  apiVersion     String     @default("v1")
+  scopes         Json       @default("[]")
+  hashedKey      String
+  status         EaceStatus @default(active)
+  expiresAt      DateTime?
+  createdAt      DateTime   @default(now())
+  accessLogs     EaceApiAccessLog[]
+
+  @@unique([organizationId, credentialKey])
+}
+
+model EaceApiAccessLog {
+  id             String   @id @default(uuid())
+  organizationId String
+  logKey         String
+  credentialId   String
+  endpoint       String
+  method         String
+  statusCode     Int?
+  accessedAt     DateTime @default(now())
+  credential     EaceApiCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, logKey])
+}
+
+model EaceKnowledgeItem {
+  id             String            @id @default(uuid())
+  organizationId String
+  itemKey        String
+  itemType       EaceKnowledgeType
+  title          String
+  content        String?
+  mediaRef       String?
+  category       String?
+  status         EaceStatus        @default(active)
+  metadata       Json              @default("{}")
+  publishedAt    DateTime          @default(now())
+
+  @@unique([organizationId, itemKey])
+}
+
+model EaceExecutiveSnapshot {
+  id             String   @id @default(uuid())
+  organizationId String
+  snapshotKey    String
+  indicators     Json     @default("{}")
+  generatedAt    DateTime @default(now())
+
+  @@unique([organizationId, snapshotKey])
+}
+
+model EaceNotification {
+  id             String     @id @default(uuid())
+  organizationId String
+  notificationKey String
+  recipientRef   String
+  channel        String     @default("in_app")
+  title          String
+  body           String
+  isRead         Boolean    @default(false)
+  sentAt         DateTime   @default(now())
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, notificationKey])
+}
+
+model EaceAlert {
+  id             String     @id @default(uuid())
+  organizationId String
+  alertKey       String
+  alertType      String
+  title          String
+  severity       String     @default("medium")
+  isActive       Boolean    @default(true)
+  triggeredAt    DateTime   @default(now())
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, alertKey])
+}
+
+model EaceAuditLog {
+  id             String          @id @default(uuid())
+  organizationId String
+  entityType     String
+  entityKey      String
+  action         EaceAuditAction
+  userId         String?
+  details        Json            @default("{}")
+  createdAt      DateTime        @default(now())
+
+  @@index([organizationId, entityType, createdAt])
+}
+
+model EaceOfflineBatch {
+  id             String        @id @default(uuid())
+  organizationId String
+  userId         String
+  batchKey       String
+  payload        Json          @default("{}")
+  status         EaceRunStatus @default(pending)
+  syncedAt       DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, batchKey])
+}

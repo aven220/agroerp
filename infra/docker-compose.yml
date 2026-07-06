@@ -1,0 +1,101 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: agroerp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: agroerp
+      POSTGRES_PASSWORD: agroerp_secret
+      POSTGRES_DB: agroerp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agroerp -d agroerp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: agroerp-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: agroerp-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: agroerp
+      MINIO_ROOT_PASSWORD: agroerp_secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.backend
+      target: development
+    container_name: agroerp-backend
+    restart: unless-stopped
+    ports:
+      - "3080:3080"
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=public
+      DATABASE_URL_BPMS: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=bpms
+      DATABASE_URL_EIP: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=eip
+      DATABASE_URL_EINT: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=eint
+      DATABASE_URL_EOPS: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=eops
+      DATABASE_URL_EATP: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=eatp
+      DATABASE_URL_EAPP: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=eapp
+      DATABASE_URL_EIWP: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=eiwp
+      DATABASE_URL_EPHP: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=ephp
+      DATABASE_URL_EATR: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=eatr
+      DATABASE_URL_EACC: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=eacc
+      DATABASE_URL_EFFM: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=effm
+      DATABASE_URL_EAIP: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=eaip
+      DATABASE_URL_EACE: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=eace
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      NODE_ENV: development
+      PORT: 3080
+      API_PREFIX: api/v1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ../backend:/app/backend
+      - ../shared:/app/shared
+      - /app/backend/node_modules
+      - /app/shared/node_modules
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

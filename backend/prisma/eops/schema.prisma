@@ -1,0 +1,444 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@agroerp/prisma-eops-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_EOPS")
+}
+
+enum EopsStatus {
+  draft
+  active
+  inactive
+  archived
+}
+
+enum EopsRunStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
+}
+
+enum EopsHealthStatus {
+  healthy
+  degraded
+  unhealthy
+  unknown
+}
+
+enum EopsDeploymentStatus {
+  pending
+  deploying
+  deployed
+  failed
+  rolled_back
+}
+
+enum EopsAuditAction {
+  bootstrap
+  config_changed
+  maintenance_enabled
+  maintenance_disabled
+  backup_started
+  backup_completed
+  restore_started
+  restore_completed
+  feature_flag_changed
+  license_updated
+  deployment_started
+  deployment_completed
+  rollback_executed
+  security_alert
+  secret_rotated
+}
+
+model EopsGlobalConfig {
+  id             String     @id @default(uuid())
+  organizationId String
+  configKey      String
+  name           String
+  category       String
+  value          Json       @default("{}")
+  environment    String     @default("production")
+  version        Int        @default(1)
+  status         EopsStatus @default(active)
+  createdBy      String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, configKey, environment])
+  @@index([organizationId, category])
+}
+
+model EopsTenantConfig {
+  id             String     @id @default(uuid())
+  organizationId String
+  tenantKey      String
+  configKey      String
+  value          Json       @default("{}")
+  version        Int        @default(1)
+  status         EopsStatus @default(active)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, tenantKey, configKey])
+}
+
+model EopsModuleConfig {
+  id             String     @id @default(uuid())
+  organizationId String
+  moduleRef      String
+  configKey      String
+  value          Json       @default("{}")
+  version        Int        @default(1)
+  status         EopsStatus @default(active)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, moduleRef, configKey])
+}
+
+model EopsEnvVariable {
+  id             String     @id @default(uuid())
+  organizationId String
+  varKey         String
+  displayName    String
+  scope          String     @default("global")
+  environment    String     @default("production")
+  isSecret       Boolean    @default(false)
+  valueRef       String?
+  status         EopsStatus @default(active)
+  createdBy      String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, varKey, environment])
+}
+
+model EopsMaintenanceWindow {
+  id             String     @id @default(uuid())
+  organizationId String
+  windowKey      String
+  title          String
+  message        String?
+  startsAt       DateTime
+  endsAt         DateTime?
+  isActive       Boolean    @default(false)
+  allowRoles     String[]   @default([])
+  createdBy      String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, windowKey])
+}
+
+model EopsScheduledTask {
+  id             String        @id @default(uuid())
+  organizationId String
+  taskKey        String
+  name           String
+  cron           String
+  handlerRef     String
+  payload        Json          @default("{}")
+  lastRunAt      DateTime?
+  nextRunAt      DateTime?
+  status         EopsStatus    @default(active)
+  createdBy      String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([organizationId, taskKey])
+}
+
+model EopsHealthProbe {
+  id             String           @id @default(uuid())
+  organizationId String
+  probeKey       String
+  targetType     String
+  targetRef      String
+  lastStatus     EopsHealthStatus @default(unknown)
+  lastLatencyMs  Int?
+  lastMessage    String?
+  lastCheckedAt  DateTime?
+  metadata       Json             @default("{}")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([organizationId, probeKey])
+  @@index([organizationId, targetType])
+}
+
+model EopsHaProfile {
+  id             String     @id @default(uuid())
+  organizationId String
+  profileKey     String
+  name           String
+  strategy       String
+  config         Json       @default("{}")
+  status         EopsStatus @default(active)
+  version        Int        @default(1)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, profileKey])
+}
+
+model EopsBackupSchedule {
+  id             String     @id @default(uuid())
+  organizationId String
+  scheduleKey    String
+  name           String
+  targetType     String
+  cron           String
+  retentionDays  Int        @default(30)
+  status         EopsStatus @default(active)
+  createdBy      String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  runs           EopsBackupRun[]
+
+  @@unique([organizationId, scheduleKey])
+}
+
+model EopsBackupRun {
+  id             String        @id @default(uuid())
+  organizationId String
+  scheduleId     String?
+  runKey         String
+  version        Int           @default(1)
+  checksum       String?
+  sizeBytes      BigInt        @default(0)
+  status         EopsRunStatus @default(pending)
+  startedAt      DateTime      @default(now())
+  completedAt    DateTime?
+  metadata       Json          @default("{}")
+  schedule       EopsBackupSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, runKey])
+  @@index([organizationId, startedAt])
+}
+
+model EopsRestoreRun {
+  id             String        @id @default(uuid())
+  organizationId String
+  restoreKey     String
+  backupRunKey   String
+  status         EopsRunStatus @default(pending)
+  validated      Boolean       @default(false)
+  startedBy      String?
+  startedAt      DateTime      @default(now())
+  completedAt    DateTime?
+  metadata       Json          @default("{}")
+
+  @@unique([organizationId, restoreKey])
+}
+
+model EopsFeatureFlag {
+  id             String     @id @default(uuid())
+  organizationId String
+  flagKey        String
+  name           String
+  description    String?
+  enabled        Boolean    @default(false)
+  rolloutPct     Int        @default(0)
+  environment    String     @default("production")
+  clientRef      String?
+  version        Int        @default(1)
+  status         EopsStatus @default(active)
+  createdBy      String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, flagKey, environment])
+}
+
+model EopsDynamicConfig {
+  id             String     @id @default(uuid())
+  organizationId String
+  configKey      String
+  namespace      String     @default("default")
+  value          Json       @default("{}")
+  version        Int        @default(1)
+  environment    String     @default("production")
+  status         EopsStatus @default(active)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, namespace, configKey, environment])
+}
+
+model EopsLicensePlan {
+  id             String     @id @default(uuid())
+  organizationId String
+  planKey        String
+  name           String
+  features       Json       @default("[]")
+  limits         Json       @default("{}")
+  priceUsd       Float      @default(0)
+  billingPeriod  String     @default("monthly")
+  status         EopsStatus @default(active)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  licenses       EopsLicense[]
+
+  @@unique([organizationId, planKey])
+}
+
+model EopsLicense {
+  id             String     @id @default(uuid())
+  organizationId String
+  licenseKey     String
+  planId         String
+  seats          Int        @default(1)
+  usageLimit     Json       @default("{}")
+  usageConsumed  Json       @default("{}")
+  trialEndsAt    DateTime?
+  expiresAt      DateTime?
+  status         EopsStatus @default(active)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  plan           EopsLicensePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, licenseKey])
+}
+
+model EopsSubscription {
+  id             String     @id @default(uuid())
+  organizationId String
+  subscriptionKey String
+  planKey        String
+  status         String     @default("active")
+  renewsAt       DateTime?
+  billingRef     String?
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, subscriptionKey])
+}
+
+model EopsSecurityPolicy {
+  id             String     @id @default(uuid())
+  organizationId String
+  policyKey      String
+  name           String
+  category       String
+  rules          Json       @default("{}")
+  severity       String     @default("medium")
+  status         EopsStatus @default(active)
+  version        Int        @default(1)
+  createdBy      String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, policyKey])
+}
+
+model EopsSecretRef {
+  id             String     @id @default(uuid())
+  organizationId String
+  secretKey      String
+  provider       String     @default("vault")
+  rotationDays   Int        @default(90)
+  lastRotatedAt  DateTime?
+  status         EopsStatus @default(active)
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([organizationId, secretKey])
+}
+
+model EopsSecurityAlert {
+  id             String     @id @default(uuid())
+  organizationId String
+  alertKey       String
+  title          String
+  severity       String
+  source         String
+  details        Json       @default("{}")
+  resolved       Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  resolvedAt     DateTime?
+
+  @@unique([organizationId, alertKey])
+  @@index([organizationId, resolved, createdAt])
+}
+
+model EopsDeployment {
+  id             String               @id @default(uuid())
+  organizationId String
+  deploymentKey  String
+  version        String
+  environment    String               @default("production")
+  status         EopsDeploymentStatus @default(pending)
+  changelog      String?
+  deployedBy     String?
+  deployedAt     DateTime?
+  rolledBackAt   DateTime?
+  metadata       Json                 @default("{}")
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@unique([organizationId, deploymentKey])
+}
+
+model EopsWorkerJob {
+  id             String        @id @default(uuid())
+  organizationId String
+  jobKey         String
+  queueName      String
+  handlerRef     String
+  status         EopsRunStatus @default(pending)
+  attempts       Int           @default(0)
+  payload        Json          @default("{}")
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, jobKey])
+  @@index([organizationId, queueName, status])
+}
+
+model EopsQueueMonitor {
+  id             String   @id @default(uuid())
+  organizationId String
+  queueKey       String
+  depth          Int      @default(0)
+  consumers      Int      @default(0)
+  throughput     Float    @default(0)
+  lagMs          Int      @default(0)
+  sampledAt      DateTime @default(now())
+
+  @@index([organizationId, queueKey, sampledAt])
+}
+
+model EopsAuditLog {
+  id             String          @id @default(uuid())
+  organizationId String
+  entityType     String
+  entityKey      String
+  action         EopsAuditAction
+  userId         String?
+  details        Json            @default("{}")
+  createdAt      DateTime        @default(now())
+
+  @@index([organizationId, entityType, createdAt])
+}
+
+model EopsOfflineBatch {
+  id             String        @id @default(uuid())
+  organizationId String
+  userId         String
+  batchKey       String
+  payload        Json          @default("{}")
+  status         EopsRunStatus @default(pending)
+  syncedAt       DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, batchKey])
+}

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/nav_eatr"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <Button
+        android:id="@+id/btnSync"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/eatr_sync_status" />
+
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:textSize="14sp" />
+
+    <EditText
+        android:id="@+id/qrInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="@string/eatr_qr_hint" />
+
+    <Button
+        android:id="@+id/btnQr"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/eatr_scan_qr" />
+
+    <EditText
+        android:id="@+id/lotInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="@string/eatr_lot_hint" />
+
+    <EditText
+        android:id="@+id/weightInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="@string/eatr_weight_hint"
+        android:inputType="numberDecimal" />
+
+    <Button
+        android:id="@+id/btnHarvest"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/eatr_record_harvest" />
+
+    <Button
+        android:id="@+id/btnWeighing"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/eatr_record_weighing" />
+
+    <Button
+        android:id="@+id/btnInspection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/eatr_record_inspection" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/eatr_history_label"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/historyText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textSize="13sp" />
+</LinearLayout>

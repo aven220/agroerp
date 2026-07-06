@@ -1,0 +1,270 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@agroerp/prisma-eaip-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_EAIP")
+}
+
+enum EaipStatus {
+  draft
+  active
+  inactive
+  archived
+  deprecated
+}
+
+enum EaipRunStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
+}
+
+enum EaipAuditAction {
+  bootstrap
+  model_registered
+  model_activated
+  model_deactivated
+  prediction_executed
+  recommendation_generated
+  simulation_run
+  twin_synced
+  assistant_query
+  alert_generated
+  sync_completed
+}
+
+model EaipModelRegistry {
+  id             String     @id @default(uuid())
+  organizationId String
+  modelKey       String
+  name           String
+  serviceType    String
+  providerRef    String?
+  status         EaipStatus @default(draft)
+  config         Json       @default("{}")
+  costLimit      Float?
+  metadata       Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  versions       EaipModelVersion[]
+  executions     EaipModelExecution[]
+
+  @@unique([organizationId, modelKey])
+}
+
+model EaipModelVersion {
+  id             String     @id @default(uuid())
+  organizationId String
+  versionKey     String
+  modelId        String
+  version        String
+  isActive       Boolean    @default(false)
+  config         Json       @default("{}")
+  createdAt      DateTime   @default(now())
+  model          EaipModelRegistry @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, versionKey])
+}
+
+model EaipModelExecution {
+  id             String        @id @default(uuid())
+  organizationId String
+  executionKey   String
+  modelId        String
+  status         EaipRunStatus @default(pending)
+  input          Json          @default("{}")
+  output         Json          @default("{}")
+  cost           Float?
+  durationMs     Int?
+  fallbackUsed   Boolean       @default(false)
+  executedAt     DateTime      @default(now())
+  executedBy     String?
+  model          EaipModelRegistry @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, executionKey])
+}
+
+model EaipPrediction {
+  id             String     @id @default(uuid())
+  organizationId String
+  predictionKey  String
+  serviceType    String
+  modelId        String?
+  fieldLotId     String?
+  cropCode       String?
+  targetDate     DateTime?
+  predictedValue Float?
+  confidence     Float?
+  payload        Json       @default("{}")
+  predictedAt    DateTime   @default(now())
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, predictionKey])
+  @@index([organizationId, serviceType, predictedAt])
+}
+
+model EaipRecommendation {
+  id             String     @id @default(uuid())
+  organizationId String
+  recommendationKey String
+  category       String
+  title          String
+  description    String
+  priority       String     @default("medium")
+  fieldLotId     String?
+  cropCode       String?
+  score          Float?
+  factors        Json       @default("{}")
+  status         EaipStatus @default(active)
+  generatedAt    DateTime   @default(now())
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, recommendationKey])
+}
+
+model EaipSimulation {
+  id             String        @id @default(uuid())
+  organizationId String
+  simulationKey  String
+  simulationType String
+  name           String
+  baseScenario   Json          @default("{}")
+  status         EaipRunStatus @default(pending)
+  economicImpact Json          @default("{}")
+  createdAt      DateTime      @default(now())
+  createdBy      String?
+  scenarios      EaipSimulationScenario[]
+
+  @@unique([organizationId, simulationKey])
+}
+
+model EaipSimulationScenario {
+  id             String     @id @default(uuid())
+  organizationId String
+  scenarioKey    String
+  simulationId   String
+  name           String
+  parameters     Json       @default("{}")
+  results        Json       @default("{}")
+  yieldProjection Float?
+  costProjection  Float?
+  simulation     EaipSimulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, scenarioKey])
+}
+
+model EaipDigitalTwin {
+  id             String     @id @default(uuid())
+  organizationId String
+  twinKey        String
+  entityType     String
+  entityRef      String
+  name           String
+  status         EaipStatus @default(active)
+  state          Json       @default("{}")
+  lastSyncedAt   DateTime?
+  metadata       Json       @default("{}")
+  syncs          EaipTwinSync[]
+
+  @@unique([organizationId, twinKey])
+  @@index([organizationId, entityType, entityRef])
+}
+
+model EaipTwinSync {
+  id             String   @id @default(uuid())
+  organizationId String
+  syncKey        String
+  twinId         String
+  source         String
+  payload        Json     @default("{}")
+  syncedAt       DateTime @default(now())
+  twin           EaipDigitalTwin @relation(fields: [twinId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, syncKey])
+}
+
+model EaipAssistantSession {
+  id             String     @id @default(uuid())
+  organizationId String
+  sessionKey     String
+  userId         String
+  title          String?
+  status         EaipStatus @default(active)
+  createdAt      DateTime   @default(now())
+  messages       EaipAssistantMessage[]
+
+  @@unique([organizationId, sessionKey])
+}
+
+model EaipAssistantMessage {
+  id             String   @id @default(uuid())
+  organizationId String
+  messageKey     String
+  sessionId      String
+  role           String
+  content        String
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  session        EaipAssistantSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, messageKey])
+}
+
+model EaipAnalyticsSnapshot {
+  id             String   @id @default(uuid())
+  organizationId String
+  snapshotKey    String
+  category       String
+  indicators     Json     @default("{}")
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  generatedAt    DateTime @default(now())
+
+  @@unique([organizationId, snapshotKey])
+}
+
+model EaipIntelligentAlert {
+  id             String     @id @default(uuid())
+  organizationId String
+  alertKey       String
+  alertType      String
+  title          String
+  severity       String     @default("medium")
+  entityRef      String?
+  isActive       Boolean    @default(true)
+  triggeredAt    DateTime   @default(now())
+  metadata       Json       @default("{}")
+
+  @@unique([organizationId, alertKey])
+}
+
+model EaipAuditLog {
+  id             String          @id @default(uuid())
+  organizationId String
+  entityType     String
+  entityKey      String
+  action         EaipAuditAction
+  userId         String?
+  details        Json            @default("{}")
+  createdAt      DateTime        @default(now())
+
+  @@index([organizationId, entityType, createdAt])
+}
+
+model EaipOfflineBatch {
+  id             String        @id @default(uuid())
+  organizationId String
+  userId         String
+  batchKey       String
+  payload        Json          @default("{}")
+  status         EaipRunStatus @default(pending)
+  syncedAt       DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, batchKey])
+}
