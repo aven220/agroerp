@@ -16,9 +16,9 @@ sleep 10
 echo "🗄️  Pushing schema..."
 pnpm exec prisma db push --accept-data-loss --skip-generate
 
-echo "🌱 Seeding database (minimal)..."
-if ! pnpm db:seed:minimal; then
-  echo "⚠️  Minimal seed failed — you can run: docker compose exec backend pnpm db:seed:minimal"
+echo "🌱 Seeding database (core)..."
+if ! pnpm db:seed:core; then
+  echo "⚠️  Core seed failed — run: docker compose exec backend pnpm db:seed:core"
 fi
 
 echo "🚀 Starting AGROERP backend..."
