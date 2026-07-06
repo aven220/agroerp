@@ -24,3 +24,7 @@ android/local.properties
 # IDE
 .idea/
 .vscode/
+
+# SSL (no commitear claves)
+infra/ssl/*.pem
+infra/ssl/*.key

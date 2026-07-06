@@ -60,8 +60,7 @@ services:
       target: production
     container_name: agroerp-backend
     restart: unless-stopped
-    ports:
-      - "3080:3080"
+    # API solo vía nginx HTTPS (no exponer 3080 públicamente)
     env_file:
       - ../.env
     environment:
@@ -84,8 +83,9 @@ services:
       DATABASE_URL_EACE: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=eace
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
-      CORS_ORIGIN: ${CORS_ORIGIN:-*}
-      FRONTEND_URL: ${FRONTEND_URL:-http://20.231.96.53}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://20.231.96.53}
+      FRONTEND_URL: ${FRONTEND_URL:-https://20.231.96.53}
+      PUBLIC_URL: ${PUBLIC_URL:-https://20.231.96.53}
     depends_on:
       postgres:
         condition: service_healthy
@@ -104,6 +104,9 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./ssl:/etc/nginx/ssl:ro
     depends_on:
       - backend
     networks:

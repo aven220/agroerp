@@ -5,5 +5,5 @@
 sdk.dir=/path/to/Android/sdk
 AGROERP_API_BASE_URL=http://10.0.2.2:3080/api/v1/
 
-# Example for physical device on same Wi‑Fi:
-# AGROERP_API_BASE_URL=http://192.168.1.50:3080/api/v1/
+# Example for production server (HTTPS):
+# AGROERP_API_BASE_URL=https://20.231.96.53/api/v1/
