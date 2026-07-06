@@ -25,6 +25,7 @@ import { LotFormPage } from './pages/LotFormPage';
 import { LotDashboardPage } from './pages/LotDashboardPage';
 import { LotImportPage } from './pages/LotImportPage';
 import { FormsPage } from './pages/FormsPage';
+import { FormDetailPage } from './pages/FormDetailPage';
 import { FormDesignerPage } from './pages/FormDesignerPage';
 import { FormFillPage } from './pages/FormFillPage';
 import { FormSubmissionsPage } from './pages/FormSubmissionsPage';
@@ -643,6 +644,7 @@ export function App() {
             <Route path="/formularios/nuevo" element={<FormDesignerPage />} />
             <Route path="/formularios/:id/disenar" element={<FormDesignerPage />} />
             <Route path="/formularios/:id/ejecutar" element={<FormFillPage />} />
+            <Route path="/formularios/:id" element={<FormDetailPage />} />
             <Route path="/compras" element={<CoffeeCenterPage />} />
             <Route path="/compras/recepcion" element={<CoffeeReceptionPage />} />
             <Route path="/compras/wizard" element={<CoffeeWizardPage />} />

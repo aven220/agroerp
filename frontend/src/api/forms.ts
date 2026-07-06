@@ -61,6 +61,7 @@ export interface FormDefinition {
   sectorCode?: string | null;
   tags?: string[];
   publishedAt?: string | null;
+  createdBy?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -169,6 +170,16 @@ export function listSubmissions(filters?: { formId?: string; formKey?: string })
 
 export function getFormDashboard() {
   return apiRequest<FormDashboard>('/udfe/dashboard');
+}
+
+export interface BootstrapFormsPayload {
+  syncedAt: string;
+  forms: Array<Pick<FormDefinition, 'id' | 'formKey' | 'name' | 'version' | 'status' | 'schema' | 'publishedAt'>>;
+}
+
+/** Paquete que descargan los dispositivos Android al sincronizar. */
+export function bootstrapForms() {
+  return apiRequest<BootstrapFormsPayload>('/forms/bootstrap');
 }
 
 export function duplicateForm(id: string, newFormKey: string) {

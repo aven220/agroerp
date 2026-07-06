@@ -1,11 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Producción: TLS validado contra CA del servidor AGROERP (20.231.96.53).
+  No desactiva la verificación SSL; añade el ancla de confianza de la organización
+  para el certificado emitido por scripts/setup-ssl.sh (autofirmado o CA interna).
+  Regenerar agroerp_ca.pem tras rotar certificados: bash scripts/sync-android-ca.sh
+-->
 <network-security-config>
-    <!-- Emulador Android: backend local en HTTP -->
+    <!-- Emulador / backend local en HTTP -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">10.0.2.2</domain>
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">127.0.0.1</domain>
     </domain-config>
-    <!-- Producción: HTTPS en 20.231.96.53 (no requiere cleartext) -->
-    <base-config cleartextTrafficPermitted="false" />
+
+    <!-- Servidor AGROERP producción (HTTPS, certificado de organización) -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">20.231.96.53</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/agroerp_ca" />
+        </trust-anchors>
+    </domain-config>
+
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
 </network-security-config>

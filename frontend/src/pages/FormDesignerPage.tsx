@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FormLifecycleStepper } from '../components/forms/FormLifecycleStepper';
+import { useToast } from '../context/ToastContext';
 import {
   fieldTypeUsesOptions,
   FieldOptionsEditor,
@@ -19,6 +21,7 @@ import {
   getForm,
   getFormVersionHistory,
   newFormVersion,
+  publishForm,
   renderForm,
   saveAsTemplate,
   submitFormForReview,
@@ -27,13 +30,17 @@ import {
   type FormFieldDefinition,
   type FormVersionHistoryItem,
 } from '../api/forms';
+import { FORM_STATUS_LABELS, getNextLifecycleHint } from '../form-studio/form-lifecycle';
 
 type StudioTab = 'design' | 'preview' | 'simulator' | 'components' | 'rules' | 'versions';
 
 export function FormDesignerPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const toast = useToast();
   const isNew = !id;
+  const openTemplatesOnLoad = searchParams.get('plantilla') === '1';
   const [formKey, setFormKey] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -48,8 +55,13 @@ export function FormDesignerPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [formStatus, setFormStatus] = useState<string>('draft');
   const [tab, setTab] = useState<StudioTab>('design');
-  const [showTemplates, setShowTemplates] = useState(isNew);
+  const [showTemplates, setShowTemplates] = useState(isNew || openTemplatesOnLoad);
   const [versions, setVersions] = useState<FormVersionHistoryItem[]>([]);
+  const [templateLoaded, setTemplateLoaded] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [savedFormId, setSavedFormId] = useState<string | null>(null);
+  const [savedVersion, setSavedVersion] = useState<number | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -72,21 +84,32 @@ export function FormDesignerPage() {
     setFields(t.schema.fields ?? []);
     setSections(t.schema.sections ?? []);
     setLayoutMode(t.schema.settings?.layoutMode ?? 'flat');
+    setTemplateLoaded(true);
+    setDirty(true);
+    setShowTemplates(false);
+    toast.info('Plantilla cargada. Presione «Guardar borrador» para crear el formulario en Mis Formularios.', 'Plantilla aplicada');
+  }
+
+  function markDirty() {
+    setDirty(true);
   }
 
   function addField(field: FormFieldDefinition) {
     const key = field.key.includes('_') ? `${field.key}_${fields.length}` : `field_${fields.length + 1}`;
     setFields((prev) => [...prev, { ...field, key }]);
     setSelectedIdx(fields.length);
+    markDirty();
   }
 
   function updateField(idx: number, patch: Partial<FormFieldDefinition>) {
     setFields((prev) => prev.map((f, i) => (i === idx ? { ...f, ...patch } : f)));
+    markDirty();
   }
 
   function removeField(idx: number) {
     setFields((prev) => prev.filter((_, i) => i !== idx));
     setSelectedIdx(null);
+    markDirty();
   }
 
   function moveField(idx: number, dir: -1 | 1) {
@@ -98,6 +121,7 @@ export function FormDesignerPage() {
       return copy;
     });
     setSelectedIdx(next);
+    markDirty();
   }
 
   function buildSchema(): FormDefinitionSchema {
@@ -110,25 +134,59 @@ export function FormDesignerPage() {
   }
 
   async function handleSave() {
+    if (!formKey.trim() || !name.trim()) {
+      setSaveError('Indique clave y nombre antes de guardar.');
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     try {
       if (isNew) {
         const created = await createForm({ formKey, name, description, schema: buildSchema() });
-        navigate(`/formularios/${created.id}/disenar`);
+        setDirty(false);
+        setTemplateLoaded(false);
+        setLastSavedAt(new Date().toISOString());
+        setSavedFormId(created.id);
+        setSavedVersion(created.version);
+        toast.success(
+          `Borrador v${created.version} guardado. Aparece en Mis Formularios. Publíquelo para habilitar Android.`,
+          'Guardado',
+        );
+        navigate(`/formularios/${created.id}/disenar`, { replace: true });
       } else if (id) {
-        await updateForm(id, { name, description, schema: buildSchema() });
+        const updated = await updateForm(id, { name, description, schema: buildSchema() });
+        setDirty(false);
+        setLastSavedAt(new Date().toISOString());
+        setSavedFormId(updated.id);
+        setSavedVersion(updated.version);
+        toast.success('Borrador actualizado.', 'Guardado');
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'No se pudo guardar';
       setSaveError(
         formStatus !== 'draft'
-          ? `${msg}. Cree una nueva versión desde la lista o pestaña Versiones.`
+          ? `${msg}. Cree una nueva versión desde Mis Formularios o la pestaña Versiones.`
           : msg,
       );
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handlePublishFromDesigner() {
+    const targetId = id ?? savedFormId;
+    if (!targetId) {
+      toast.warning('Guarde el borrador antes de publicar.');
+      return;
+    }
+    if (dirty) {
+      toast.warning('Guarde los cambios pendientes antes de publicar.');
+      return;
+    }
+    if (!confirm(`¿Publicar "${name}"?\n\nQuedará disponible en Web y en el próximo sync de Android.`)) return;
+    await publishForm(targetId);
+    setFormStatus('published');
+    toast.success('Publicado. Verifique en Mis Formularios → Verificar sync.', 'Publicado');
   }
 
   async function handleSaveAsTemplate() {
@@ -200,9 +258,12 @@ export function FormDesignerPage() {
             {!isNew && (
               <button type="button" className="btn" onClick={handleSaveAsTemplate}>Guardar como plantilla</button>
             )}
-            <button type="button" className="btn" onClick={() => navigate('/formularios')}>Volver</button>
+            <button type="button" className="btn" onClick={() => navigate('/formularios')}>Mis Formularios</button>
+            {(formStatus === 'draft' || isNew) && (id || savedFormId) && !dirty && (
+              <button type="button" className="btn btn-primary" onClick={handlePublishFromDesigner}>Publicar</button>
+            )}
             <button type="button" className="btn btn-primary" disabled={saving || (formStatus !== 'draft' && !isNew)} onClick={handleSave}>
-              {saving ? 'Guardando...' : 'Guardar'}
+              {saving ? 'Guardando…' : dirty || isNew ? 'Guardar borrador' : 'Guardar'}
             </button>
           </div>
         }
@@ -214,6 +275,43 @@ export function FormDesignerPage() {
         onSelect={applyTemplate}
       />
 
+      {templateLoaded && isNew && (
+        <div className="alert alert-info">
+          Plantilla cargada en el editor. Los cambios <strong>no están guardados</strong> hasta presionar «Guardar borrador».
+        </div>
+      )}
+
+      {dirty && (
+        <div className="alert alert-warning">Hay cambios sin guardar.</div>
+      )}
+
+      {lastSavedAt && !dirty && (
+        <div className="alert alert-success form-save-success panel">
+          <strong>Borrador guardado</strong>
+          {savedVersion != null ? ` · v${savedVersion}` : ''}
+          {' · '}
+          {new Date(lastSavedAt).toLocaleString('es-CO')}
+          <p className="muted">{getNextLifecycleHint(formStatus)}</p>
+          <div className="row-actions" style={{ marginTop: '0.5rem' }}>
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => navigate(`/formularios?saved=${savedFormId ?? id}`)}
+            >
+              Ver en Mis Formularios
+            </button>
+            <button type="button" className="btn btn-sm" onClick={() => setTab('preview')}>Vista previa</button>
+            {(formStatus === 'draft' || isNew) && (id || savedFormId) && (
+              <button type="button" className="btn btn-sm btn-primary" onClick={handlePublishFromDesigner}>Publicar ahora</button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <section className="panel form-designer-lifecycle">
+        <FormLifecycleStepper status={formStatus} compact highlightFrom={templateLoaded ? 'template' : undefined} />
+      </section>
+
       {formStatus !== 'draft' && !isNew && (
         <div className="alert alert-warning">
           Estado: <strong>{formStatus}</strong>. Para editar, cree una <button type="button" className="btn-link" onClick={handleNewVersion}>nueva versión</button>.
@@ -224,7 +322,7 @@ export function FormDesignerPage() {
       <div className="form-studio-settings-bar panel">
         <label>
           Layout
-          <select value={layoutMode} onChange={(e) => setLayoutMode(e.target.value as typeof layoutMode)} disabled={formStatus !== 'draft' && !isNew}>
+          <select value={layoutMode} onChange={(e) => { setLayoutMode(e.target.value as typeof layoutMode); markDirty(); }} disabled={formStatus !== 'draft' && !isNew}>
             <option value="flat">Plano</option>
             <option value="tabs">Pestañas</option>
             <option value="accordion">Acordeón</option>
@@ -251,11 +349,11 @@ export function FormDesignerPage() {
           <section className="designer-canvas panel">
             {isNew && (
               <div className="form-row">
-                <input placeholder="form_key" value={formKey} onChange={(e) => setFormKey(e.target.value)} />
-                <input placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} />
+                <input placeholder="form_key" value={formKey} onChange={(e) => { setFormKey(e.target.value); markDirty(); }} />
+                <input placeholder="Nombre" value={name} onChange={(e) => { setName(e.target.value); markDirty(); }} />
               </div>
             )}
-            <textarea placeholder="Descripción" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+            <textarea placeholder="Descripción" value={description} onChange={(e) => { setDescription(e.target.value); markDirty(); }} rows={2} />
             <h3>Campos ({fields.length})</h3>
             {fields.map((f, idx) => (
               <div key={`${f.key}-${idx}`} className={`designer-field ${selectedIdx === idx ? 'selected' : ''}`} onClick={() => setSelectedIdx(idx)}>
@@ -393,7 +491,7 @@ export function FormDesignerPage() {
               {versions.map((v) => (
                 <tr key={v.id}>
                   <td>v{v.version}</td>
-                  <td>{v.status}</td>
+                  <td>{FORM_STATUS_LABELS[v.status] ?? v.status}</td>
                   <td>{new Date(v.createdAt).toLocaleString()}</td>
                   <td>{v.publishedAt ? new Date(v.publishedAt).toLocaleString() : '—'}</td>
                 </tr>

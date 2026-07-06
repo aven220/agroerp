@@ -88,7 +88,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
       item('ag-effm', '/plataforma-agritech/maquinaria', 'Maquinaria', '🚜', { permission: 'effm:read', keywords: ['flota', 'maquinaria'] }),
       item('ag-eaip', '/plataforma-agritech/inteligencia', 'Inteligencia agrícola', '🧠', { permission: 'eaip:read', keywords: ['ia agrícola', 'predicción'] }),
       item('ag-coffee', '/compras', 'Compras café', '☕', { keywords: ['compras', 'café', 'pesaje'] }),
-      item('ag-forms', '/formularios', 'Formularios de campo', '📋', { permission: 'form:read', keywords: ['formularios', 'campo'] }),
+      item('ag-forms', '/formularios', 'Mis Formularios', '📋', { permission: 'form:read', keywords: ['formularios', 'campo', 'mis formularios'] }),
     ],
   },
   {

@@ -2049,3 +2049,286 @@ a:hover {
     width: 100%;
   }
 }
+
+/* ─── Form lifecycle / Mis Formularios ─── */
+.form-lifecycle-stepper {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+}
+
+.form-lifecycle-steps {
+  display: flex;
+  gap: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  min-width: min(100%, 720px);
+}
+
+.form-lifecycle-step {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  position: relative;
+  min-width: 100px;
+}
+
+.form-lifecycle-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 0.65rem;
+  left: calc(0.5rem + 12px);
+  right: 0;
+  height: 2px;
+  background: var(--border, #e2e8f0);
+  z-index: 0;
+}
+
+.form-lifecycle-step.done:not(:last-child)::after,
+.form-lifecycle-step.current:not(:last-child)::after {
+  background: var(--primary, #2e7d32);
+}
+
+.form-lifecycle-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--border, #cbd5e1);
+  background: white;
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.form-lifecycle-step.done .form-lifecycle-dot,
+.form-lifecycle-step.current .form-lifecycle-dot {
+  border-color: var(--primary, #2e7d32);
+  background: var(--primary, #2e7d32);
+}
+
+.form-lifecycle-step.current .form-lifecycle-dot {
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
+}
+
+.form-lifecycle-step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.8rem;
+}
+
+.form-lifecycle-stepper.compact .form-lifecycle-step-text .muted {
+  display: none;
+}
+
+.form-lifecycle-intro {
+  margin-bottom: 1rem;
+}
+
+.form-lifecycle-intro-text {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+
+.form-lifecycle-hint {
+  font-size: 0.9rem;
+  color: var(--text-muted, #64748b);
+  margin: 0.75rem 0 0;
+}
+
+.form-availability-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.form-avail-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.form-avail-badge.android-ready {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.form-avail-badge.android-requires-publish {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.form-avail-badge.web-execute {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.form-mis-filters {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.form-status-chip {
+  border: 1px solid var(--border, #e2e8f0);
+  background: white;
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.form-status-chip.active {
+  background: var(--primary, #2e7d32);
+  border-color: var(--primary, #2e7d32);
+  color: white;
+}
+
+.form-mis-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-mis-card {
+  padding: 1rem 1.25rem;
+}
+
+.form-mis-card-highlight {
+  outline: 2px solid var(--primary, #2e7d32);
+  outline-offset: 2px;
+}
+
+.form-mis-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.form-mis-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.form-mis-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+}
+
+.form-mis-saved-badge {
+  color: var(--primary, #2e7d32);
+  font-weight: 600;
+}
+
+.form-mis-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem 1rem;
+  margin: 0.75rem 0;
+  font-size: 0.85rem;
+}
+
+.form-mis-meta dt {
+  color: var(--text-muted, #64748b);
+  font-size: 0.75rem;
+}
+
+.form-mis-meta dd {
+  margin: 0;
+}
+
+.form-mis-actions {
+  flex-wrap: wrap;
+}
+
+.form-mis-versions-toggle {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.form-mis-versions-table {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.form-detail-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 1rem;
+  align-items: start;
+}
+
+.form-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.form-detail-dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin: 1rem 0 0;
+}
+
+.form-detail-dl dt {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+}
+
+.form-detail-dl dd {
+  margin: 0.15rem 0 0;
+}
+
+.form-action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-designer-lifecycle {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.form-save-success {
+  margin-bottom: 1rem;
+}
+
+.badge-published { background: #dcfce7; color: #166534; }
+.badge-in_review { background: #fef3c7; color: #92400e; }
+.badge-approved { background: #dbeafe; color: #1e40af; }
+.badge-rejected { background: #fee2e2; color: #991b1b; }
+.badge-deprecated { background: #f1f5f9; color: #64748b; }
+.badge-archived { background: #e2e8f0; color: #475569; }
+
+@media (max-width: 900px) {
+  .form-detail-layout {
+    grid-template-columns: 1fr;
+  }
+  .form-lifecycle-steps {
+    flex-direction: column;
+  }
+  .form-lifecycle-step:not(:last-child)::after {
+    display: none;
+  }
+}
