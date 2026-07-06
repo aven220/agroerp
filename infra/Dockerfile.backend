@@ -42,10 +42,11 @@ RUN pnpm db:generate
 EXPOSE 3080
 
 COPY infra/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+COPY infra/start-backend.sh /start-backend.sh
+RUN chmod +x /docker-entrypoint.sh /start-backend.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["node", "dist/src/main"]
+CMD ["/start-backend.sh"]
 
 # ─── Development target ──────────────────────────────────────────────────────
 FROM build-shared AS development
