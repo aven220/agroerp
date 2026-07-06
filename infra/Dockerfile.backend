@@ -4,7 +4,7 @@ WORKDIR /app
 
 # ─── Dependencies ────────────────────────────────────────────────────────────
 FROM base AS deps
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY shared/package.json ./shared/
 COPY backend/package.json ./backend/
 RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
@@ -26,18 +26,19 @@ FROM node:20-alpine AS production
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY shared/package.json ./shared/
 COPY backend/package.json ./backend/
-RUN pnpm install --prod --frozen-lockfile 2>/dev/null || pnpm install --prod
+# Instalación completa: prisma CLI necesario para generate + db push en entrypoint
+RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 
 COPY --from=build-shared /app/shared/dist ./shared/dist
 COPY --from=build-backend /app/backend/dist ./backend/dist
 COPY --from=build-backend /app/backend/prisma ./backend/prisma
-COPY --from=build-backend /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build-backend /app/backend/node_modules/.prisma ./backend/node_modules/.prisma
 
 WORKDIR /app/backend
+RUN pnpm db:generate
+
 EXPOSE 3080
 
 COPY infra/docker-entrypoint.sh /docker-entrypoint.sh
