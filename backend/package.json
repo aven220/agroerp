@@ -7,7 +7,7 @@
     "port:free": "lsof -ti :3080 | xargs kill -9 2>/dev/null || true",
     "dev": "pnpm port:free && NODE_OPTIONS=--max-old-space-size=8192 nest start --watch",
     "start": "node dist/src/main",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/src/main",
     "db:generate": "NODE_OPTIONS=--max-old-space-size=8192 prisma generate && prisma generate --schema prisma/bpms/schema.prisma && prisma generate --schema prisma/eip/schema.prisma && prisma generate --schema prisma/eint/schema.prisma && prisma generate --schema prisma/eops/schema.prisma && prisma generate --schema prisma/eatp/schema.prisma && prisma generate --schema prisma/eapp/schema.prisma && prisma generate --schema prisma/eiwp/schema.prisma && prisma generate --schema prisma/ephp/schema.prisma && prisma generate --schema prisma/eatr/schema.prisma && prisma generate --schema prisma/eacc/schema.prisma && prisma generate --schema prisma/effm/schema.prisma && prisma generate --schema prisma/eaip/schema.prisma && prisma generate --schema prisma/eace/schema.prisma",
     "db:fix-drift": "prisma db execute --file prisma/fix-db-drift.sql --schema prisma/schema.prisma",
     "db:init-schemas": "prisma db execute --file prisma/init-schemas.sql --schema prisma/schema.prisma",

@@ -45,7 +45,7 @@ COPY infra/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]
 
 # ─── Development target ──────────────────────────────────────────────────────
 FROM build-shared AS development

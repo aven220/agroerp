@@ -3,19 +3,22 @@ set -e
 
 cd /app/backend
 
-echo "📦 Generating Prisma client..."
-pnpm db:generate
+if [ "${SKIP_PRISMA_GENERATE:-0}" != "1" ]; then
+  echo "📦 Generating Prisma client..."
+  pnpm db:generate
+else
+  echo "⏭️  Skipping Prisma generate (SKIP_PRISMA_GENERATE=1)"
+fi
 
-echo "⏳ Waiting for database (15s)..."
-sleep 15
+echo "⏳ Waiting for database (10s)..."
+sleep 10
 
 echo "🗄️  Pushing schema..."
-pnpm exec prisma db push --accept-data-loss
+pnpm exec prisma db push --accept-data-loss --skip-generate
 
-echo "🌱 Seeding database..."
-if ! pnpm db:seed; then
-  echo "⚠️  Full seed failed — trying minimal auth seed..."
-  pnpm db:seed:minimal || echo "❌ Seed failed — run manually: docker compose exec backend pnpm db:seed:minimal"
+echo "🌱 Seeding database (minimal)..."
+if ! pnpm db:seed:minimal; then
+  echo "⚠️  Minimal seed failed — you can run: docker compose exec backend pnpm db:seed:minimal"
 fi
 
 echo "🚀 Starting AGROERP backend..."
