@@ -12,6 +12,15 @@ export interface FormFieldDefinition {
   options?: { value: string; label: string }[];
   visibleWhen?: unknown;
   requiredWhen?: unknown;
+  readOnlyWhen?: unknown;
+  validation?: {
+    min?: number;
+    max?: number;
+    minLength?: number;
+    maxLength?: number;
+    pattern?: string;
+    maxAccuracyMeters?: number;
+  };
   calculate?: { expression: string; dependsOn: string[] };
   fields?: FormFieldDefinition[];
   metadata?: Record<string, unknown>;

@@ -54,6 +54,27 @@ function cloneDefaults(role: DashboardRole): WorkspaceState {
   };
 }
 
+function isValidWorkspaceState(value: unknown): value is WorkspaceState {
+  if (!value || typeof value !== 'object') return false;
+  const state = value as WorkspaceState;
+  if (!Array.isArray(state.views) || state.views.length === 0) return false;
+  if (!state.views.every((v) => v && typeof v.id === 'string' && typeof v.name === 'string' && Array.isArray(v.widgets))) {
+    return false;
+  }
+  return state.views.some((v) => v.id === state.activeViewId);
+}
+
+function loadWorkspaceState(userId: string | undefined, role: DashboardRole): WorkspaceState {
+  try {
+    const raw = localStorage.getItem(storageKey(userId, role));
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown;
+      if (isValidWorkspaceState(parsed)) return parsed;
+    }
+  } catch { /* ignore */ }
+  return migrateLegacyLayout(userId, role) ?? cloneDefaults(role);
+}
+
 function migrateLegacyLayout(userId: string | undefined, role: DashboardRole): WorkspaceState | null {
   try {
     const legacy = localStorage.getItem(`agroerp_dashboard_layout_${userId ?? 'anon'}`);
@@ -82,24 +103,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [user?.roles],
   );
 
-  const [state, setState] = useState<WorkspaceState>(() => {
-    try {
-      const raw = localStorage.getItem(storageKey(userId, dashboardRole));
-      if (raw) return JSON.parse(raw) as WorkspaceState;
-    } catch { /* ignore */ }
-    return migrateLegacyLayout(userId, dashboardRole) ?? cloneDefaults(dashboardRole);
-  });
+  const [state, setState] = useState<WorkspaceState>(() => loadWorkspaceState(userId, dashboardRole));
 
   const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey(userId, dashboardRole));
-      if (raw) setState(JSON.parse(raw));
-      else setState(migrateLegacyLayout(userId, dashboardRole) ?? cloneDefaults(dashboardRole));
-    } catch {
-      setState(cloneDefaults(dashboardRole));
-    }
+    setState(loadWorkspaceState(userId, dashboardRole));
     setEditMode(false);
   }, [userId, dashboardRole]);
 
@@ -107,10 +116,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(storageKey(userId, dashboardRole), JSON.stringify(state));
   }, [state, userId, dashboardRole]);
 
-  const activeView = useMemo(
-    () => state.views.find((v) => v.id === state.activeViewId) ?? state.views[0],
-    [state],
-  );
+  const activeView = useMemo(() => {
+    const found = state.views.find((v) => v.id === state.activeViewId) ?? state.views[0];
+    return found ?? cloneDefaults(dashboardRole).views[0];
+  }, [state, dashboardRole]);
 
   const updateActiveView = useCallback((updater: (view: WorkspaceView) => WorkspaceView) => {
     setState((prev) => ({

@@ -83,7 +83,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       await refreshProfile();
       if (res.user.roles.includes('admin')) {
-        await ensureDomainSchemas();
+        try {
+          await ensureDomainSchemas();
+        } catch {
+          /* no bloquear login si falla bootstrap de schemas */
+        }
       }
     },
     [refreshProfile],

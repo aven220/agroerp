@@ -22,7 +22,9 @@ export function DashboardGrid() {
     setDropIndex(null);
   };
 
-  if (!activeView.widgets.length) {
+  const widgets = activeView?.widgets ?? [];
+
+  if (!widgets.length) {
     return (
       <EmptyState
         illustration="data"
@@ -35,7 +37,7 @@ export function DashboardGrid() {
 
   return (
     <div className={`ws-grid${editMode ? ' ws-grid-edit' : ''}`} role="list">
-      {activeView.widgets.map((placed, index) => (
+      {widgets.map((placed, index) => (
         <WidgetShell
           key={placed.instanceId}
           placed={placed}

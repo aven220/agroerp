@@ -6,7 +6,7 @@ export function WidgetPicker() {
   const { dashboardRole, addWidget, activeView } = useWorkspace();
   const [open, setOpen] = useState(false);
   const catalog = getWidgetsForRole(dashboardRole);
-  const placedIds = new Set(activeView.widgets.map((w) => w.widgetId));
+  const placedIds = new Set((activeView?.widgets ?? []).map((w) => w.widgetId));
 
   if (!open) {
     return (
