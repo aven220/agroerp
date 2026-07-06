@@ -191,6 +191,54 @@ export function FormFieldControl({ field, value, onChange, readOnly, onButtonAct
     );
   }
 
+  if (field.type === 'autocomplete') {
+    const listId = `ac-${field.key}`;
+    return (
+      <div className="form-group">
+        <label>{field.label}{required ? ' *' : ''}</label>
+        <input
+          list={listId}
+          value={String(value ?? '')}
+          disabled={disabled}
+          onChange={(e) => onChange(field.key, e.target.value)}
+        />
+        <datalist id={listId}>
+          {(field.options ?? []).map((o) => (
+            <option key={o.value} value={o.label} />
+          ))}
+        </datalist>
+      </div>
+    );
+  }
+
+  if (field.type === 'repeat_group' || field.type === 'subform') {
+    const nested = field.fields ?? [];
+    const row = (typeof value === 'object' && value && !Array.isArray(value) ? value : {}) as Record<string, unknown>;
+    return (
+      <fieldset className="form-repeat-group">
+        <legend>{field.label}</legend>
+        {nested.map((sub) => (
+          <FormFieldControl
+            key={sub.key}
+            field={sub}
+            value={row[sub.key]}
+            onChange={(_, val) => onChange(field.key, { ...row, [sub.key]: val })}
+            readOnly={readOnly}
+          />
+        ))}
+      </fieldset>
+    );
+  }
+
+  if (field.metadata?.layout === 'accordion' && field.type === 'html') {
+    return (
+      <details className="form-accordion">
+        <summary>{String(field.metadata?.accordionTitle ?? field.label)}</summary>
+        <div className="form-html" dangerouslySetInnerHTML={{ __html: field.description ?? '' }} />
+      </details>
+    );
+  }
+
   if (field.type === 'textarea') {
     return (
       <div className="form-group">
@@ -282,20 +330,52 @@ export function FormFieldControl({ field, value, onChange, readOnly, onButtonAct
     );
   }
 
-  if (['photo', 'file', 'pdf', 'gallery', 'signature', 'video', 'audio'].includes(field.type)) {
+  if (['photo', 'file', 'pdf', 'signature', 'video', 'audio'].includes(field.type)) {
     return (
       <div className="form-group">
         <label>{field.label}{required ? ' *' : ''}</label>
         <input
           type="file"
           disabled={disabled}
-          accept={field.type === 'photo' ? 'image/*' : field.type === 'video' ? 'video/*' : field.type === 'audio' ? 'audio/*' : undefined}
+          accept={field.type === 'photo' ? 'image/*' : field.type === 'video' ? 'video/*' : field.type === 'audio' ? 'audio/*' : String(field.metadata?.accept ?? '')}
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) onChange(field.key, crypto.randomUUID());
           }}
         />
         {value ? <span className="muted">Archivo registrado</span> : null}
+      </div>
+    );
+  }
+
+  if (field.type === 'gallery') {
+    const files = Array.isArray(value) ? (value as string[]) : value ? [String(value)] : [];
+    const max = Number(field.metadata?.maxFiles ?? 10);
+    return (
+      <div className="form-group">
+        <label>{field.label}{required ? ' *' : ''}</label>
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          disabled={disabled || files.length >= max}
+          onChange={(e) => {
+            const added = Array.from(e.target.files ?? []).map(() => crypto.randomUUID());
+            onChange(field.key, [...files, ...added].slice(0, max));
+          }}
+        />
+        {files.length > 0 && (
+          <ul className="form-gallery-list">
+            {files.map((id, i) => (
+              <li key={id}>
+                Foto {i + 1}
+                {!disabled && (
+                  <button type="button" className="btn btn-sm" onClick={() => onChange(field.key, files.filter((_, j) => j !== i))}>Eliminar</button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     );
   }
@@ -317,16 +397,18 @@ export function FormFieldControl({ field, value, onChange, readOnly, onButtonAct
     );
   }
 
+  const inputType = String(field.metadata?.inputType ?? 'text');
+
   return (
     <div className="form-group">
       <label>{field.label}{required ? ' *' : ''}</label>
       <input
-        type="text"
-        value={String(value ?? '')}
+        type={inputType === 'color' ? 'color' : inputType}
+        value={String(value ?? (inputType === 'color' ? '#2d6a4f' : ''))}
         disabled={disabled}
         onChange={(e) => onChange(field.key, e.target.value)}
       />
-      {field.description && <small className="muted">{field.description}</small>}
+      {field.description && inputType !== 'color' && <small className="muted">{field.description}</small>}
     </div>
   );
 }

@@ -25,6 +25,7 @@ export interface FormDefinitionSchema {
     requireGps?: boolean;
     allowDraft?: boolean;
     offlineCapable?: boolean;
+    layoutMode?: 'flat' | 'tabs' | 'accordion';
   };
 }
 
@@ -195,7 +196,58 @@ export function importForms(forms: unknown[], force?: boolean) {
 
 export function listTemplates(sectorCode?: string) {
   const q = sectorCode ? `?sectorCode=${sectorCode}` : '';
-  return apiRequest<unknown[]>(`/udfe/templates${q}`);
+  return apiRequest<Array<{ id: string; templateKey: string; name: string; description?: string; schema: FormDefinitionSchema }>>(`/udfe/templates${q}`);
+}
+
+export function saveAsTemplate(data: {
+  templateKey: string;
+  name: string;
+  description?: string;
+  schema: FormDefinitionSchema;
+  tags?: string[];
+}) {
+  return apiRequest<unknown>('/udfe/templates', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function instantiateTemplate(templateId: string, formKey: string, name?: string) {
+  return apiRequest<FormDefinition>(`/udfe/templates/${templateId}/instantiate`, {
+    method: 'POST',
+    body: JSON.stringify({ formKey, name }),
+  });
+}
+
+export interface FormVersionHistoryItem {
+  id: string;
+  version: number;
+  status: string;
+  createdAt: string;
+  publishedAt?: string | null;
+}
+
+export function getFormVersionHistory(id: string) {
+  return apiRequest<FormVersionHistoryItem[]>(`/udfe/forms/${id}/versions`);
+}
+
+export function submitFormForReview(id: string, reasonNotes?: string) {
+  return apiRequest<FormDefinition>(`/udfe/forms/${id}/submit-review`, {
+    method: 'POST',
+    body: JSON.stringify({ reasonNotes }),
+  });
+}
+
+export function approveForm(id: string) {
+  return apiRequest<FormDefinition>(`/udfe/forms/${id}/approve`, { method: 'POST' });
+}
+
+export function rejectForm(id: string, reasonNotes?: string) {
+  return apiRequest<FormDefinition>(`/udfe/forms/${id}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ reasonNotes }),
+  });
+}
+
+export function restoreForm(id: string) {
+  return apiRequest<FormDefinition>(`/udfe/forms/${id}/restore`, { method: 'POST' });
 }
 
 export type FormsReportType = 'full' | 'catalog' | 'submissions';

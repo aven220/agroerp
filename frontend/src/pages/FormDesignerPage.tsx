@@ -1,27 +1,34 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
-import { FormFieldControl } from '../components/forms/FormFieldControl';
 import {
-  DEFAULT_FIELD_OPTIONS,
   fieldTypeUsesOptions,
   FieldOptionsEditor,
 } from '../components/forms/FieldOptionsEditor';
 import { ConditionalRuleEditor } from '../components/forms/ConditionalRuleEditor';
+import { ComponentLibraryPanel } from '../form-studio/ComponentLibraryPanel';
+import { FormSimulator } from '../form-studio/FormSimulator';
+import { FormStudioPreview, type PreviewDevice } from '../form-studio/FormStudioPreview';
+import { FormStudioRenderer } from '../form-studio/FormStudioRenderer';
+import { TemplateLibraryModal } from '../form-studio/TemplateLibraryModal';
+import type { FormStudioTemplate } from '../form-studio/form-templates-library';
+import { DYNAMIC_CATALOGS } from '../form-studio/form-dynamic-catalogs';
+import { findComponentByType } from '../form-studio/form-field-catalog';
 import {
-  FORM_FIELD_TYPES,
   createForm,
   getForm,
+  getFormVersionHistory,
+  newFormVersion,
   renderForm,
+  saveAsTemplate,
+  submitFormForReview,
   updateForm,
   type FormDefinitionSchema,
   type FormFieldDefinition,
+  type FormVersionHistoryItem,
 } from '../api/forms';
 
-const PALETTE = FORM_FIELD_TYPES.map((t) => ({
-  type: t,
-  label: t.replace(/_/g, ' '),
-}));
+type StudioTab = 'design' | 'preview' | 'simulator' | 'components' | 'rules' | 'versions';
 
 export function FormDesignerPage() {
   const { id } = useParams<{ id: string }>();
@@ -31,13 +38,18 @@ export function FormDesignerPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [fields, setFields] = useState<FormFieldDefinition[]>([]);
+  const [sections, setSections] = useState<FormDefinitionSchema['sections']>([]);
+  const [layoutMode, setLayoutMode] = useState<'flat' | 'tabs' | 'accordion'>('flat');
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [previewData, setPreviewData] = useState<Record<string, unknown>>({});
-  const [previewFields, setPreviewFields] = useState<Array<FormFieldDefinition & { visible?: boolean; effectiveRequired?: boolean }>>([]);
+  const [serverFields, setServerFields] = useState<Array<FormFieldDefinition & { visible?: boolean; effectiveRequired?: boolean }>>([]);
+  const [previewDevice, setPreviewDevice] = useState<PreviewDevice>('desktop');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [formStatus, setFormStatus] = useState<string>('draft');
-  const [tab, setTab] = useState<'design' | 'preview' | 'rules'>('design');
+  const [tab, setTab] = useState<StudioTab>('design');
+  const [showTemplates, setShowTemplates] = useState(isNew);
+  const [versions, setVersions] = useState<FormVersionHistoryItem[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -46,18 +58,25 @@ export function FormDesignerPage() {
       setName(f.name);
       setDescription(f.description ?? '');
       setFields(f.schema.fields ?? []);
+      setSections(f.schema.sections ?? []);
+      setLayoutMode(f.schema.settings?.layoutMode ?? 'flat');
       setFormStatus(f.status);
     });
+    getFormVersionHistory(id).then(setVersions).catch(() => setVersions([]));
   }, [id]);
 
-  function addField(type: string) {
-    const key = `field_${fields.length + 1}`;
-    const label = `Campo ${fields.length + 1}`;
-    const base: FormFieldDefinition = { key, type, label };
-    const withOptions = fieldTypeUsesOptions(type)
-      ? { ...base, options: [...DEFAULT_FIELD_OPTIONS!] }
-      : base;
-    setFields((prev) => [...prev, withOptions]);
+  function applyTemplate(t: FormStudioTemplate) {
+    setName(t.name);
+    setDescription(t.description);
+    setFormKey(t.templateKey.replace(/^tpl-/, ''));
+    setFields(t.schema.fields ?? []);
+    setSections(t.schema.sections ?? []);
+    setLayoutMode(t.schema.settings?.layoutMode ?? 'flat');
+  }
+
+  function addField(field: FormFieldDefinition) {
+    const key = field.key.includes('_') ? `${field.key}_${fields.length}` : `field_${fields.length + 1}`;
+    setFields((prev) => [...prev, { ...field, key }]);
     setSelectedIdx(fields.length);
   }
 
@@ -81,26 +100,30 @@ export function FormDesignerPage() {
     setSelectedIdx(next);
   }
 
+  function buildSchema(): FormDefinitionSchema {
+    return {
+      version: 1,
+      fields,
+      sections: sections?.length ? sections : undefined,
+      settings: { offlineCapable: true, allowDraft: true, layoutMode },
+    };
+  }
+
   async function handleSave() {
     setSaving(true);
     setSaveError(null);
-    const schema: FormDefinitionSchema = {
-      version: 1,
-      fields,
-      settings: { offlineCapable: true, allowDraft: true },
-    };
     try {
       if (isNew) {
-        const created = await createForm({ formKey, name, description, schema });
+        const created = await createForm({ formKey, name, description, schema: buildSchema() });
         navigate(`/formularios/${created.id}/disenar`);
       } else if (id) {
-        await updateForm(id, { name, description, schema });
+        await updateForm(id, { name, description, schema: buildSchema() });
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'No se pudo guardar';
       setSaveError(
         formStatus !== 'draft'
-          ? `${msg}. Solo se pueden editar formularios en borrador — cree una nueva versión desde la lista.`
+          ? `${msg}. Cree una nueva versión desde la lista o pestaña Versiones.`
           : msg,
       );
     } finally {
@@ -108,31 +131,43 @@ export function FormDesignerPage() {
     }
   }
 
+  async function handleSaveAsTemplate() {
+    const templateKey = prompt('Clave de plantilla (template_key):', `${formKey}-tpl`);
+    if (!templateKey) return;
+    await saveAsTemplate({
+      templateKey,
+      name: name || templateKey,
+      description,
+      schema: buildSchema(),
+      tags: ['studio', 'custom'],
+    });
+    alert('Plantilla guardada en la biblioteca.');
+  }
+
+  async function handleNewVersion() {
+    if (!formKey) return;
+    const created = await newFormVersion(formKey);
+    navigate(`/formularios/${created.id}/disenar`);
+  }
+
+  async function handleSubmitReview() {
+    if (!id) return;
+    await submitFormForReview(id);
+    setFormStatus('in_review');
+    alert('Formulario enviado a revisión.');
+  }
+
   async function refreshPreview() {
-    let visibilityByKey = new Map<string, { visible: boolean; effectiveRequired: boolean }>();
     if (id) {
       try {
         const rendered = await renderForm(id, previewData);
-        visibilityByKey = new Map(
-          rendered.fields.map((f) => [
-            f.key,
-            { visible: f.visible !== false, effectiveRequired: !!f.effectiveRequired },
-          ]),
-        );
+        setServerFields(rendered.fields);
+        return;
       } catch {
-        /* usar solo lienzo local */
+        /* cliente local */
       }
     }
-    setPreviewFields(
-      fields.map((f) => {
-        const vis = visibilityByKey.get(f.key);
-        return {
-          ...f,
-          visible: vis?.visible ?? true,
-          effectiveRequired: vis?.effectiveRequired ?? f.required,
-        };
-      }),
-    );
+    setServerFields([]);
   }
 
   useEffect(() => {
@@ -140,50 +175,78 @@ export function FormDesignerPage() {
   }, [tab, previewData, fields, id]);
 
   const selected = selectedIdx != null ? fields[selectedIdx] : null;
+  const learning = selected ? findComponentByType(selected.type) : null;
+
+  const tabs: { id: StudioTab; label: string }[] = [
+    { id: 'design', label: 'Diseño' },
+    { id: 'components', label: 'Componentes' },
+    { id: 'preview', label: 'Vista previa' },
+    { id: 'simulator', label: 'Probar formulario' },
+    { id: 'rules', label: 'JSON / Reglas' },
+    ...(!isNew ? [{ id: 'versions' as const, label: 'Versiones' }] : []),
+  ];
 
   return (
     <>
       <Header
-        title={isNew ? 'Nuevo formulario' : `Diseñador — ${name}`}
-        subtitle="Arrastre controles · reglas · vista previa"
+        title={isNew ? 'Smart Form Studio — Nuevo' : `Smart Form Studio — ${name}`}
+        subtitle="Plantillas · componentes · vista previa · simulador · versionado"
         actions={
           <div className="row-actions">
+            <button type="button" className="btn" onClick={() => setShowTemplates(true)}>Plantillas</button>
+            {!isNew && formStatus === 'draft' && (
+              <button type="button" className="btn" onClick={handleSubmitReview}>Enviar a revisión</button>
+            )}
+            {!isNew && (
+              <button type="button" className="btn" onClick={handleSaveAsTemplate}>Guardar como plantilla</button>
+            )}
             <button type="button" className="btn" onClick={() => navigate('/formularios')}>Volver</button>
-            <button type="button" className="btn btn-primary" disabled={saving} onClick={handleSave}>
+            <button type="button" className="btn btn-primary" disabled={saving || (formStatus !== 'draft' && !isNew)} onClick={handleSave}>
               {saving ? 'Guardando...' : 'Guardar'}
             </button>
           </div>
         }
       />
 
+      <TemplateLibraryModal
+        open={showTemplates}
+        onClose={() => setShowTemplates(false)}
+        onSelect={applyTemplate}
+      />
+
       {formStatus !== 'draft' && !isNew && (
         <div className="alert alert-warning">
-          Este formulario está <strong>{formStatus}</strong>. Los cambios no se pueden guardar aquí;
-          cree una nueva versión en la lista de formularios, edítela y publíquela para usarla en la app.
+          Estado: <strong>{formStatus}</strong>. Para editar, cree una <button type="button" className="btn-link" onClick={handleNewVersion}>nueva versión</button>.
         </div>
       )}
       {saveError && <div className="alert alert-danger">{saveError}</div>}
 
+      <div className="form-studio-settings-bar panel">
+        <label>
+          Layout
+          <select value={layoutMode} onChange={(e) => setLayoutMode(e.target.value as typeof layoutMode)} disabled={formStatus !== 'draft' && !isNew}>
+            <option value="flat">Plano</option>
+            <option value="tabs">Pestañas</option>
+            <option value="accordion">Acordeón</option>
+          </select>
+        </label>
+        <button type="button" className="btn btn-sm" onClick={() => setSections((s) => [...(s ?? []), { key: `sec_${(s?.length ?? 0) + 1}`, title: `Sección ${(s?.length ?? 0) + 1}` }])}>
+          + Sección
+        </button>
+        <button type="button" className="btn btn-sm" onClick={() => setTab('simulator')}>Probar formulario</button>
+      </div>
+
       <nav className="tab-nav">
-        {(['design', 'preview', 'rules'] as const).map((t) => (
-          <button key={t} type="button" className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-            {t === 'design' ? 'Diseño' : t === 'preview' ? 'Vista previa' : 'Reglas'}
+        {tabs.map((t) => (
+          <button key={t.id} type="button" className={`tab-btn ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
+            {t.label}
           </button>
         ))}
       </nav>
 
       {tab === 'design' && (
         <div className="designer-layout">
-          <aside className="designer-palette panel">
-            <h3>Controles</h3>
-            <div className="palette-grid">
-              {PALETTE.map((p) => (
-                <button key={p.type} type="button" className="btn btn-sm palette-item" onClick={() => addField(p.type)}>
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </aside>
+          <ComponentLibraryPanel onAdd={addField} selectedType={selected?.type} />
 
           <section className="designer-canvas panel">
             {isNew && (
@@ -192,20 +255,12 @@ export function FormDesignerPage() {
                 <input placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} />
               </div>
             )}
-            <textarea
-              placeholder="Descripción"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-            />
+            <textarea placeholder="Descripción" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
             <h3>Campos ({fields.length})</h3>
             {fields.map((f, idx) => (
-              <div
-                key={f.key}
-                className={`designer-field ${selectedIdx === idx ? 'selected' : ''}`}
-                onClick={() => setSelectedIdx(idx)}
-              >
+              <div key={`${f.key}-${idx}`} className={`designer-field ${selectedIdx === idx ? 'selected' : ''}`} onClick={() => setSelectedIdx(idx)}>
                 <strong>{f.label}</strong> <span className="muted">({f.type})</span>
+                {f.visibleWhen ? <span className="badge">condicional</span> : null}
                 <div className="row-actions">
                   <button type="button" className="btn btn-sm" onClick={(e) => { e.stopPropagation(); moveField(idx, -1); }}>↑</button>
                   <button type="button" className="btn btn-sm" onClick={(e) => { e.stopPropagation(); moveField(idx, 1); }}>↓</button>
@@ -228,159 +283,123 @@ export function FormDesignerPage() {
                   <input value={selected.label} onChange={(e) => updateField(selectedIdx!, { label: e.target.value })} />
                 </div>
                 <div className="form-group">
-                  <label>Tipo</label>
+                  <label>Sección</label>
                   <select
-                    value={selected.type}
-                    onChange={(e) => {
-                      const type = e.target.value;
-                      const patch: Partial<FormFieldDefinition> = { type };
-                      if (fieldTypeUsesOptions(type) && !selected.options?.length) {
-                        patch.options = [...DEFAULT_FIELD_OPTIONS!];
-                      }
-                      updateField(selectedIdx!, patch);
-                    }}
+                    value={selected.sectionKey ?? ''}
+                    onChange={(e) => updateField(selectedIdx!, { sectionKey: e.target.value || undefined })}
                   >
-                    {PALETTE.map((p) => <option key={p.type} value={p.type}>{p.label}</option>)}
+                    <option value="">— Sin sección —</option>
+                    {(sections ?? []).map((s) => (
+                      <option key={s.key} value={s.key}>{s.title}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group form-check">
                   <label>
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selected.required)}
-                      onChange={(e) => updateField(selectedIdx!, { required: e.target.checked })}
-                    />
+                    <input type="checkbox" checked={Boolean(selected.required)} onChange={(e) => updateField(selectedIdx!, { required: e.target.checked })} />
                     Obligatorio
                   </label>
                 </div>
                 <div className="form-group">
-                  <label>Descripción</label>
-                  <textarea
-                    value={selected.description ?? ''}
-                    onChange={(e) => updateField(selectedIdx!, { description: e.target.value })}
-                  />
+                  <label>Descripción / ayuda</label>
+                  <textarea value={selected.description ?? ''} onChange={(e) => updateField(selectedIdx!, { description: e.target.value })} />
                 </div>
-                {selected.type === 'button' && (
-                  <>
-                    <div className="form-group">
-                      <label>Acción del botón</label>
-                      <select
-                        value={String(selected.metadata?.action ?? 'submit')}
-                        onChange={(e) =>
-                          updateField(selectedIdx!, {
-                            metadata: { ...selected.metadata, action: e.target.value },
-                          })
-                        }
-                      >
-                        <option value="submit">Enviar</option>
-                        <option value="draft">Guardar borrador</option>
-                        <option value="reset">Restablecer</option>
-                        <option value="link">Abrir enlace</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Estilo</label>
-                      <select
-                        value={String(selected.metadata?.variant ?? 'primary')}
-                        onChange={(e) =>
-                          updateField(selectedIdx!, {
-                            metadata: { ...selected.metadata, variant: e.target.value },
-                          })
-                        }
-                      >
-                        <option value="primary">Primario</option>
-                        <option value="secondary">Secundario</option>
-                        <option value="ghost">Ghost</option>
-                      </select>
-                    </div>
-                    {selected.metadata?.action === 'link' && (
-                      <div className="form-group">
-                        <label>URL (enlace)</label>
-                        <input
-                          value={String(selected.metadata?.url ?? '')}
-                          onChange={(e) =>
-                            updateField(selectedIdx!, {
-                              metadata: { ...selected.metadata, url: e.target.value },
-                            })
-                          }
-                        />
-                      </div>
-                    )}
-                  </>
+                <div className="form-group">
+                  <label>Lista dinámica</label>
+                  <select
+                    value={String(selected.metadata?.catalogKey ?? '')}
+                    onChange={(e) => {
+                      const catalogKey = e.target.value || undefined;
+                      const cat = catalogKey ? DYNAMIC_CATALOGS[catalogKey] : undefined;
+                      updateField(selectedIdx!, {
+                        type: 'select',
+                        metadata: { ...selected.metadata, catalogKey, dynamicList: !!catalogKey },
+                        options: cat && !cat.dependsOn ? cat.options.map((o) => ({ value: o.value, label: o.label })) : selected.options,
+                      });
+                    }}
+                  >
+                    <option value="">— Manual —</option>
+                    {Object.values(DYNAMIC_CATALOGS).map((c) => (
+                      <option key={c.key} value={c.key}>{c.label}{c.dependsOn ? ` (depende de ${c.dependsOn})` : ''}</option>
+                    ))}
+                  </select>
+                </div>
+                {fieldTypeUsesOptions(selected.type) && (
+                  <FieldOptionsEditor options={selected.options} onChange={(options) => updateField(selectedIdx!, { options })} />
                 )}
-                {selected.type === 'hyperlink' && (
-                  <div className="form-group">
-                    <label>URL</label>
-                    <input
-                      value={String(selected.metadata?.url ?? selected.description ?? '')}
-                      onChange={(e) =>
-                        updateField(selectedIdx!, {
-                          metadata: { ...selected.metadata, url: e.target.value },
-                          description: e.target.value,
-                        })
-                      }
-                    />
+                <ConditionalRuleEditor label="Mostrar solo si" ruleKey="visibleWhen" field={selected} allFields={fields} onChange={(p) => updateField(selectedIdx!, p)} />
+                <ConditionalRuleEditor label="Obligatorio solo si" ruleKey="requiredWhen" field={selected} allFields={fields} onChange={(p) => updateField(selectedIdx!, p)} />
+                {learning && (
+                  <div className="form-studio-learning compact">
+                    <h4>Modo aprendizaje</h4>
+                    <p>{learning.description}</p>
+                    <p className="muted">Ejemplo: {learning.example}</p>
                   </div>
                 )}
-                {fieldTypeUsesOptions(selected.type) && (
-                  <FieldOptionsEditor
-                    options={selected.options}
-                    onChange={(options) => updateField(selectedIdx!, { options })}
-                  />
-                )}
-                <ConditionalRuleEditor
-                  label="Mostrar solo si (visibleWhen)"
-                  ruleKey="visibleWhen"
-                  field={selected}
-                  allFields={fields}
-                  onChange={(patch) => updateField(selectedIdx!, patch)}
-                />
-                <ConditionalRuleEditor
-                  label="Obligatorio solo si (requiredWhen)"
-                  ruleKey="requiredWhen"
-                  field={selected}
-                  allFields={fields}
-                  onChange={(patch) => updateField(selectedIdx!, patch)}
-                />
               </div>
             ) : (
-              <p className="muted">Seleccione un campo</p>
+              <p className="muted">Seleccione un campo o use la biblioteca de componentes.</p>
             )}
           </aside>
         </div>
       )}
 
-      {tab === 'preview' && (
-        <div className="panel form-panel">
-          {(previewFields.length ? previewFields : fields.map((f) => ({ ...f, visible: true })))
-            .filter((f) => f.visible !== false)
-            .map((f) => (
-            <FormFieldControl
-              key={f.key}
-              field={f}
-              value={previewData[f.key]}
-              onChange={(key, val) => setPreviewData((d) => ({ ...d, [key]: val }))}
-              onButtonAction={(action, field) => {
-                if (action === 'reset') {
-                  setPreviewData({});
-                  return;
-                }
-                if (action === 'link') {
-                  const url = field.metadata?.url ?? field.description;
-                  if (url) window.open(String(url), '_blank', 'noopener,noreferrer');
-                  return;
-                }
-                window.alert(`Vista previa: acción "${action}" — ${field.label}`);
-              }}
-            />
-          ))}
+      {tab === 'components' && (
+        <div className="designer-layout">
+          <ComponentLibraryPanel onAdd={(f) => { addField(f); setTab('design'); }} />
+          <section className="panel">
+            <h3>Catálogo de componentes Enterprise</h3>
+            <p className="muted">Clic para agregar al formulario. Clic derecho en un componente (en Diseño) para ver modo aprendizaje.</p>
+            <p>Listas dinámicas en cadena: País → Departamento → Municipio → Vereda → Finca → Lote.</p>
+          </section>
         </div>
       )}
 
+      {tab === 'preview' && (
+        <FormStudioPreview device={previewDevice} onDeviceChange={setPreviewDevice}>
+          <FormStudioRenderer
+            fields={fields}
+            data={previewData}
+            serverFields={serverFields.length ? serverFields : undefined}
+            onChange={(key, val) => setPreviewData((d) => ({ ...d, [key]: val }))}
+            onButtonAction={(action, field) => {
+              if (action === 'reset') setPreviewData({});
+              if (action === 'link') {
+                const url = field.metadata?.url ?? field.description;
+                if (url) window.open(String(url), '_blank', 'noopener,noreferrer');
+              }
+            }}
+          />
+        </FormStudioPreview>
+      )}
+
+      {tab === 'simulator' && <FormSimulator fields={fields} formName={name || 'Formulario'} />}
+
       {tab === 'rules' && (
         <div className="panel">
-          <p>Constructor de reglas condicionales — configure <code>visibleWhen</code> y <code>requiredWhen</code> en el inspector JSON del campo.</p>
-          <pre className="code-block">{JSON.stringify(fields, null, 2)}</pre>
+          <p>Esquema JSON compatible con Web y móvil. Las reglas <code>visibleWhen</code> / <code>requiredWhen</code> se evalúan en servidor y cliente.</p>
+          <pre className="code-block">{JSON.stringify(buildSchema(), null, 2)}</pre>
+        </div>
+      )}
+
+      {tab === 'versions' && (
+        <div className="panel">
+          <div className="row-actions" style={{ marginBottom: '1rem' }}>
+            <button type="button" className="btn btn-primary" onClick={handleNewVersion}>Nueva versión (clonar)</button>
+          </div>
+          <table className="data-table">
+            <thead><tr><th>Versión</th><th>Estado</th><th>Creado</th><th>Publicado</th></tr></thead>
+            <tbody>
+              {versions.map((v) => (
+                <tr key={v.id}>
+                  <td>v{v.version}</td>
+                  <td>{v.status}</td>
+                  <td>{new Date(v.createdAt).toLocaleString()}</td>
+                  <td>{v.publishedAt ? new Date(v.publishedAt).toLocaleString() : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </>

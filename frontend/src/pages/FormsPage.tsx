@@ -5,11 +5,16 @@ import { LoadingState } from '../components/ux/LoadingState';
 import {
   archiveForm,
   deleteForm,
+  duplicateForm,
   getFormDashboard,
   listForms,
+  newFormVersion,
   publishForm,
+  restoreForm,
   saveFormSchemaExport,
   saveFormsReport,
+  submitFormForReview,
+  unpublishForm,
   type FormDefinition,
   type FormDashboard,
 } from '../api/forms';
@@ -85,6 +90,34 @@ export function FormsPage() {
     }
   }
 
+  async function handleDuplicate(row: FormDefinition) {
+    const newKey = prompt('Nueva clave de formulario:', `${row.formKey}-copia`);
+    if (!newKey) return;
+    const created = await duplicateForm(row.id, newKey);
+    navigate(`/formularios/${created.id}/disenar`);
+  }
+
+  async function handleNewVersion(row: FormDefinition) {
+    const created = await newFormVersion(row.formKey);
+    navigate(`/formularios/${created.id}/disenar`);
+  }
+
+  async function handleSubmitReview(row: FormDefinition) {
+    await submitFormForReview(row.id);
+    load();
+  }
+
+  async function handleRestore(row: FormDefinition) {
+    await restoreForm(row.id);
+    load();
+  }
+
+  async function handleUnpublish(row: FormDefinition) {
+    if (!confirm(`¿Despublicar "${row.name}"?`)) return;
+    await unpublishForm(row.id);
+    load();
+  }
+
   async function handleExportSchema(row: FormDefinition) {
     try {
       await saveFormSchemaExport(row.id, row.formKey, 'csv');
@@ -120,6 +153,9 @@ export function FormsPage() {
             </button>
             <button type="button" className="btn" onClick={() => navigate('/formularios/nuevo')}>
               + Nuevo formulario
+            </button>
+            <button type="button" className="btn" onClick={() => navigate('/formularios/nuevo?plantillas=1')}>
+              Desde plantilla
             </button>
           </div>
         }
@@ -161,8 +197,22 @@ export function FormsPage() {
                       <button type="button" className="btn btn-sm" onClick={() => navigate(`/formularios/${row.id}/ejecutar`)}>Ejecutar</button>
                     )}
                     {row.status === 'draft' && (
-                      <button type="button" className="btn btn-sm btn-primary" onClick={() => handlePublish(row)}>Publicar</button>
+                      <>
+                        <button type="button" className="btn btn-sm btn-primary" onClick={() => handlePublish(row)}>Publicar</button>
+                        <button type="button" className="btn btn-sm" onClick={() => handleSubmitReview(row)}>A revisión</button>
+                      </>
                     )}
+                    {row.status === 'in_review' && (
+                      <button type="button" className="btn btn-sm" onClick={() => navigate(`/formularios/${row.id}/disenar`)}>Revisar</button>
+                    )}
+                    {row.status === 'published' && (
+                      <button type="button" className="btn btn-sm" onClick={() => handleUnpublish(row)}>Despublicar</button>
+                    )}
+                    {row.status === 'archived' && (
+                      <button type="button" className="btn btn-sm" onClick={() => handleRestore(row)}>Restaurar</button>
+                    )}
+                    <button type="button" className="btn btn-sm" onClick={() => handleNewVersion(row)}>Nueva versión</button>
+                    <button type="button" className="btn btn-sm" onClick={() => handleDuplicate(row)}>Clonar</button>
                     {row.status !== 'archived' && (
                       <button type="button" className="btn btn-sm" onClick={() => handleArchive(row)}>Archivar</button>
                     )}
