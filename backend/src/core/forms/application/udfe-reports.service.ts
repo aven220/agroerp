@@ -1,6 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { FormDefinitionSchema, FormFieldDefinition } from '@agroerp/shared';
-import { PrismaService } from '@/shared/infrastructure/database/prisma.service';
+import {
+  FORM_REPORT_REPOSITORY,
+  type FormReportRepository,
+} from '../domain/interfaces';
 import { flattenFields, isDataField } from './field-type.util';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -17,7 +20,10 @@ type ExportType = 'full' | 'catalog' | 'submissions';
 
 @Injectable()
 export class UdfeReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(FORM_REPORT_REPOSITORY)
+    private readonly reportRepository: FormReportRepository,
+  ) {}
 
   async runReport(organizationId: string, reportCode: string, params?: { formId?: string }) {
     switch (reportCode) {
@@ -120,7 +126,7 @@ export class UdfeReportsService {
   }
 
   private async buildSummarySection(organizationId: string, generatedAt: Date) {
-    const [
+    const {
       totalForms,
       publishedForms,
       draftForms,
@@ -129,36 +135,9 @@ export class UdfeReportsService {
       pendingSync,
       totalAssignments,
       pendingAssignments,
-    ] = await Promise.all([
-      this.prisma.formDefinition.count({
-        where: { organizationId, deletedAt: null },
-      }),
-      this.prisma.formDefinition.count({
-        where: { organizationId, status: 'published', deletedAt: null },
-      }),
-      this.prisma.formDefinition.count({
-        where: { organizationId, status: 'draft', deletedAt: null },
-      }),
-      this.prisma.formDefinition.count({
-        where: { organizationId, status: 'in_review', deletedAt: null },
-      }),
-      this.prisma.formSubmission.count({
-        where: { organizationId, deletedAt: null },
-      }),
-      this.prisma.formSubmission.count({
-        where: { organizationId, syncStatus: 'pending', deletedAt: null },
-      }),
-      this.prisma.formAssignment.count({ where: { organizationId } }),
-      this.prisma.formAssignment.count({
-        where: { organizationId, status: 'pending' },
-      }),
-    ]);
+    } = await this.reportRepository.getSummaryKpiCounts(organizationId);
 
-    const byStatus = await this.prisma.formDefinition.groupBy({
-      by: ['status'],
-      where: { organizationId, deletedAt: null },
-      _count: { id: true },
-    });
+    const byStatus = await this.reportRepository.groupFormsByStatus(organizationId);
 
     const lines = [
       this.sectionTitle('RESUMEN EJECUTIVO'),
@@ -177,7 +156,7 @@ export class UdfeReportsService {
       ...byStatus.map((s) =>
         this.row([
           STATUS_LABELS[s.status] ?? s.status,
-          s._count.id,
+          s.count,
         ]),
       ),
     ];
@@ -185,10 +164,7 @@ export class UdfeReportsService {
   }
 
   private async buildCatalogSection(organizationId: string) {
-    const forms = await this.prisma.formDefinition.findMany({
-      where: { organizationId, deletedAt: null },
-      orderBy: [{ formKey: 'asc' }, { version: 'desc' }],
-    });
+    const forms = await this.reportRepository.findFormsForCatalog(organizationId);
 
     const lines = [
       this.sectionTitle('CATÁLOGO DE FORMULARIOS'),
@@ -224,14 +200,10 @@ export class UdfeReportsService {
   }
 
   private async buildFieldsSection(organizationId: string, formId?: string) {
-    const forms = await this.prisma.formDefinition.findMany({
-      where: {
-        organizationId,
-        deletedAt: null,
-        ...(formId ? { id: formId } : {}),
-      },
-      orderBy: [{ formKey: 'asc' }, { version: 'desc' }],
-    });
+    const forms = await this.reportRepository.findFormsForFieldReport(
+      organizationId,
+      formId,
+    );
 
     const lines = [
       this.sectionTitle('DETALLE DE CAMPOS'),
@@ -275,24 +247,10 @@ export class UdfeReportsService {
   }
 
   private async buildSubmissionsSection(organizationId: string, formId?: string) {
-    const submissions = await this.prisma.formSubmission.findMany({
-      where: {
-        organizationId,
-        deletedAt: null,
-        ...(formId ? { formId } : {}),
-      },
-      include: {
-        form: {
-          select: {
-            formKey: true,
-            name: true,
-            schema: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 10000,
-    });
+    const submissions = await this.reportRepository.findSubmissionsForExport(
+      organizationId,
+      formId,
+    );
 
     const fieldKeys = new Set<string>();
     const fieldLabels = new Map<string, string>();
@@ -368,74 +326,60 @@ export class UdfeReportsService {
   }
 
   private async submissionsByForm(organizationId: string, formId?: string) {
-    const items = await this.prisma.formSubmission.groupBy({
-      by: ['formId', 'status'],
-      where: {
-        organizationId,
-        deletedAt: null,
-        ...(formId ? { formId } : {}),
-      },
-      _count: { id: true },
-    });
-    return { reportCode: 'UDFE-RPT-01', items };
+    const items = await this.reportRepository.groupSubmissionsByFormAndStatus(
+      organizationId,
+      formId,
+    );
+    return {
+      reportCode: 'UDFE-RPT-01',
+      items: items.map((item) => ({
+        formId: item.formId,
+        status: item.status,
+        _count: { id: item.count },
+      })),
+    };
   }
 
   private async formsByStatus(organizationId: string) {
-    const items = await this.prisma.formDefinition.groupBy({
-      by: ['status'],
-      where: { organizationId, deletedAt: null },
-      _count: { id: true },
-    });
-    return { reportCode: 'UDFE-RPT-02', items };
+    const items = await this.reportRepository.groupFormsByStatus(organizationId);
+    return {
+      reportCode: 'UDFE-RPT-02',
+      items: items.map((item) => ({
+        status: item.status,
+        _count: { id: item.count },
+      })),
+    };
   }
 
   private async assignmentCompliance(organizationId: string) {
-    const items = await this.prisma.formAssignment.groupBy({
-      by: ['status'],
-      where: { organizationId },
-      _count: { id: true },
-    });
-    return { reportCode: 'UDFE-RPT-03', items };
+    const items = await this.reportRepository.groupAssignmentsByStatus(organizationId);
+    return {
+      reportCode: 'UDFE-RPT-03',
+      items: items.map((item) => ({
+        status: item.status,
+        _count: { id: item.count },
+      })),
+    };
   }
 
   private async syncHealth(organizationId: string) {
-    const items = await this.prisma.formSubmission.groupBy({
-      by: ['syncStatus'],
-      where: { organizationId, deletedAt: null },
-      _count: { id: true },
-    });
-    return { reportCode: 'UDFE-RPT-04', items };
+    const items = await this.reportRepository.groupSubmissionsBySyncStatus(
+      organizationId,
+    );
+    return {
+      reportCode: 'UDFE-RPT-04',
+      items: items.map((item) => ({
+        syncStatus: item.syncStatus,
+        _count: { id: item.count },
+      })),
+    };
   }
 
   private async dataCenterSummary(organizationId: string, formId?: string) {
     const [submissions, campaigns, forms] = await Promise.all([
-      this.prisma.formSubmission.findMany({
-        where: {
-          organizationId,
-          deletedAt: null,
-          ...(formId ? { formId } : {}),
-        },
-        select: {
-          id: true,
-          formId: true,
-          status: true,
-          syncStatus: true,
-          gpsLocation: true,
-          createdAt: true,
-          form: { select: { formKey: true, name: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 5000,
-      }),
-      this.prisma.formCampaign.findMany({
-        where: { organizationId, status: { in: ['active', 'closed'] } },
-        select: { id: true, code: true, name: true, status: true, expectedCount: true, formId: true },
-      }),
-      this.prisma.formDefinition.groupBy({
-        by: ['status'],
-        where: { organizationId, deletedAt: null },
-        _count: { id: true },
-      }),
+      this.reportRepository.findDataCenterSubmissions(organizationId, formId),
+      this.reportRepository.findDataCenterCampaigns(organizationId),
+      this.reportRepository.groupFormsByStatus(organizationId),
     ]);
 
     const byForm = new Map<string, { formKey: string; name: string; count: number }>();
@@ -481,7 +425,10 @@ export class UdfeReportsService {
       submissionsByDay: Array.from(byDay.entries())
         .map(([date, count]) => ({ date, count }))
         .sort((a, b) => a.date.localeCompare(b.date)),
-      formsByStatus: forms,
+      formsByStatus: forms.map((f) => ({
+        status: f.status,
+        _count: { id: f.count },
+      })),
       campaigns,
     };
   }

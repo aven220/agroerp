@@ -1,0 +1,9 @@
+export { PrismaFormRepository } from './prisma-form.repository';
+export { PrismaFormTemplateRepository } from './prisma-form-template.repository';
+export { PrismaFormSubmissionRepository } from './prisma-form-submission.repository';
+export { PrismaFormCampaignRepository } from './prisma-form-campaign.repository';
+export { PrismaFormAssignmentRepository } from './prisma-form-assignment.repository';
+export { PrismaFormLifecycleRepository } from './prisma-form-lifecycle.repository';
+export { PrismaFormDashboardRepository } from './prisma-form-dashboard.repository';
+export { PrismaFormReportRepository } from './prisma-form-report.repository';
+export { PrismaFormImportRepository } from './prisma-form-import.repository';

@@ -1,13 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '@/shared/infrastructure/database/prisma.service';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CoreEngineService } from '@/core/engine/application/core-engine.service';
 import { RequestContext } from '@/core/engine/middleware/request-context.middleware';
+import {
+  FORM_ASSIGNMENT_REPOSITORY,
+  type FormAssignmentRepository,
+} from '../domain/interfaces';
 import { FormsService } from './forms.service';
 
 @Injectable()
 export class FormAssignmentsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(FORM_ASSIGNMENT_REPOSITORY)
+    private readonly assignmentRepository: FormAssignmentRepository,
     private readonly core: CoreEngineService,
     private readonly forms: FormsService,
   ) {}
@@ -16,17 +20,11 @@ export class FormAssignmentsService {
     organizationId: string,
     filters?: { assigneeId?: string; status?: string; formId?: string },
   ) {
-    return this.prisma.formAssignment.findMany({
-      where: {
-        organizationId,
-        ...(filters?.assigneeId ? { assigneeId: filters.assigneeId } : {}),
-        ...(filters?.status ? { status: filters.status } : {}),
-        ...(filters?.formId ? { formId: filters.formId } : {}),
-      },
-      include: {
-        form: { select: { id: true, formKey: true, name: true, version: true, status: true } },
-      },
-      orderBy: { assignedAt: 'desc' },
+    return this.assignmentRepository.findMany({
+      organizationId,
+      assigneeId: filters?.assigneeId,
+      status: filters?.status,
+      formId: filters?.formId,
     });
   }
 
@@ -44,20 +42,15 @@ export class FormAssignmentsService {
     ctx?: RequestContext,
   ) {
     await this.forms.findOne(organizationId, data.formId);
-    const assignment = await this.prisma.formAssignment.create({
-      data: {
-        organizationId,
-        formId: data.formId,
-        assigneeType: data.assigneeType,
-        assigneeId: data.assigneeId,
-        contextType: data.contextType,
-        contextId: data.contextId,
-        dueAt: data.dueAt ? new Date(data.dueAt) : undefined,
-        assignedBy: userId,
-      },
-      include: {
-        form: { select: { formKey: true, name: true } },
-      },
+    const assignment = await this.assignmentRepository.create({
+      organizationId,
+      formId: data.formId,
+      assigneeType: data.assigneeType,
+      assigneeId: data.assigneeId,
+      contextType: data.contextType,
+      contextId: data.contextId,
+      dueAt: data.dueAt ? new Date(data.dueAt) : undefined,
+      assignedBy: userId,
     });
     await this.core.emitUserAction(
       organizationId,
@@ -75,13 +68,11 @@ export class FormAssignmentsService {
   }
 
   async complete(organizationId: string, id: string, userId: string) {
-    const assignment = await this.prisma.formAssignment.findFirst({
-      where: { id, organizationId },
-    });
+    const assignment = await this.assignmentRepository.findFirstByOrgAndId(
+      organizationId,
+      id,
+    );
     if (!assignment) throw new NotFoundException('Assignment not found');
-    return this.prisma.formAssignment.update({
-      where: { id },
-      data: { status: 'completed', completedAt: new Date() },
-    });
+    return this.assignmentRepository.complete(id);
   }
 }

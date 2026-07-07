@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -7,9 +8,12 @@ import {
   FORM_SUBMISSION_RESOURCE_TYPE,
   FormDefinitionSchema,
 } from '@agroerp/shared';
-import { PrismaService } from '@/shared/infrastructure/database/prisma.service';
 import { CoreEngineService } from '@/core/engine/application/core-engine.service';
 import { RequestContext } from '@/core/engine/middleware/request-context.middleware';
+import {
+  FORM_SUBMISSION_REPOSITORY,
+  type FormSubmissionRepository,
+} from '../domain/interfaces';
 import { FormValidationEngine } from './form-validation.engine';
 import { FormsService } from './forms.service';
 import { SubmitFormDto, SyncSubmissionsDto } from '../presentation/forms.dto';
@@ -17,7 +21,8 @@ import { SubmitFormDto, SyncSubmissionsDto } from '../presentation/forms.dto';
 @Injectable()
 export class FormSubmissionsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(FORM_SUBMISSION_REPOSITORY)
+    private readonly submissionRepository: FormSubmissionRepository,
     private readonly forms: FormsService,
     private readonly validator: FormValidationEngine,
     private readonly core: CoreEngineService,
@@ -27,43 +32,18 @@ export class FormSubmissionsService {
     organizationId: string,
     filters?: { formId?: string; formKey?: string },
   ) {
-    return this.prisma.formSubmission.findMany({
-      where: {
-        organizationId,
-        ...(filters?.formId ? { formId: filters.formId } : {}),
-        ...(filters?.formKey
-          ? { form: { formKey: filters.formKey } }
-          : {}),
-      },
-      include: {
-        form: {
-          select: {
-            id: true,
-            formKey: true,
-            name: true,
-            version: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
+    return this.submissionRepository.findMany({
+      organizationId,
+      formId: filters?.formId,
+      formKey: filters?.formKey,
     });
   }
 
   async findOne(organizationId: string, id: string) {
-    const submission = await this.prisma.formSubmission.findFirst({
-      where: { id, organizationId },
-      include: {
-        form: {
-          select: {
-            id: true,
-            formKey: true,
-            name: true,
-            version: true,
-            schema: true,
-          },
-        },
-      },
-    });
+    const submission = await this.submissionRepository.findFirstByOrgAndId(
+      organizationId,
+      id,
+    );
     if (!submission) throw new NotFoundException('Submission not found');
     return submission;
   }
@@ -87,15 +67,13 @@ export class FormSubmissionsService {
     }
 
     if (dto.externalId) {
-      const existing = await this.prisma.formSubmission.findFirst({
-        where: { organizationId, externalId: dto.externalId },
-        include: { form: true },
-      });
+      const existing = await this.submissionRepository.findByExternalId(
+        organizationId,
+        dto.externalId,
+      );
       if (existing) {
         const resource = existing.resourceId
-          ? await this.prisma.resource.findUnique({
-              where: { id: existing.resourceId },
-            })
+          ? await this.submissionRepository.findResourceById(existing.resourceId)
           : null;
         return { submission: existing, resource, duplicate: true };
       }
@@ -124,50 +102,46 @@ export class FormSubmissionsService {
 
     const attachedFiles = this.extractFileRefs(validation.data);
 
-    const resource = await this.prisma.resource.create({
+    const resource = await this.submissionRepository.createResource({
+      organizationId,
+      resourceType: FORM_SUBMISSION_RESOURCE_TYPE,
+      schemaVersion: form.version,
       data: {
-        organizationId,
-        resourceType: FORM_SUBMISSION_RESOURCE_TYPE,
-        schemaVersion: form.version,
-        data: {
-          formId: form.id,
-          formKey: form.formKey,
-          formVersion: form.version,
-          formName: form.name,
-          ...validation.data,
-        } as object,
-        attributes: validation.data as object,
-        metadata: {
-          gpsLocation: dto.gpsLocation,
-          gpsTrack: dto.gpsTrack,
-          deviceInfo: dto.deviceInfo,
-          attachedFiles,
-          externalId: dto.externalId,
-        } as object,
-        status: dto.draft ? 'draft' : 'submitted',
-        syncStatus: 'pending',
+        formId: form.id,
+        formKey: form.formKey,
+        formVersion: form.version,
+        formName: form.name,
+        ...validation.data,
+      } as object,
+      attributes: validation.data as object,
+      metadata: {
+        gpsLocation: dto.gpsLocation,
+        gpsTrack: dto.gpsTrack,
+        deviceInfo: dto.deviceInfo,
+        attachedFiles,
         externalId: dto.externalId,
-        createdBy: userId,
-        updatedBy: userId,
-      },
+      } as object,
+      status: dto.draft ? 'draft' : 'submitted',
+      syncStatus: 'pending',
+      externalId: dto.externalId,
+      createdBy: userId,
+      updatedBy: userId,
     });
 
-    const submission = await this.prisma.formSubmission.create({
-      data: {
-        organizationId,
-        formId: form.id,
-        formVersion: form.version,
-        resourceId: resource.id,
-        data: validation.data as object,
-        gpsLocation: dto.gpsLocation as object | undefined,
-        gpsTrack: dto.gpsTrack as object | undefined,
-        deviceInfo: dto.deviceInfo as object | undefined,
-        context: (dto.context ?? {}) as object,
-        status: dto.draft ? 'draft' : 'submitted',
-        syncStatus: 'pending',
-        externalId: dto.externalId,
-        createdBy: userId,
-      },
+    const submission = await this.submissionRepository.create({
+      organizationId,
+      formId: form.id,
+      formVersion: form.version,
+      resourceId: resource.id,
+      data: validation.data as object,
+      gpsLocation: dto.gpsLocation as object | undefined,
+      gpsTrack: dto.gpsTrack as object | undefined,
+      deviceInfo: dto.deviceInfo as object | undefined,
+      context: (dto.context ?? {}) as object,
+      status: dto.draft ? 'draft' : 'submitted',
+      syncStatus: 'pending',
+      externalId: dto.externalId,
+      createdBy: userId,
     });
 
     await this.core.emitResourceCreated(

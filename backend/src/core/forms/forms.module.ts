@@ -14,6 +14,28 @@ import { FormCampaignsService } from './application/form-campaigns.service';
 import { FormDashboardService } from './application/form-dashboard.service';
 import { UdfeReportsService } from './application/udfe-reports.service';
 import {
+  FORM_ASSIGNMENT_REPOSITORY,
+  FORM_CAMPAIGN_REPOSITORY,
+  FORM_DASHBOARD_REPOSITORY,
+  FORM_IMPORT_REPOSITORY,
+  FORM_LIFECYCLE_REPOSITORY,
+  FORM_REPORT_REPOSITORY,
+  FORM_REPOSITORY,
+  FORM_SUBMISSION_REPOSITORY,
+  FORM_TEMPLATE_REPOSITORY,
+} from './domain/interfaces';
+import {
+  PrismaFormAssignmentRepository,
+  PrismaFormCampaignRepository,
+  PrismaFormDashboardRepository,
+  PrismaFormImportRepository,
+  PrismaFormLifecycleRepository,
+  PrismaFormReportRepository,
+  PrismaFormRepository,
+  PrismaFormSubmissionRepository,
+  PrismaFormTemplateRepository,
+} from './infrastructure/persistence';
+import {
   FormsController,
   FormSubmissionsController,
 } from './presentation/forms.controller';
@@ -36,6 +58,15 @@ import { UdfeController } from './presentation/udfe.controller';
     FormCampaignsService,
     FormDashboardService,
     UdfeReportsService,
+    { provide: FORM_REPOSITORY, useClass: PrismaFormRepository },
+    { provide: FORM_TEMPLATE_REPOSITORY, useClass: PrismaFormTemplateRepository },
+    { provide: FORM_SUBMISSION_REPOSITORY, useClass: PrismaFormSubmissionRepository },
+    { provide: FORM_CAMPAIGN_REPOSITORY, useClass: PrismaFormCampaignRepository },
+    { provide: FORM_ASSIGNMENT_REPOSITORY, useClass: PrismaFormAssignmentRepository },
+    { provide: FORM_LIFECYCLE_REPOSITORY, useClass: PrismaFormLifecycleRepository },
+    { provide: FORM_DASHBOARD_REPOSITORY, useClass: PrismaFormDashboardRepository },
+    { provide: FORM_REPORT_REPOSITORY, useClass: PrismaFormReportRepository },
+    { provide: FORM_IMPORT_REPOSITORY, useClass: PrismaFormImportRepository },
   ],
   exports: [
     FormsService,

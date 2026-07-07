@@ -1,9 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { FormDefinitionSchema } from '@agroerp/shared';
-import { PrismaService } from '@/shared/infrastructure/database/prisma.service';
 import { CoreEngineService } from '@/core/engine/application/core-engine.service';
 import { RequestContext } from '@/core/engine/middleware/request-context.middleware';
+import {
+  FORM_IMPORT_REPOSITORY,
+  type FormImportRepository,
+} from '../domain/interfaces';
 import { FormsService } from './forms.service';
 
 export interface FormImportRow {
@@ -17,7 +20,8 @@ export interface FormImportRow {
 @Injectable()
 export class FormImportService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(FORM_IMPORT_REPOSITORY)
+    private readonly importRepository: FormImportRepository,
     private readonly core: CoreEngineService,
     private readonly forms: FormsService,
   ) {}
@@ -77,22 +81,17 @@ export class FormImportService {
           ctx,
         );
         if (item.sectorCode) {
-          await this.prisma.formDefinition.update({
-            where: { id: form.id },
-            data: { sectorCode: item.sectorCode },
-          });
+          await this.importRepository.updateSectorCode(form.id, item.sectorCode);
         }
         createdIds.push(form.id);
         results.push({ row, status: 'created', formId: form.id });
-        await this.prisma.formImportLog.create({
-          data: {
-            organizationId,
-            formId: form.id,
-            batchId,
-            rowNumber: row,
-            status: 'created',
-            payload: item as object,
-          },
+        await this.importRepository.createImportLog({
+          organizationId,
+          formId: form.id,
+          batchId,
+          rowNumber: row,
+          status: 'created',
+          payload: item as object,
         });
       } catch (err) {
         results.push({
@@ -100,23 +99,16 @@ export class FormImportService {
           status: 'error',
           error: err instanceof Error ? err.message : 'Import error',
         });
-        await this.prisma.formImportLog.create({
-          data: {
-            organizationId,
-            batchId,
-            rowNumber: row,
-            status: 'error',
-            message: err instanceof Error ? err.message : 'Import error',
-            payload: item as object,
-          },
+        await this.importRepository.createImportLog({
+          organizationId,
+          batchId,
+          rowNumber: row,
+          status: 'error',
+          message: err instanceof Error ? err.message : 'Import error',
+          payload: item as object,
         });
         if (!payload.force) {
-          for (const id of createdIds) {
-            await this.prisma.formDefinition.update({
-              where: { id },
-              data: { deletedAt: new Date(), status: 'archived' },
-            });
-          }
+          await this.importRepository.rollbackImportedForms(createdIds);
           return { batchId, status: 'rolled_back', results, validation };
         }
       }

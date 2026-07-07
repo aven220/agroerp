@@ -1,12 +1,18 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { PrismaService } from '@/shared/infrastructure/database/prisma.service';
 import { CoreEngineService } from '@/core/engine/application/core-engine.service';
 import { RequestContext } from '@/core/engine/middleware/request-context.middleware';
+import {
+  FORM_CAMPAIGN_REPOSITORY,
+  FORM_SUBMISSION_REPOSITORY,
+  type FormCampaignRepository,
+  type FormSubmissionRepository,
+} from '../domain/interfaces';
 import { FormsService } from './forms.service';
 
 export type FormCampaignMetadata = {
@@ -19,7 +25,10 @@ export type FormCampaignMetadata = {
 @Injectable()
 export class FormCampaignsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(FORM_CAMPAIGN_REPOSITORY)
+    private readonly campaignRepository: FormCampaignRepository,
+    @Inject(FORM_SUBMISSION_REPOSITORY)
+    private readonly submissionRepository: FormSubmissionRepository,
     private readonly core: CoreEngineService,
     private readonly forms: FormsService,
   ) {}
@@ -28,45 +37,19 @@ export class FormCampaignsService {
     organizationId: string,
     filters?: { status?: string; formId?: string; search?: string },
   ) {
-    return this.prisma.formCampaign.findMany({
-      where: {
-        organizationId,
-        ...(filters?.status ? { status: filters.status } : {}),
-        ...(filters?.formId ? { formId: filters.formId } : {}),
-        ...(filters?.search
-          ? {
-              OR: [
-                { name: { contains: filters.search, mode: 'insensitive' } },
-                { code: { contains: filters.search, mode: 'insensitive' } },
-              ],
-            }
-          : {}),
-      },
-      include: {
-        form: {
-          select: { id: true, formKey: true, name: true, version: true, status: true },
-        },
-      },
-      orderBy: [{ status: 'asc' }, { startsAt: 'desc' }],
+    return this.campaignRepository.findMany({
+      organizationId,
+      status: filters?.status,
+      formId: filters?.formId,
+      search: filters?.search,
     });
   }
 
   async findOne(organizationId: string, id: string) {
-    const campaign = await this.prisma.formCampaign.findFirst({
-      where: { id, organizationId },
-      include: {
-        form: {
-          select: {
-            id: true,
-            formKey: true,
-            name: true,
-            version: true,
-            status: true,
-            publishedAt: true,
-          },
-        },
-      },
-    });
+    const campaign = await this.campaignRepository.findFirstByOrgAndId(
+      organizationId,
+      id,
+    );
     if (!campaign) throw new NotFoundException('Campaign not found');
     return campaign;
   }
@@ -86,9 +69,10 @@ export class FormCampaignsService {
     },
     ctx?: RequestContext,
   ) {
-    const existing = await this.prisma.formCampaign.findFirst({
-      where: { organizationId, code: data.code },
-    });
+    const existing = await this.campaignRepository.findByCode(
+      organizationId,
+      data.code,
+    );
     if (existing) {
       throw new ConflictException(`Campaign code "${data.code}" already exists`);
     }
@@ -100,23 +84,18 @@ export class FormCampaignsService {
       );
     }
 
-    const campaign = await this.prisma.formCampaign.create({
-      data: {
-        organizationId,
-        code: data.code,
-        name: data.name,
-        description: data.description,
-        formId: data.formId,
-        status: 'draft',
-        startsAt: data.startsAt ? new Date(data.startsAt) : undefined,
-        endsAt: data.endsAt ? new Date(data.endsAt) : undefined,
-        expectedCount: data.expectedCount,
-        metadata: (data.metadata ?? {}) as object,
-        createdBy: userId,
-      },
-      include: {
-        form: { select: { formKey: true, name: true, version: true, status: true } },
-      },
+    const campaign = await this.campaignRepository.create({
+      organizationId,
+      code: data.code,
+      name: data.name,
+      description: data.description,
+      formId: data.formId,
+      status: 'draft',
+      startsAt: data.startsAt ? new Date(data.startsAt) : undefined,
+      endsAt: data.endsAt ? new Date(data.endsAt) : undefined,
+      expectedCount: data.expectedCount,
+      metadata: (data.metadata ?? {}) as object,
+      createdBy: userId,
     });
 
     await this.core.emitUserAction(
@@ -147,32 +126,22 @@ export class FormCampaignsService {
     if (campaign.status === 'archived') {
       throw new UnprocessableEntityException('No se puede editar una campaña archivada');
     }
-    return this.prisma.formCampaign.update({
-      where: { id },
-      data: {
-        name: data.name,
-        description: data.description,
-        startsAt: data.startsAt ? new Date(data.startsAt) : undefined,
-        endsAt: data.endsAt ? new Date(data.endsAt) : undefined,
-        expectedCount: data.expectedCount,
-        ...(data.metadata ? { metadata: data.metadata as object } : {}),
-      },
-      include: {
-        form: { select: { formKey: true, name: true, version: true, status: true } },
-      },
+    return this.campaignRepository.update(id, {
+      name: data.name,
+      description: data.description,
+      startsAt: data.startsAt ? new Date(data.startsAt) : undefined,
+      endsAt: data.endsAt ? new Date(data.endsAt) : undefined,
+      expectedCount: data.expectedCount,
+      ...(data.metadata ? { metadata: data.metadata as object } : {}),
     });
   }
 
   async activate(organizationId: string, id: string, userId: string, ctx?: RequestContext) {
     const campaign = await this.findOne(organizationId, id);
-    if (campaign.form.status !== 'published') {
+    if (campaign.form?.status !== 'published') {
       throw new UnprocessableEntityException('Publique el formulario antes de activar la campaña');
     }
-    const updated = await this.prisma.formCampaign.update({
-      where: { id },
-      data: { status: 'active' },
-      include: { form: { select: { formKey: true, name: true } } },
-    });
+    const updated = await this.campaignRepository.updateStatus(id, 'active');
     await this.core.emitUserAction(
       organizationId,
       'FormCampaign',
@@ -186,10 +155,7 @@ export class FormCampaignsService {
 
   async close(organizationId: string, id: string, userId: string, ctx?: RequestContext) {
     await this.findOne(organizationId, id);
-    const updated = await this.prisma.formCampaign.update({
-      where: { id },
-      data: { status: 'closed' },
-    });
+    const updated = await this.campaignRepository.updateStatus(id, 'closed');
     await this.core.emitUserAction(
       organizationId,
       'FormCampaign',
@@ -203,10 +169,7 @@ export class FormCampaignsService {
 
   async archive(organizationId: string, id: string, userId: string, ctx?: RequestContext) {
     await this.findOne(organizationId, id);
-    const updated = await this.prisma.formCampaign.update({
-      where: { id },
-      data: { status: 'archived' },
-    });
+    const updated = await this.campaignRepository.updateStatus(id, 'archived');
     await this.core.emitUserAction(
       organizationId,
       'FormCampaign',
@@ -220,22 +183,10 @@ export class FormCampaignsService {
 
   async getStats(organizationId: string, id: string) {
     const campaign = await this.findOne(organizationId, id);
-    const submissions = await this.prisma.formSubmission.findMany({
-      where: {
-        organizationId,
-        formId: campaign.formId,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        status: true,
-        syncStatus: true,
-        gpsLocation: true,
-        createdAt: true,
-        context: true,
-        data: true,
-      },
-    });
+    const submissions = await this.submissionRepository.findStatsRowsByFormId(
+      organizationId,
+      campaign.formId,
+    );
 
     const forCampaign = submissions.filter((s) => {
       const ctx = s.context as Record<string, unknown> | null;

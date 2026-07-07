@@ -1,19 +1,24 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { FormDefinitionSchema } from '@agroerp/shared';
-import { PrismaService } from '@/shared/infrastructure/database/prisma.service';
 import { CoreEngineService } from '@/core/engine/application/core-engine.service';
 import { RequestContext } from '@/core/engine/middleware/request-context.middleware';
+import {
+  FORM_LIFECYCLE_REPOSITORY,
+  type FormLifecycleRepository,
+} from '../domain/interfaces';
 import { FormsService } from './forms.service';
 
 @Injectable()
 export class FormLifecycleService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(FORM_LIFECYCLE_REPOSITORY)
+    private readonly lifecycleRepository: FormLifecycleRepository,
     private readonly core: CoreEngineService,
     private readonly forms: FormsService,
   ) {}
@@ -26,31 +31,30 @@ export class FormLifecycleService {
     ctx?: RequestContext,
   ) {
     const source = await this.forms.findOne(organizationId, id);
-    const existing = await this.prisma.formDefinition.findFirst({
-      where: { organizationId, formKey: newFormKey },
-    });
+    const existing = await this.lifecycleRepository.findAnyByFormKey(
+      organizationId,
+      newFormKey,
+    );
     if (existing) {
       throw new ConflictException(`Form key "${newFormKey}" already exists`);
     }
 
     const schema = source.schema as unknown as FormDefinitionSchema;
-    const form = await this.prisma.formDefinition.create({
-      data: {
-        organizationId,
-        formKey: newFormKey,
-        name: `${source.name} (copia)`,
-        description: source.description,
-        version: 1,
-        schema: { ...schema, version: 1 } as object,
-        status: 'draft',
-        sectorCode: source.sectorCode,
-        commodityCode: source.commodityCode,
-        tags: source.tags,
-        metadata: source.metadata as object,
-        workflowKey: source.workflowKey,
-        clonedFromId: source.id,
-        createdBy: userId,
-      },
+    const form = await this.lifecycleRepository.createDuplicate({
+      organizationId,
+      formKey: newFormKey,
+      name: `${source.name} (copia)`,
+      description: source.description,
+      version: 1,
+      schema: { ...schema, version: 1 } as object,
+      status: 'draft',
+      sectorCode: source.sectorCode,
+      commodityCode: source.commodityCode,
+      tags: source.tags,
+      metadata: source.metadata as object,
+      workflowKey: source.workflowKey,
+      clonedFromId: source.id,
+      createdBy: userId,
     });
 
     await this.recordHistory(organizationId, form.id, 0, 1, 'duplicate', userId, schema);
@@ -83,9 +87,8 @@ export class FormLifecycleService {
     if (form.status !== 'draft' && form.status !== 'rejected') {
       throw new ConflictException('Only draft or rejected forms can be submitted for review');
     }
-    const updated = await this.prisma.formDefinition.update({
-      where: { id },
-      data: { status: 'in_review' },
+    const updated = await this.lifecycleRepository.updateLifecycle(id, {
+      status: 'in_review',
     });
     await this.recordHistory(
       organizationId,
@@ -118,9 +121,10 @@ export class FormLifecycleService {
     if (form.status !== 'in_review') {
       throw new UnprocessableEntityException('Form must be in review to approve');
     }
-    const updated = await this.prisma.formDefinition.update({
-      where: { id },
-      data: { status: 'approved', approvedBy: userId, approvedAt: new Date() },
+    const updated = await this.lifecycleRepository.updateLifecycle(id, {
+      status: 'approved',
+      approvedBy: userId,
+      approvedAt: new Date(),
     });
     await this.core.emitUserAction(
       organizationId,
@@ -144,9 +148,8 @@ export class FormLifecycleService {
     if (form.status !== 'in_review') {
       throw new UnprocessableEntityException('Form must be in review to reject');
     }
-    const updated = await this.prisma.formDefinition.update({
-      where: { id },
-      data: { status: 'rejected' },
+    const updated = await this.lifecycleRepository.updateLifecycle(id, {
+      status: 'rejected',
     });
     await this.recordHistory(
       organizationId,
@@ -174,9 +177,9 @@ export class FormLifecycleService {
     if (form.status !== 'published') {
       throw new ConflictException('Only published forms can be unpublished');
     }
-    const updated = await this.prisma.formDefinition.update({
-      where: { id },
-      data: { status: 'draft', publishedAt: null },
+    const updated = await this.lifecycleRepository.updateLifecycle(id, {
+      status: 'draft',
+      publishedAt: null,
     });
     await this.core.emitUserAction(
       organizationId,
@@ -194,9 +197,9 @@ export class FormLifecycleService {
     if (form.status === 'archived') {
       throw new ConflictException('Form is already archived');
     }
-    const updated = await this.prisma.formDefinition.update({
-      where: { id },
-      data: { status: 'archived', archivedAt: new Date() },
+    const updated = await this.lifecycleRepository.updateLifecycle(id, {
+      status: 'archived',
+      archivedAt: new Date(),
     });
     await this.core.emitUserAction(
       organizationId,
@@ -210,16 +213,14 @@ export class FormLifecycleService {
   }
 
   async restore(organizationId: string, id: string, userId: string, ctx?: RequestContext) {
-    const form = await this.prisma.formDefinition.findFirst({
-      where: { id, organizationId },
-    });
+    const form = await this.lifecycleRepository.findFirstByOrgAndId(organizationId, id);
     if (!form) throw new NotFoundException('Form not found');
     if (form.status !== 'archived') {
       throw new ConflictException('Only archived forms can be restored');
     }
-    const updated = await this.prisma.formDefinition.update({
-      where: { id },
-      data: { status: 'draft', archivedAt: null },
+    const updated = await this.lifecycleRepository.updateLifecycle(id, {
+      status: 'draft',
+      archivedAt: null,
     });
     await this.core.emitUserAction(
       organizationId,
@@ -237,14 +238,11 @@ export class FormLifecycleService {
     if (form.deletedAt) {
       throw new ConflictException('El formulario ya fue eliminado');
     }
-    const updated = await this.prisma.formDefinition.update({
-      where: { id },
-      data: {
-        deletedAt: new Date(),
-        status: 'archived',
-        archivedAt: new Date(),
-        publishedAt: form.status === 'published' ? null : form.publishedAt,
-      },
+    const updated = await this.lifecycleRepository.updateLifecycle(id, {
+      deletedAt: new Date(),
+      status: 'archived',
+      archivedAt: new Date(),
+      publishedAt: form.status === 'published' ? null : form.publishedAt,
     });
     await this.core.emitUserAction(
       organizationId,
@@ -259,10 +257,7 @@ export class FormLifecycleService {
 
   async getVersionHistory(organizationId: string, formId: string) {
     await this.forms.findOne(organizationId, formId);
-    return this.prisma.formVersionHistory.findMany({
-      where: { organizationId, formId },
-      orderBy: { occurredAt: 'desc' },
-    });
+    return this.lifecycleRepository.findVersionHistory(organizationId, formId);
   }
 
   private async recordHistory(
@@ -275,17 +270,15 @@ export class FormLifecycleService {
     snapshot: object,
     reasonNotes?: string,
   ) {
-    await this.prisma.formVersionHistory.create({
-      data: {
-        organizationId,
-        formId,
-        fromVersion,
-        toVersion,
-        changeType,
-        snapshot,
-        actorId,
-        reasonNotes,
-      },
+    await this.lifecycleRepository.createVersionHistory({
+      organizationId,
+      formId,
+      fromVersion,
+      toVersion,
+      changeType,
+      snapshot,
+      actorId,
+      reasonNotes,
     });
   }
 }

@@ -1,51 +1,49 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { FormDefinitionSchema } from '@agroerp/shared';
-import { PrismaService } from '@/shared/infrastructure/database/prisma.service';
 import { CoreEngineService } from '@/core/engine/application/core-engine.service';
 import { RequestContext } from '@/core/engine/middleware/request-context.middleware';
+import {
+  FORM_REPOSITORY,
+  type FormRepository,
+} from '../domain/interfaces';
 import { FormRendererService } from './form-renderer.service';
 import { CreateFormDto, UpdateFormDto } from '../presentation/forms.dto';
 
 @Injectable()
 export class FormsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(FORM_REPOSITORY)
+    private readonly formRepository: FormRepository,
     private readonly core: CoreEngineService,
     private readonly renderer: FormRendererService,
   ) {}
 
   async findAll(organizationId: string, status?: string, search?: string) {
-    return this.prisma.formDefinition.findMany({
-      where: {
-        organizationId,
-        deletedAt: null,
-        ...(status ? { status: status as 'draft' | 'published' | 'deprecated' | 'in_review' | 'approved' | 'rejected' | 'archived' } : {}),
-        ...(search
-          ? {
-              OR: [
-                { name: { contains: search, mode: 'insensitive' } },
-                { formKey: { contains: search, mode: 'insensitive' } },
-              ],
-            }
-          : {}),
-      },
-      orderBy: [{ formKey: 'asc' }, { version: 'desc' }],
+    return this.formRepository.findMany({
+      organizationId,
+      status: status as
+        | 'draft'
+        | 'published'
+        | 'deprecated'
+        | 'in_review'
+        | 'approved'
+        | 'rejected'
+        | 'archived'
+        | undefined,
+      search,
     });
   }
 
   async findPublished(organizationId: string) {
-    const forms = await this.prisma.formDefinition.findMany({
-      where: {
-        organizationId,
-        status: 'published',
-        deletedAt: null,
-      },
-      orderBy: [{ formKey: 'asc' }, { version: 'desc' }],
+    const forms = await this.formRepository.findMany({
+      organizationId,
+      publishedOnly: true,
     });
 
     const latestByKey = new Map<string, (typeof forms)[number]>();
@@ -58,18 +56,19 @@ export class FormsService {
   }
 
   async findOne(organizationId: string, id: string) {
-    const form = await this.prisma.formDefinition.findFirst({
-      where: { id, organizationId },
-    });
+    const form = await this.formRepository.findFirstByOrgAndId(
+      organizationId,
+      id,
+    );
     if (!form) throw new NotFoundException('Form not found');
     return form;
   }
 
   async findPublishedByKey(organizationId: string, formKey: string) {
-    const form = await this.prisma.formDefinition.findFirst({
-      where: { organizationId, formKey, status: 'published' },
-      orderBy: { version: 'desc' },
-    });
+    const form = await this.formRepository.findPublishedByKey(
+      organizationId,
+      formKey,
+    );
     if (!form) throw new NotFoundException('Published form not found');
     return form;
   }
@@ -80,25 +79,23 @@ export class FormsService {
     dto: CreateFormDto,
     ctx?: RequestContext,
   ) {
-    const latest = await this.prisma.formDefinition.findFirst({
-      where: { organizationId, formKey: dto.formKey },
-      orderBy: { version: 'desc' },
-    });
+    const latest = await this.formRepository.findLatestByKey(
+      organizationId,
+      dto.formKey,
+    );
 
     const version = (latest?.version ?? 0) + 1;
     const schema = this.normalizeSchema(dto.schema, version);
 
-    const form = await this.prisma.formDefinition.create({
-      data: {
-        organizationId,
-        formKey: dto.formKey,
-        name: dto.name,
-        description: dto.description,
-        version,
-        schema: schema as object,
-        status: 'draft',
-        createdBy: userId,
-      },
+    const form = await this.formRepository.create({
+      organizationId,
+      formKey: dto.formKey,
+      name: dto.name,
+      description: dto.description,
+      version,
+      schema: schema as object,
+      status: 'draft',
+      createdBy: userId,
     });
 
     await this.core.emitFormCreated(
@@ -132,13 +129,10 @@ export class FormsService {
       ? this.normalizeSchema(dto.schema, existing.version)
       : currentSchema;
 
-    const form = await this.prisma.formDefinition.update({
-      where: { id },
-      data: {
-        name: dto.name ?? existing.name,
-        description: dto.description ?? existing.description,
-        schema: schema as object,
-      },
+    const form = await this.formRepository.update(id, {
+      name: dto.name ?? existing.name,
+      description: dto.description ?? existing.description,
+      schema: schema as object,
     });
 
     await this.core.emitUserAction(
@@ -169,20 +163,7 @@ export class FormsService {
       throw new BadRequestException('Form must have at least one field');
     }
 
-    await this.prisma.$transaction([
-      this.prisma.formDefinition.updateMany({
-        where: {
-          organizationId,
-          formKey: form.formKey,
-          status: 'published',
-        },
-        data: { status: 'deprecated' },
-      }),
-      this.prisma.formDefinition.update({
-        where: { id },
-        data: { status: 'published', publishedAt: new Date() },
-      }),
-    ]);
+    await this.formRepository.publish(organizationId, id, form.formKey);
 
     const published = await this.findOne(organizationId, id);
 
@@ -206,10 +187,10 @@ export class FormsService {
     userId: string,
     ctx?: RequestContext,
   ) {
-    const latest = await this.prisma.formDefinition.findFirst({
-      where: { organizationId, formKey },
-      orderBy: { version: 'desc' },
-    });
+    const latest = await this.formRepository.findLatestByKey(
+      organizationId,
+      formKey,
+    );
     if (!latest) throw new NotFoundException('Form not found');
 
     const version = latest.version + 1;
@@ -219,17 +200,15 @@ export class FormsService {
       version,
     );
 
-    const form = await this.prisma.formDefinition.create({
-      data: {
-        organizationId,
-        formKey,
-        name: latest.name,
-        description: latest.description,
-        version,
-        schema: newSchema as object,
-        status: 'draft',
-        createdBy: userId,
-      },
+    const form = await this.formRepository.create({
+      organizationId,
+      formKey,
+      name: latest.name,
+      description: latest.description,
+      version,
+      schema: newSchema as object,
+      status: 'draft',
+      createdBy: userId,
     });
 
     await this.core.emitFormCreated(

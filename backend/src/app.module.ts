@@ -9,6 +9,7 @@ import { MetadataModule } from '@/core/metadata/metadata.module';
 import { AuditModule } from '@/core/audit/audit.module';
 import { SyncModule } from '@/core/sync/sync.module';
 import { FormsModule } from '@/core/forms/forms.module';
+import { CaptureModule } from '@/core/capture/capture.module';
 import { WorkflowsModule } from '@/core/workflows/workflows.module';
 import { PrmModule } from '@/core/prm/prm.module';
 import { FtipModule } from '@/core/ftip/ftip.module';
@@ -76,6 +77,7 @@ import { RequestContextMiddleware } from '@/core/engine/middleware/request-conte
     IdentityModule,
     ResourceEngineModule,
     FormsModule,
+    CaptureModule,
     WorkflowsModule,
     PrmModule,
     FtipModule,
