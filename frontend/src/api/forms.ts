@@ -75,6 +75,7 @@ export interface FormSubmission {
   status: string;
   syncStatus: string;
   createdAt: string;
+  gpsLocation?: { lat: number; lng: number; accuracy?: number } | null;
   form?: { formKey: string; name: string; version: number };
 }
 
@@ -319,4 +320,192 @@ export async function saveFormSchemaExport(id: string, formKey: string, format: 
     a.click();
     URL.revokeObjectURL(url);
   }
+}
+
+// ─── Campañas ───
+
+export interface FormCampaign {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  formId: string;
+  status: string;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  expectedCount?: number | null;
+  metadata?: {
+    zones?: string[];
+    municipalities?: string[];
+    farms?: string[];
+    assigneeUserIds?: string[];
+  };
+  createdAt: string;
+  updatedAt: string;
+  form?: { id: string; formKey: string; name: string; version: number; status: string };
+}
+
+export interface FormCampaignStats {
+  campaignId: string;
+  code: string;
+  expectedCount: number;
+  collected: number;
+  synced: number;
+  pending: number;
+  failed: number;
+  withGps: number;
+  progressPct: number | null;
+}
+
+export function listCampaigns(filters?: { status?: string; formId?: string; search?: string }) {
+  const params = new URLSearchParams();
+  if (filters?.status) params.set('status', filters.status);
+  if (filters?.formId) params.set('formId', filters.formId);
+  if (filters?.search) params.set('search', filters.search);
+  const q = params.toString();
+  return apiRequest<FormCampaign[]>(`/udfe/campaigns${q ? `?${q}` : ''}`);
+}
+
+export function getCampaign(id: string) {
+  return apiRequest<FormCampaign>(`/udfe/campaigns/${id}`);
+}
+
+export function getCampaignStats(id: string) {
+  return apiRequest<FormCampaignStats>(`/udfe/campaigns/${id}/stats`);
+}
+
+export function createCampaign(data: {
+  code: string;
+  name: string;
+  description?: string;
+  formId: string;
+  startsAt?: string;
+  endsAt?: string;
+  expectedCount?: number;
+  metadata?: FormCampaign['metadata'];
+}) {
+  return apiRequest<FormCampaign>('/udfe/campaigns', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function updateCampaign(id: string, data: Partial<Omit<FormCampaign, 'id' | 'form' | 'createdAt' | 'updatedAt'>>) {
+  return apiRequest<FormCampaign>(`/udfe/campaigns/${id}`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function activateCampaign(id: string) {
+  return apiRequest<FormCampaign>(`/udfe/campaigns/${id}/activate`, { method: 'POST' });
+}
+
+export function closeCampaign(id: string) {
+  return apiRequest<FormCampaign>(`/udfe/campaigns/${id}/close`, { method: 'POST' });
+}
+
+export function archiveCampaign(id: string) {
+  return apiRequest<FormCampaign>(`/udfe/campaigns/${id}/archive`, { method: 'POST' });
+}
+
+// ─── Asignaciones ───
+
+export interface FormAssignment {
+  id: string;
+  formId: string;
+  assigneeType: string;
+  assigneeId: string;
+  status: string;
+  dueAt?: string | null;
+  assignedAt: string;
+  completedAt?: string | null;
+  form?: { id: string; formKey: string; name: string; version: number; status: string };
+}
+
+export function listAssignments(filters?: { assigneeId?: string; status?: string }) {
+  const params = new URLSearchParams();
+  if (filters?.assigneeId) params.set('assigneeId', filters.assigneeId);
+  if (filters?.status) params.set('status', filters.status);
+  const q = params.toString();
+  return apiRequest<FormAssignment[]>(`/udfe/assignments${q ? `?${q}` : ''}`);
+}
+
+export function createAssignment(data: {
+  formId: string;
+  assigneeType: string;
+  assigneeId: string;
+  contextType?: string;
+  contextId?: string;
+  dueAt?: string;
+}) {
+  return apiRequest<FormAssignment>('/udfe/assignments', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export function completeAssignment(id: string) {
+  return apiRequest<FormAssignment>(`/udfe/assignments/${id}/complete`, { method: 'POST' });
+}
+
+// ─── Informes / Centro de datos ───
+
+export function runFormReport(reportCode: string, formId?: string) {
+  const params = new URLSearchParams();
+  if (formId) params.set('formId', formId);
+  const q = params.toString();
+  return apiRequest<Record<string, unknown>>(`/udfe/reports/${reportCode}${q ? `?${q}` : ''}`);
+}
+
+export function getSubmission(id: string) {
+  return apiRequest<FormSubmission & { form?: FormDefinition }>(`/form-submissions/${id}`);
+}
+
+export function downloadJson(data: unknown, filename: string) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename.endsWith('.json') ? filename : `${filename}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function downloadGeoJsonFromSubmissions(
+  submissions: FormSubmission[],
+  filename = 'recoleccion.geojson',
+) {
+  const features = submissions
+    .filter((s) => s.data && typeof s.data === 'object')
+    .map((s) => {
+      const gps = (s as FormSubmission & { gpsLocation?: { lat?: number; lng?: number } }).gpsLocation
+        ?? extractGpsFromData(s.data);
+      if (!gps?.lat || !gps?.lng) return null;
+      return {
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: [gps.lng, gps.lat] },
+        properties: {
+          submissionId: s.id,
+          formId: s.formId,
+          formKey: s.form?.formKey,
+          status: s.status,
+          syncStatus: s.syncStatus,
+          createdAt: s.createdAt,
+          ...flattenDataForGeo(s.data),
+        },
+      };
+    })
+    .filter(Boolean);
+
+  downloadJson({ type: 'FeatureCollection', features }, filename);
+}
+
+function extractGpsFromData(data: Record<string, unknown>): { lat?: number; lng?: number } | null {
+  for (const v of Object.values(data)) {
+    if (v && typeof v === 'object' && 'lat' in (v as object) && 'lng' in (v as object)) {
+      return v as { lat: number; lng: number };
+    }
+  }
+  return null;
+}
+
+function flattenDataForGeo(data: Record<string, unknown>): Record<string, string | number | boolean> {
+  const out: Record<string, string | number | boolean> = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (v == null || typeof v === 'object') continue;
+    if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') out[k] = v;
+  }
+  return out;
 }

@@ -337,6 +337,7 @@ model Organization {
   formSubmissions FormSubmission[]
   formTemplates   FormTemplate[]
   formAssignments FormAssignment[]
+  formCampaigns   FormCampaign[]
   formVersionHistories FormVersionHistory[]
   formImportLogs  FormImportLog[]
   formKpiSnapshots FormKpiSnapshot[]
@@ -6036,6 +6037,7 @@ model FormDefinition {
   submissions    FormSubmission[]
   versionHistory FormVersionHistory[]
   assignments    FormAssignment[]
+  campaigns      FormCampaign[]
   importLogs     FormImportLog[]
   kpiSnapshots   FormKpiSnapshot[]
 
@@ -6107,6 +6109,31 @@ model FormAssignment {
   @@index([organizationId, assigneeId, status])
   @@index([formId, status])
   @@map("form_assignments")
+}
+
+model FormCampaign {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  code           String    @db.VarChar(100)
+  name           String    @db.VarChar(255)
+  description    String?   @db.Text
+  formId         String    @map("form_id") @db.Uuid
+  status         String    @default("draft") @db.VarChar(50)
+  startsAt       DateTime? @map("starts_at") @db.Timestamptz
+  endsAt         DateTime? @map("ends_at") @db.Timestamptz
+  expectedCount  Int?      @map("expected_count")
+  metadata       Json      @default("{}")
+  createdBy      String?   @map("created_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization   @relation(fields: [organizationId], references: [id])
+  form         FormDefinition @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, code])
+  @@index([organizationId, status])
+  @@index([organizationId, formId])
+  @@map("form_campaigns")
 }
 
 model FormImportLog {

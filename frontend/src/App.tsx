@@ -26,6 +26,11 @@ import { LotDashboardPage } from './pages/LotDashboardPage';
 import { LotImportPage } from './pages/LotImportPage';
 import { FormsPage } from './pages/FormsPage';
 import { FormDetailPage } from './pages/FormDetailPage';
+import { FormTemplatesPage } from './pages/FormTemplatesPage';
+import { FormCampaignsPage } from './pages/FormCampaignsPage';
+import { FormCollectionPage } from './pages/FormCollectionPage';
+import { FormDataCenterPage } from './pages/FormDataCenterPage';
+import { FormExportPage } from './pages/FormExportPage';
 import { FormDesignerPage } from './pages/FormDesignerPage';
 import { FormFillPage } from './pages/FormFillPage';
 import { FormSubmissionsPage } from './pages/FormSubmissionsPage';
@@ -639,8 +644,13 @@ export function App() {
             <Route path="/lotes/:id" element={<LotDetailPage />} />
             <Route path="/lotes/:id/editar" element={<LotFormPage />} />
             <Route path="/formularios" element={<FormsPage />} />
+            <Route path="/formularios/plantillas" element={<FormTemplatesPage />} />
+            <Route path="/formularios/campanas" element={<FormCampaignsPage />} />
+            <Route path="/formularios/recoleccion" element={<FormCollectionPage />} />
+            <Route path="/formularios/centro-datos" element={<FormDataCenterPage />} />
+            <Route path="/formularios/exportar" element={<FormExportPage />} />
             <Route path="/formularios/dashboard" element={<FormsDashboardPage />} />
-            <Route path="/formularios/envios" element={<FormSubmissionsPage />} />
+            <Route path="/formularios/envios" element={<FormCollectionPage />} />
             <Route path="/formularios/nuevo" element={<FormDesignerPage />} />
             <Route path="/formularios/:id/disenar" element={<FormDesignerPage />} />
             <Route path="/formularios/:id/ejecutar" element={<FormFillPage />} />

@@ -65,7 +65,8 @@ export const NAV_CATEGORIES: NavCategory[] = [
       item('work-bpms-inbox', '/bpms/bandeja', 'Bandeja BPMS', '📬', { permission: 'bpms:read', keywords: ['bpms', 'procesos'] }),
       item('work-notifications', '/notificaciones', 'Notificaciones', '🔔', { keywords: ['alertas', 'notificaciones'] }),
       item('work-tasks', '/tareas', 'Scheduler & Jobs', '⏱', { permission: 'scheduler:read', keywords: ['jobs', 'tareas', 'programador'] }),
-      item('work-forms', '/formularios/envios', 'Envíos de formularios', '📝', { permission: 'form:read', keywords: ['formularios', 'envíos'] }),
+      item('work-forms', '/formularios/recoleccion', 'Recolección', '📥', { permission: 'form:read', keywords: ['formularios', 'envíos', 'recolección'] }),
+      item('work-forms-data', '/formularios/centro-datos', 'Centro de Datos', '📊', { permission: 'form:read', keywords: ['formularios', 'análisis', 'datos'] }),
       item('work-portal', '/portal', 'Portal empleado', '🏠', { keywords: ['portal', 'empleado'] }),
       item('work-portal-dash', '/portal/mi-dashboard', 'Mi dashboard', '🧭', { keywords: ['personal', 'dashboard'] }),
     ],
@@ -89,6 +90,8 @@ export const NAV_CATEGORIES: NavCategory[] = [
       item('ag-eaip', '/plataforma-agritech/inteligencia', 'Inteligencia agrícola', '🧠', { permission: 'eaip:read', keywords: ['ia agrícola', 'predicción'] }),
       item('ag-coffee', '/compras', 'Compras café', '☕', { keywords: ['compras', 'café', 'pesaje'] }),
       item('ag-forms', '/formularios', 'Mis Formularios', '📋', { permission: 'form:read', keywords: ['formularios', 'campo', 'mis formularios'] }),
+      item('ag-forms-tpl', '/formularios/plantillas', 'Plantillas', '📚', { permission: 'form:read', keywords: ['plantillas', 'formularios'] }),
+      item('ag-forms-camp', '/formularios/campanas', 'Campañas', '🎯', { permission: 'form:read', keywords: ['campañas', 'recolección'] }),
     ],
   },
   {

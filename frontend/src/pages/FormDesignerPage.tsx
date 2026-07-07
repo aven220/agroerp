@@ -31,6 +31,7 @@ import {
   type FormVersionHistoryItem,
 } from '../api/forms';
 import { FORM_STATUS_LABELS, getNextLifecycleHint } from '../form-studio/form-lifecycle';
+import { FORM_STUDIO_TEMPLATES } from '../form-studio/form-templates-library';
 
 type StudioTab = 'design' | 'preview' | 'simulator' | 'components' | 'rules' | 'versions';
 
@@ -41,6 +42,8 @@ export function FormDesignerPage() {
   const toast = useToast();
   const isNew = !id;
   const openTemplatesOnLoad = searchParams.get('plantilla') === '1';
+  const presetTplKey = searchParams.get('tpl');
+  const presetFormKey = searchParams.get('key');
   const [formKey, setFormKey] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -89,6 +92,15 @@ export function FormDesignerPage() {
     setShowTemplates(false);
     toast.info('Plantilla cargada. Presione «Guardar borrador» para crear el formulario en Mis Formularios.', 'Plantilla aplicada');
   }
+
+  useEffect(() => {
+    if (!isNew || !presetTplKey) return;
+    const t = FORM_STUDIO_TEMPLATES.find((x) => x.templateKey === presetTplKey);
+    if (!t) return;
+    applyTemplate(t);
+    if (presetFormKey) setFormKey(presetFormKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al abrir desde biblioteca
+  }, [isNew, presetTplKey]);
 
   function markDirty() {
     setDirty(true);

@@ -224,6 +224,83 @@ export class CreateFormAssignmentDto {
   dueAt?: string;
 }
 
+export class CreateFormCampaignDto {
+  @ApiProperty()
+  @IsString()
+  code!: string;
+
+  @ApiProperty()
+  @IsString()
+  name!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiProperty()
+  @IsString()
+  formId!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  startsAt?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  endsAt?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  expectedCount?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  metadata?: {
+    zones?: string[];
+    municipalities?: string[];
+    farms?: string[];
+    assigneeUserIds?: string[];
+  };
+}
+
+export class UpdateFormCampaignDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  startsAt?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  endsAt?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  expectedCount?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  metadata?: {
+    zones?: string[];
+    municipalities?: string[];
+    farms?: string[];
+    assigneeUserIds?: string[];
+  };
+}
+
 export class ImportFormsDto {
   @ApiProperty({ type: 'array', items: { type: 'object' } })
   @IsArray()

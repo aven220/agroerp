@@ -14,15 +14,18 @@ import { FormLifecycleService } from '../application/form-lifecycle.service';
 import { FormImportService } from '../application/form-import.service';
 import { FormTemplatesService } from '../application/form-templates.service';
 import { FormAssignmentsService } from '../application/form-assignments.service';
+import { FormCampaignsService } from '../application/form-campaigns.service';
 import { FormDashboardService } from '../application/form-dashboard.service';
 import { UdfeReportsService } from '../application/udfe-reports.service';
 import {
   CreateFormAssignmentDto,
+  CreateFormCampaignDto,
   CreateFormTemplateDto,
   DuplicateFormDto,
   ImportFormsDto,
   InstantiateTemplateDto,
   LifecycleNotesDto,
+  UpdateFormCampaignDto,
 } from './forms.dto';
 import { JwtAuthGuard } from '@/shared/infrastructure/guards/jwt-auth.guard';
 import {
@@ -42,6 +45,7 @@ export class UdfeController {
     private readonly formImport: FormImportService,
     private readonly templates: FormTemplatesService,
     private readonly assignments: FormAssignmentsService,
+    private readonly campaigns: FormCampaignsService,
     private readonly dashboard: FormDashboardService,
     private readonly reports: UdfeReportsService,
   ) {}
@@ -106,6 +110,94 @@ export class UdfeController {
     @Req() req: AgroRequest,
   ) {
     return this.assignments.create(user.organizationId, user.id, dto, req.agroContext);
+  }
+
+  @Post('assignments/:id/complete')
+  @RequirePermissions('form:assign')
+  completeAssignment(
+    @CurrentUser() user: { id: string; organizationId: string },
+    @Param('id') id: string,
+  ) {
+    return this.assignments.complete(user.organizationId, id, user.id);
+  }
+
+  @Get('campaigns')
+  @RequirePermissions('form:read')
+  listCampaigns(
+    @CurrentUser() user: { organizationId: string },
+    @Query('status') status?: string,
+    @Query('formId') formId?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.campaigns.findAll(user.organizationId, { status, formId, search });
+  }
+
+  @Get('campaigns/:id')
+  @RequirePermissions('form:read')
+  getCampaign(
+    @CurrentUser() user: { organizationId: string },
+    @Param('id') id: string,
+  ) {
+    return this.campaigns.findOne(user.organizationId, id);
+  }
+
+  @Get('campaigns/:id/stats')
+  @RequirePermissions('form:read')
+  campaignStats(
+    @CurrentUser() user: { organizationId: string },
+    @Param('id') id: string,
+  ) {
+    return this.campaigns.getStats(user.organizationId, id);
+  }
+
+  @Post('campaigns')
+  @RequirePermissions('form:assign')
+  createCampaign(
+    @CurrentUser() user: { id: string; organizationId: string },
+    @Body() dto: CreateFormCampaignDto,
+    @Req() req: AgroRequest,
+  ) {
+    return this.campaigns.create(user.organizationId, user.id, dto, req.agroContext);
+  }
+
+  @Post('campaigns/:id')
+  @RequirePermissions('form:assign')
+  updateCampaign(
+    @CurrentUser() user: { organizationId: string },
+    @Param('id') id: string,
+    @Body() dto: UpdateFormCampaignDto,
+  ) {
+    return this.campaigns.update(user.organizationId, id, dto);
+  }
+
+  @Post('campaigns/:id/activate')
+  @RequirePermissions('form:assign')
+  activateCampaign(
+    @CurrentUser() user: { id: string; organizationId: string },
+    @Param('id') id: string,
+    @Req() req: AgroRequest,
+  ) {
+    return this.campaigns.activate(user.organizationId, id, user.id, req.agroContext);
+  }
+
+  @Post('campaigns/:id/close')
+  @RequirePermissions('form:assign')
+  closeCampaign(
+    @CurrentUser() user: { id: string; organizationId: string },
+    @Param('id') id: string,
+    @Req() req: AgroRequest,
+  ) {
+    return this.campaigns.close(user.organizationId, id, user.id, req.agroContext);
+  }
+
+  @Post('campaigns/:id/archive')
+  @RequirePermissions('form:admin')
+  archiveCampaign(
+    @CurrentUser() user: { id: string; organizationId: string },
+    @Param('id') id: string,
+    @Req() req: AgroRequest,
+  ) {
+    return this.campaigns.archive(user.organizationId, id, user.id, req.agroContext);
   }
 
   @Get('import/template')

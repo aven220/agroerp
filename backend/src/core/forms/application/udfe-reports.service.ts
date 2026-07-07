@@ -29,6 +29,8 @@ export class UdfeReportsService {
         return this.assignmentCompliance(organizationId);
       case 'UDFE-RPT-04':
         return this.syncHealth(organizationId);
+      case 'UDFE-RPT-05':
+        return this.dataCenterSummary(organizationId, params?.formId);
       default:
         return { reportCode, error: 'Unknown report' };
     }
@@ -403,5 +405,84 @@ export class UdfeReportsService {
       _count: { id: true },
     });
     return { reportCode: 'UDFE-RPT-04', items };
+  }
+
+  private async dataCenterSummary(organizationId: string, formId?: string) {
+    const [submissions, campaigns, forms] = await Promise.all([
+      this.prisma.formSubmission.findMany({
+        where: {
+          organizationId,
+          deletedAt: null,
+          ...(formId ? { formId } : {}),
+        },
+        select: {
+          id: true,
+          formId: true,
+          status: true,
+          syncStatus: true,
+          gpsLocation: true,
+          createdAt: true,
+          form: { select: { formKey: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5000,
+      }),
+      this.prisma.formCampaign.findMany({
+        where: { organizationId, status: { in: ['active', 'closed'] } },
+        select: { id: true, code: true, name: true, status: true, expectedCount: true, formId: true },
+      }),
+      this.prisma.formDefinition.groupBy({
+        by: ['status'],
+        where: { organizationId, deletedAt: null },
+        _count: { id: true },
+      }),
+    ]);
+
+    const byForm = new Map<string, { formKey: string; name: string; count: number }>();
+    const byDay = new Map<string, number>();
+    let withGps = 0;
+    let synced = 0;
+    let pending = 0;
+    let failed = 0;
+
+    for (const s of submissions) {
+      const key = s.formId;
+      const cur = byForm.get(key) ?? {
+        formKey: s.form?.formKey ?? key,
+        name: s.form?.name ?? key,
+        count: 0,
+      };
+      cur.count += 1;
+      byForm.set(key, cur);
+
+      const day = s.createdAt.toISOString().slice(0, 10);
+      byDay.set(day, (byDay.get(day) ?? 0) + 1);
+
+      if (s.gpsLocation) withGps += 1;
+      if (s.syncStatus === 'synced') synced += 1;
+      else if (s.syncStatus === 'failed') failed += 1;
+      else pending += 1;
+    }
+
+    return {
+      reportCode: 'UDFE-RPT-05',
+      totals: {
+        submissions: submissions.length,
+        withGps,
+        synced,
+        pending,
+        failed,
+        activeCampaigns: campaigns.filter((c) => c.status === 'active').length,
+      },
+      submissionsByForm: Array.from(byForm.entries()).map(([formId, v]) => ({
+        formId,
+        ...v,
+      })),
+      submissionsByDay: Array.from(byDay.entries())
+        .map(([date, count]) => ({ date, count }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+      formsByStatus: forms,
+      campaigns,
+    };
   }
 }

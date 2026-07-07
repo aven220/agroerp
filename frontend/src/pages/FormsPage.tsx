@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FormsPlatformNav } from '../components/forms/FormsPlatformNav';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ux/LoadingState';
 import { FormAvailabilityBadges } from '../components/forms/FormAvailabilityBadges';
@@ -210,6 +211,8 @@ export function FormsPage() {
           </div>
         }
       />
+
+      <FormsPlatformNav />
 
       <section className="panel form-lifecycle-intro">
         <h2 className="ds-h4">Cómo funciona</h2>

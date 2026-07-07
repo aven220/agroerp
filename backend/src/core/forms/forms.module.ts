@@ -10,6 +10,7 @@ import { FormLifecycleService } from './application/form-lifecycle.service';
 import { FormImportService } from './application/form-import.service';
 import { FormTemplatesService } from './application/form-templates.service';
 import { FormAssignmentsService } from './application/form-assignments.service';
+import { FormCampaignsService } from './application/form-campaigns.service';
 import { FormDashboardService } from './application/form-dashboard.service';
 import { UdfeReportsService } from './application/udfe-reports.service';
 import {
@@ -32,6 +33,7 @@ import { UdfeController } from './presentation/udfe.controller';
     FormImportService,
     FormTemplatesService,
     FormAssignmentsService,
+    FormCampaignsService,
     FormDashboardService,
     UdfeReportsService,
   ],
@@ -41,6 +43,7 @@ import { UdfeController } from './presentation/udfe.controller';
     FormValidationEngine,
     FormLifecycleService,
     FormAssignmentsService,
+    FormCampaignsService,
     FormDashboardService,
   ],
 })
