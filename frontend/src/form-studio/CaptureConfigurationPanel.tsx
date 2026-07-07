@@ -90,6 +90,7 @@ export function captureValueFromForm(
       processingType: meta.processingType,
       requiredCatalogKeys: meta.requiredCatalogKeys,
       catalogRequirements: meta.catalogRequirements,
+      entityMapping: meta.entityMapping,
     },
     requiredCatalogKeys: meta.requiredCatalogKeys ?? [],
     catalogRequirements: meta.catalogRequirements ?? [],
@@ -112,6 +113,7 @@ export function captureValueToPayload(value: CaptureConfigurationValue) {
     ...metadata,
     requiredCatalogKeys,
     catalogRequirements: catalogRequirements.length ? catalogRequirements : undefined,
+    entityMapping: metadata.entityMapping,
   };
   if (!formMetadata.processingType) {
     delete formMetadata.processingType;

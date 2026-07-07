@@ -51,10 +51,8 @@ import { EffmModule } from '@/core/effm/effm.module';
 import { EaipModule } from '@/core/eaip/eaip.module';
 import { EaceModule } from '@/core/eace/eace.module';
 import { EiampModule } from '@/core/eiamp/eiamp.module';
-
-
-
 import { CoreEngineModule } from '@/core/engine/core-engine.module';
+import { RecordExplorerModule } from '@/core/record-explorer/record-explorer.module';
 import { HealthController } from '@/core/platform/health.controller';
 import { JwtAuthGuard } from '@/shared/infrastructure/guards/jwt-auth.guard';
 import { PermissionsGuard } from '@/shared/infrastructure/guards/permissions.guard';
@@ -82,6 +80,7 @@ import { RequestContextMiddleware } from '@/core/engine/middleware/request-conte
     PrmModule,
     FtipModule,
     FmdtModule,
+    RecordExplorerModule,
     EgsipModule,
     EneacModule,
     EbiapModule,

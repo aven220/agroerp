@@ -42,8 +42,15 @@ import { FORM_STATUS_LABELS, getNextLifecycleHint } from '../form-studio/form-li
 import { FORM_STUDIO_TEMPLATES } from '../form-studio/form-templates-library';
 import { LayoutBuilder } from '../form-studio/layout/LayoutBuilder';
 import type { FormLayoutNode } from '../form-studio/layout/layout-types';
+import {
+  DataMappingPanel,
+  dataMappingFromForm,
+  type DataMappingValue,
+} from '../form-studio/DataMappingPanel';
+import { UcemPreviewBanner } from '../form-studio/UcemPreviewBanner';
+import { buildClientUcemPreview } from '../form-studio/ucem/data-provider-utils';
 
-type StudioTab = 'design' | 'layout' | 'capture' | 'preview' | 'simulator' | 'components' | 'rules' | 'versions';
+type StudioTab = 'design' | 'layout' | 'mapping' | 'capture' | 'preview' | 'simulator' | 'components' | 'rules' | 'versions';
 
 export function FormDesignerPage() {
   const { id } = useParams<{ id: string }>();
@@ -60,11 +67,15 @@ export function FormDesignerPage() {
   const [fields, setFields] = useState<FormFieldDefinition[]>([]);
   const [sections, setSections] = useState<FormDefinitionSchema['sections']>([]);
   const [layout, setLayout] = useState<FormLayoutNode[]>([]);
+  const [dataMapping, setDataMapping] = useState<DataMappingValue>(() =>
+    dataMappingFromForm([], {}),
+  );
   const [layoutMode, setLayoutMode] = useState<'flat' | 'tabs' | 'accordion'>('flat');
   const [captureConfig, setCaptureConfig] = useState<CaptureConfigurationValue>(() => captureValueFromForm());
   const [previewRender, setPreviewRender] = useState<FormRenderPayload | null>(null);
   const [previewMetadata, setPreviewMetadata] = useState<FormCaptureMetadata | Record<string, unknown>>({});
   const [previewCatalogKeys, setPreviewCatalogKeys] = useState<string[]>([]);
+  const [previewUcem, setPreviewUcem] = useState<import('../api/forms').FormUcemPreview | null>(null);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [previewData, setPreviewData] = useState<Record<string, unknown>>({});
   const [serverFields, setServerFields] = useState<Array<FormFieldDefinition & { visible?: boolean; effectiveRequired?: boolean }>>([]);
@@ -90,6 +101,13 @@ export function FormDesignerPage() {
       setFields(f.schema.fields ?? []);
       setSections(f.schema.sections ?? []);
       setLayout((f.schema.layout as FormLayoutNode[] | undefined) ?? []);
+      setDataMapping(
+        dataMappingFromForm(
+          f.schema.fields ?? [],
+          f.metadata as FormCaptureMetadata,
+          f.schema.universalCatalogs,
+        ),
+      );
       setLayoutMode(f.schema.settings?.layoutMode ?? 'flat');
       setCaptureConfig(captureValueFromForm(f.schema, f.metadata as FormCaptureMetadata));
       setFormStatus(f.status);
@@ -104,10 +122,18 @@ export function FormDesignerPage() {
     setFields(t.schema.fields ?? []);
     setSections(t.schema.sections ?? []);
     setLayout(t.schema.layout ?? []);
+    setDataMapping(
+      dataMappingFromForm(
+        t.schema.fields ?? [],
+        { entityMapping: t.captureMetadata?.entityMapping },
+        t.schema.universalCatalogs,
+      ),
+    );
     setLayoutMode(t.schema.settings?.layoutMode ?? 'flat');
     setCaptureConfig(
       captureValueFromForm(t.schema, {
         processingType: t.captureMetadata?.processingType,
+        entityMapping: t.captureMetadata?.entityMapping,
         requiredCatalogKeys: t.requiredCatalogKeys,
         catalogRequirements: t.requiredCatalogKeys?.map((catalogKey) => ({
           catalogKey,
@@ -172,6 +198,9 @@ export function FormDesignerPage() {
       fields,
       sections: sections?.length ? sections : undefined,
       layout: layout.length ? layout : undefined,
+      universalCatalogs: dataMapping.universalCatalogs.length
+        ? dataMapping.universalCatalogs
+        : undefined,
       settings: { ...schemaSettings, layoutMode },
     };
   }
@@ -182,7 +211,12 @@ export function FormDesignerPage() {
       name,
       description,
       schema: buildSchema(),
-      metadata,
+      metadata: {
+        ...metadata,
+        entityMapping: dataMapping.entityMapping.mappings.length
+          ? dataMapping.entityMapping
+          : undefined,
+      },
       requiredCatalogKeys,
     };
   }
@@ -283,6 +317,7 @@ export function FormDesignerPage() {
         setServerFields(payload.fields);
         setPreviewMetadata(rendered.metadata ?? {});
         setPreviewCatalogKeys(rendered.requiredCatalogKeys ?? []);
+        setPreviewUcem(rendered.ucem ?? null);
         return;
       } catch {
         /* cliente local */
@@ -292,6 +327,7 @@ export function FormDesignerPage() {
     setPreviewRender(null);
     setPreviewMetadata({});
     setPreviewCatalogKeys([]);
+    setPreviewUcem(null);
   }
 
   useEffect(() => {
@@ -304,6 +340,7 @@ export function FormDesignerPage() {
   const tabs: { id: StudioTab; label: string }[] = [
     { id: 'design', label: 'Diseño' },
     { id: 'layout', label: 'Layout' },
+    { id: 'mapping', label: 'Mapeo ERP' },
     { id: 'capture', label: 'Capture' },
     { id: 'components', label: 'Componentes' },
     { id: 'preview', label: 'Vista previa' },
@@ -526,6 +563,22 @@ export function FormDesignerPage() {
         />
       )}
 
+      {tab === 'mapping' && (
+        <DataMappingPanel
+          fields={fields}
+          value={dataMapping}
+          disabled={formStatus !== 'draft' && !isNew}
+          onChange={(next) => {
+            setDataMapping(next);
+            markDirty();
+          }}
+          onFieldsChange={(next) => {
+            setFields(next);
+            markDirty();
+          }}
+        />
+      )}
+
       {tab === 'capture' && (
         <CaptureConfigurationPanel
           value={captureConfig}
@@ -557,8 +610,24 @@ export function FormDesignerPage() {
         const displayCatalogKeys = previewCatalogKeys.length
           ? previewCatalogKeys
           : localPayload.requiredCatalogKeys;
+        const clientUcem = buildClientUcemPreview(
+          fields,
+          dataMapping.entityMapping,
+          dataMapping.universalCatalogs,
+        );
+        const displayUcem = previewUcem?.fieldOrigins?.length
+          ? previewUcem
+          : {
+              entityMapping: dataMapping.entityMapping,
+              universalCatalogs: dataMapping.universalCatalogs,
+              fieldOrigins: clientUcem,
+            };
         return (
         <>
+          <UcemPreviewBanner
+            fieldOrigins={displayUcem.fieldOrigins}
+            targetEntity={displayUcem.entityMapping?.targetEntity}
+          />
           <div className="panel capture-preview-package">
             <h3>Paquete Capture (vista previa)</h3>
             <p className="muted">Misma estructura que consume Android: <code>render</code> + <code>settings</code> + <code>metadata</code>.</p>
@@ -623,7 +692,7 @@ export function FormDesignerPage() {
           <h4>Layout</h4>
           <pre className="code-block">{JSON.stringify(layout, null, 2)}</pre>
           <h4>Capture metadata</h4>
-          <pre className="code-block">{JSON.stringify(captureValueToPayload(captureConfig).metadata, null, 2)}</pre>
+          <pre className="code-block">{JSON.stringify({ ...captureValueToPayload(captureConfig).metadata, entityMapping: dataMapping.entityMapping }, null, 2)}</pre>
         </div>
       )}
 

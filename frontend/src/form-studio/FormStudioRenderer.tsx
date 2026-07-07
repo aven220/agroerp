@@ -24,8 +24,13 @@ interface Props {
 }
 
 function enrichFieldOptions(field: FormFieldDefinition, data: Record<string, unknown>): FormFieldDefinition {
-  const catalogKey = field.metadata?.catalogKey as string | undefined;
-  if (!catalogKey || !field.metadata?.dynamicList) return field;
+  const catalogKey =
+    field.dataProvider?.catalogKey ?? (field.metadata?.catalogKey as string | undefined);
+  const isDynamic =
+    field.dataProvider?.type === 'ERP_CATALOG' ||
+    field.dataProvider?.type === 'DEPENDENT' ||
+    field.metadata?.dynamicList;
+  if (!catalogKey || !isDynamic) return field;
   const dynamic = resolveCatalogOptions(catalogKey, data);
   if (dynamic.length === 0 && field.options?.length) return field;
   return { ...field, options: dynamic.length ? dynamic : field.options };

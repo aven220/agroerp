@@ -1,6 +1,8 @@
-import type { FormDefinitionSchema, FormFieldDefinition } from '../api/forms';
+import type { FormDefinitionSchema, FormFieldDefinition, FormEntityMapping } from '../api/forms';
 import type { FormCaptureMetadata } from '../api/forms';
 import { buildGeoCascadeFields, catalogFieldDefaults } from './form-dynamic-catalogs';
+import { UNIVERSAL_CATALOG_REGISTRY } from './ucem/universal-catalog-registry';
+import { DATA_PROVIDER_TYPES } from './ucem/data-provider-utils';
 
 export type FormStudioTemplate = {
   templateKey: string;
@@ -9,7 +11,7 @@ export type FormStudioTemplate = {
   category: string;
   tags: string[];
   schema: FormDefinitionSchema;
-  captureMetadata?: FormCaptureMetadata;
+  captureMetadata?: FormCaptureMetadata & { entityMapping?: FormEntityMapping };
   requiredCatalogKeys?: string[];
 };
 
@@ -120,7 +122,85 @@ export const FORM_STUDIO_TEMPLATES: FormStudioTemplate[] = [
   },
   {
     templateKey: 'tpl-registro-productor',
-    name: 'Registro productor',
+    name: 'Registro de Productor',
+    category: 'Captura / ERP / Low-Code',
+    description: 'Registro productor con UCEM: mapeo ERP, catálogos y processingType.',
+    tags: ['productor', 'capture', 'erp', 'ucem', 'low-code'],
+    captureMetadata: {
+      processingType: 'PRODUCER_CREATE',
+      entityMapping: {
+        targetEntity: 'Producer',
+        mappings: [
+          { fieldKey: 'nombre', entityType: 'Producer', entityProperty: 'name' },
+          { fieldKey: 'documento', entityType: 'Producer', entityProperty: 'document' },
+          { fieldKey: 'municipio', entityType: 'Producer', entityProperty: 'city' },
+          { fieldKey: 'cultivo', entityType: 'Producer', entityProperty: 'mainCrop' },
+        ],
+      },
+    },
+    requiredCatalogKeys: ['municipios', 'cultivos'],
+    schema: f([
+      { key: 'titulo', type: 'heading', label: 'Registro de productor' },
+      {
+        key: 'nombre',
+        type: 'text',
+        label: 'Nombre',
+        required: true,
+        dataProvider: { type: DATA_PROVIDER_TYPES.MANUAL },
+      },
+      {
+        key: 'documento',
+        type: 'text',
+        label: 'Documento',
+        required: true,
+        dataProvider: { type: DATA_PROVIDER_TYPES.MANUAL },
+      },
+      { key: 'pais', type: 'hidden', label: 'País', defaultValue: 'co' },
+      {
+        ...catalogFieldDefaults('departamentos', 'Departamento', 'departamento'),
+        dataProvider: {
+          type: DATA_PROVIDER_TYPES.DEPENDENT,
+          catalogKey: 'departamentos',
+          dependsOnField: 'pais',
+        },
+      },
+      {
+        ...catalogFieldDefaults('municipios', 'Municipio', 'municipio'),
+        dataProvider: {
+          type: DATA_PROVIDER_TYPES.ERP_CATALOG,
+          catalogKey: 'municipios',
+          dependsOnField: 'departamento',
+        },
+      },
+      {
+        key: 'cultivo',
+        type: 'select',
+        label: 'Cultivo principal',
+        metadata: { catalogKey: 'cultivos', dynamicList: true },
+        dataProvider: { type: DATA_PROVIDER_TYPES.ERP_CATALOG, catalogKey: 'cultivos' },
+        options: [],
+      },
+      { key: 'foto', type: 'photo', label: 'Foto', dataProvider: { type: DATA_PROVIDER_TYPES.MANUAL } },
+      { key: 'ubicacion', type: 'geo', label: 'GPS', required: true, dataProvider: { type: DATA_PROVIDER_TYPES.MANUAL } },
+    ], {
+      universalCatalogs: [
+        UNIVERSAL_CATALOG_REGISTRY.find((c) => c.catalogKey === 'municipios')!,
+        UNIVERSAL_CATALOG_REGISTRY.find((c) => c.catalogKey === 'cultivos')!,
+        UNIVERSAL_CATALOG_REGISTRY.find((c) => c.catalogKey === 'departamentos')!,
+      ],
+      settings: {
+        ...settings,
+        allowOffline: true,
+        requiresSync: true,
+        requireGps: true,
+        location: { enabled: true, required: true, accuracy: 50 },
+        media: { allowPhotos: true, multiplePhotos: false, allowFiles: false },
+      },
+    }),
+  },
+  {
+    templateKey: 'tpl-registro-productor-legacy',
+    name: 'Registro productor (legacy)',
     category: 'Captura / ERP',
     description: 'Alta de productor con ubicación, foto y sincronización ERP.',
     tags: ['productor', 'capture', 'erp', 'gps'],

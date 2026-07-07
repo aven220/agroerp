@@ -7,6 +7,7 @@ import { ConditionalLogicEngine } from './application/conditional-logic.engine';
 import { CalculatedFieldEngine } from './application/calculated-field.engine';
 import { FormValidationEngine } from './application/form-validation.engine';
 import { FormRendererService } from './application/form-renderer.service';
+import { UcemPreviewService } from './application/ucem-preview.service';
 import { FormLifecycleService } from './application/form-lifecycle.service';
 import { FormImportService } from './application/form-import.service';
 import { FormTemplatesService } from './application/form-templates.service';
@@ -52,6 +53,7 @@ import { UdfeController } from './presentation/udfe.controller';
     CalculatedFieldEngine,
     FormValidationEngine,
     FormRendererService,
+    UcemPreviewService,
     FormLifecycleService,
     FormImportService,
     FormTemplatesService,

@@ -13,6 +13,7 @@ import {
   type FormRepository,
 } from '../domain/interfaces';
 import { FormRendererService } from './form-renderer.service';
+import { UcemPreviewService } from './ucem-preview.service';
 import { CreateFormDto, UpdateFormDto } from '../presentation/forms.dto';
 
 @Injectable()
@@ -22,6 +23,7 @@ export class FormsService {
     private readonly formRepository: FormRepository,
     private readonly core: CoreEngineService,
     private readonly renderer: FormRendererService,
+    private readonly ucem: UcemPreviewService,
   ) {}
 
   async findAll(organizationId: string, status?: string, search?: string) {
@@ -244,6 +246,7 @@ export class FormsService {
     const schema = form.schema as unknown as FormDefinitionSchema;
     const renderResult = this.renderer.render(schema, partialData);
     const meta = (form.metadata ?? {}) as Record<string, unknown>;
+    const ucem = this.ucem.buildPreview(schema, meta.entityMapping as import('@agroerp/shared').FormEntityMapping | undefined);
 
     return {
       formId: form.id,
@@ -255,6 +258,7 @@ export class FormsService {
       requiredCatalogKeys: Array.isArray(meta.requiredCatalogKeys)
         ? (meta.requiredCatalogKeys as string[])
         : [],
+      ucem,
       render: renderResult,
       ...renderResult,
     };

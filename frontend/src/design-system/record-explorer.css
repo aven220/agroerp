@@ -1,0 +1,307 @@
+/* URE — Universal Record Explorer */
+
+.ure-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--ds-space-4);
+  align-items: start;
+  padding: 0 var(--ds-space-4) var(--ds-space-6);
+}
+
+.ure-sidebar {
+  position: sticky;
+  top: var(--ds-space-4);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  padding: var(--ds-space-3);
+  box-shadow: var(--ds-shadow-sm);
+}
+
+.ure-nav {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.ure-nav-item {
+  width: 100%;
+  text-align: left;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-md);
+  background: transparent;
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-semibold);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ure-nav-item:hover,
+.ure-nav-item.active {
+  background: var(--ds-primary-subtle);
+  color: var(--ds-primary);
+  border-color: var(--ds-primary-muted);
+}
+
+.ure-panel {
+  min-width: 0;
+}
+
+.ure-widgets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.ure-widget-slot > .ure-summary {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  padding: var(--ds-space-4);
+  box-shadow: var(--ds-shadow-sm);
+}
+
+.ure-summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--ds-space-3);
+}
+
+.ure-entity-type {
+  display: inline-block;
+  font-size: var(--ds-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-text-muted);
+  margin-bottom: var(--ds-space-1);
+}
+
+.ure-summary-title {
+  font-size: var(--ds-text-xl);
+  margin-bottom: var(--ds-space-1);
+}
+
+.ure-summary-sub {
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-sm);
+}
+
+.ure-status-badge {
+  padding: var(--ds-space-1) var(--ds-space-2);
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-primary-subtle);
+  color: var(--ds-primary);
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-semibold);
+  white-space: nowrap;
+}
+
+.ure-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  margin-top: var(--ds-space-3);
+}
+
+.ure-badge {
+  padding: 2px var(--ds-space-2);
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-surface-sunken);
+  font-size: var(--ds-text-xs);
+}
+
+.ure-kpi-row,
+.ure-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--ds-space-3);
+  margin-top: var(--ds-space-4);
+}
+
+.ure-kpi,
+.ure-metric {
+  padding: var(--ds-space-3);
+}
+
+.ure-kpi-label {
+  display: block;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+  margin-bottom: var(--ds-space-1);
+}
+
+.ure-kpi-value {
+  font-size: var(--ds-text-lg);
+}
+
+.ure-field-list {
+  display: grid;
+  gap: var(--ds-space-2);
+}
+
+.ure-field-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) 1fr;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-2) 0;
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.ure-field-row dt {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.ure-field-row dd {
+  font-size: var(--ds-text-sm);
+  word-break: break-word;
+}
+
+.ure-timeline {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.ure-timeline-item {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  gap: var(--ds-space-3);
+}
+
+.ure-timeline-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--ds-primary);
+}
+
+.ure-timeline-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+  margin-bottom: var(--ds-space-1);
+}
+
+.ure-timeline-type {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ure-rel-list,
+.ure-doc-list,
+.ure-form-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.ure-rel-list li,
+.ure-doc-list li,
+.ure-form-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-2);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+}
+
+.ure-rel-type {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+  text-transform: uppercase;
+}
+
+.ure-doc-meta {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+
+.ure-form-status {
+  margin-left: var(--ds-space-2);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+
+.ure-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--ds-space-3);
+}
+
+.ure-gallery-item {
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  overflow: hidden;
+  background: var(--ds-surface-sunken);
+}
+
+.ure-gallery-item img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  display: block;
+}
+
+.ure-gallery-placeholder {
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ds-space-2);
+  text-align: center;
+  font-size: var(--ds-text-sm);
+}
+
+.ure-gallery-id {
+  color: var(--ds-text-muted);
+  margin-top: var(--ds-space-1);
+}
+
+.ure-gallery figcaption {
+  padding: var(--ds-space-2);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+
+.ure-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+}
+
+.ure-empty {
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-sm);
+}
+
+@media (max-width: 900px) {
+  .ure-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ure-sidebar {
+    position: static;
+  }
+
+  .ure-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}

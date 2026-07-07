@@ -22,6 +22,67 @@ export interface FormCaptureMetadata {
   processingType?: string;
   requiredCatalogKeys?: string[];
   catalogRequirements?: FormCatalogRequirement[];
+  entityMapping?: FormEntityMapping;
+}
+
+export const DATA_PROVIDER_TYPES = {
+  MANUAL: 'MANUAL',
+  STATIC_LIST: 'STATIC_LIST',
+  ERP_CATALOG: 'ERP_CATALOG',
+  ERP_ENTITY: 'ERP_ENTITY',
+  DEPENDENT: 'DEPENDENT',
+  FORM_RESULT: 'FORM_RESULT',
+  EXTERNAL_API: 'EXTERNAL_API',
+} as const;
+
+export type DataProviderType = (typeof DATA_PROVIDER_TYPES)[keyof typeof DATA_PROVIDER_TYPES];
+
+export interface FieldDataProvider {
+  type: DataProviderType;
+  catalogKey?: string;
+  entityType?: string;
+  entityField?: string;
+  dependsOnField?: string;
+  dependsOnCatalog?: string;
+  apiUrl?: string;
+  valueField?: string;
+  labelField?: string;
+  sourceFieldKey?: string;
+  staticOptions?: Array<{ value: string; label: string }>;
+}
+
+export interface FormFieldEntityMapping {
+  fieldKey: string;
+  entityType: string;
+  entityProperty: string;
+}
+
+export interface FormEntityMapping {
+  targetEntity: string;
+  mappings: FormFieldEntityMapping[];
+}
+
+export interface FormUcemFieldOrigin {
+  fieldKey: string;
+  label: string;
+  dataProviderType: DataProviderType;
+  catalogKey?: string;
+  dependencies?: string[];
+  entityProperty?: string;
+  entityType?: string;
+}
+
+export interface FormUcemPreview {
+  entityMapping?: FormEntityMapping;
+  universalCatalogs: Array<{
+    catalogKey: string;
+    displayName: string;
+    domain: string;
+    offlineCapable: boolean;
+    dependencies?: string[];
+    version: string;
+  }>;
+  fieldOrigins: FormUcemFieldOrigin[];
 }
 
 export interface FormFieldDefinition {
@@ -37,6 +98,8 @@ export interface FormFieldDefinition {
   visibleWhen?: unknown;
   requiredWhen?: unknown;
   readOnlyWhen?: unknown;
+  relationTo?: string;
+  apiSource?: { url: string; valueField: string; labelField: string };
   validation?: {
     min?: number;
     max?: number;
@@ -49,6 +112,7 @@ export interface FormFieldDefinition {
   fields?: FormFieldDefinition[];
   matrix?: { rows: string[]; columns: string[] };
   metadata?: Record<string, unknown>;
+  dataProvider?: FieldDataProvider;
 }
 
 export type FormLayoutNodeType =
@@ -116,6 +180,8 @@ export interface FormDefinitionSchema {
   fields: FormFieldDefinition[];
   sections?: Array<{ key: string; title: string; description?: string }>;
   layout?: FormLayoutNode[];
+  dataProviders?: Record<string, FieldDataProvider>;
+  universalCatalogs?: FormUcemPreview['universalCatalogs'];
   settings?: {
     requireGps?: boolean;
     allowDraft?: boolean;
@@ -206,6 +272,7 @@ export interface RenderedForm {
   resolvedData?: Record<string, unknown>;
   settings?: FormDefinitionSchema['settings'];
   schemaVersion?: number;
+  ucem?: FormUcemPreview;
 }
 
 export function listForms(filters?: { status?: string; search?: string }) {

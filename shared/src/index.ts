@@ -797,6 +797,8 @@ export interface FormFieldDefinition {
   scale?: { min: number; max: number; step?: number };
   likert?: { statements: string[]; options: string[] };
   metadata?: Record<string, unknown>;
+  /** UCEM — data origin for low-code binding */
+  dataProvider?: import('./ucem').FieldDataProvider;
 }
 
 export interface FormSectionDefinition {
@@ -919,6 +921,10 @@ export interface FormDefinitionSchema {
   fields: FormFieldDefinition[];
   sections?: FormSectionDefinition[];
   layout?: FormLayoutNode[];
+  /** UCEM — reusable named data providers */
+  dataProviders?: Record<string, import('./ucem').FieldDataProvider>;
+  /** UCEM — catalog definitions bound to this form */
+  universalCatalogs?: import('./ucem').UniversalCatalogDefinition[];
   settings?: FormSettings;
   workflow?: FormWorkflowBinding;
   aiReadiness?: Record<string, string>;
@@ -952,6 +958,8 @@ export interface FormCaptureMetadata {
   processingType?: CaptureProcessingType | string;
   requiredCatalogKeys?: string[];
   catalogRequirements?: FormCatalogRequirement[];
+  /** UCEM — complements processingType; maps form fields → ERP entity */
+  entityMapping?: import('./ucem').FormEntityMapping;
 }
 
 /** Capture Analytics — semantic event types for EBIAP BI ingestion */
@@ -2970,3 +2978,6 @@ export const FIELD_OPERATION_TYPES = [
 ] as const;
 
 export type FieldOperationType = (typeof FIELD_OPERATION_TYPES)[number];
+
+export * from './ucem';
+export * from './ure';

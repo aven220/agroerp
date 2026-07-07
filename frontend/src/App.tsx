@@ -24,6 +24,7 @@ import { LotDetailPage } from './pages/LotDetailPage';
 import { LotFormPage } from './pages/LotFormPage';
 import { LotDashboardPage } from './pages/LotDashboardPage';
 import { LotImportPage } from './pages/LotImportPage';
+import { RecordExplorerPage } from './pages/RecordExplorerPage';
 import { FormsPage } from './pages/FormsPage';
 import { FormDetailPage } from './pages/FormDetailPage';
 import { FormTemplatesPage } from './pages/FormTemplatesPage';
@@ -643,6 +644,7 @@ export function App() {
             <Route path="/lotes/nuevo" element={<LotFormPage />} />
             <Route path="/lotes/:id" element={<LotDetailPage />} />
             <Route path="/lotes/:id/editar" element={<LotFormPage />} />
+            <Route path="/record-explorer/:entityType/:recordId" element={<RecordExplorerPage />} />
             <Route path="/formularios" element={<FormsPage />} />
             <Route path="/formularios/plantillas" element={<FormTemplatesPage />} />
             <Route path="/formularios/campanas" element={<FormCampaignsPage />} />

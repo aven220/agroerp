@@ -5,6 +5,11 @@ import {
   CAPTURE_CATALOG_REGISTRY_VERSION,
 } from '../domain/catalogs/capture-catalog.registry';
 import type { CaptureCatalog } from '../domain';
+import {
+  UNIVERSAL_CATALOG_REGISTRY,
+  UNIVERSAL_CATALOG_REGISTRY_MAP,
+} from '../domain/catalogs/universal-catalog.registry';
+import type { UniversalCatalogDefinition } from '@agroerp/shared';
 
 @Injectable()
 export class CaptureCatalogService {
@@ -21,10 +26,22 @@ export class CaptureCatalogService {
     };
   }
 
+  getUniversalCatalogs(keys?: string[]): UniversalCatalogDefinition[] {
+    if (keys?.length) {
+      return keys
+        .map((key) => UNIVERSAL_CATALOG_REGISTRY_MAP[key])
+        .filter((c): c is UniversalCatalogDefinition => Boolean(c));
+    }
+    return UNIVERSAL_CATALOG_REGISTRY;
+  }
+
   extractCatalogKeysFromSchemas(schemas: unknown[]): string[] {
     const keys = new Set<string>();
     for (const schema of schemas) {
       const def = schema as FormDefinitionSchema;
+      for (const catalog of def.universalCatalogs ?? []) {
+        keys.add(catalog.catalogKey);
+      }
       for (const field of this.flattenFields(def?.fields ?? [])) {
         this.collectCatalogKey(field, keys);
       }
@@ -44,7 +61,8 @@ export class CaptureCatalogService {
   }
 
   private collectCatalogKey(field: FormFieldDefinition, keys: Set<string>) {
-    const catalogKey = field.metadata?.catalogKey;
+    const catalogKey =
+      field.dataProvider?.catalogKey ?? (field.metadata?.catalogKey as string | undefined);
     if (typeof catalogKey === 'string' && catalogKey.trim()) {
       keys.add(catalogKey);
     }
