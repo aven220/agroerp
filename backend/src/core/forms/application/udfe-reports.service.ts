@@ -460,8 +460,8 @@ export class UdfeReportsService {
 
       if (s.gpsLocation) withGps += 1;
       if (s.syncStatus === 'synced') synced += 1;
-      else if (s.syncStatus === 'failed') failed += 1;
-      else pending += 1;
+      else if (s.syncStatus === 'conflict') failed += 1;
+      else if (s.syncStatus === 'pending') pending += 1;
     }
 
     return {

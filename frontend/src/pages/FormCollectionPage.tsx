@@ -9,7 +9,7 @@ import { formatFormDate } from '../form-studio/form-lifecycle';
 const SYNC_LABELS: Record<string, string> = {
   synced: 'Sincronizado',
   pending: 'Pendiente',
-  failed: 'Error',
+  conflict: 'Conflicto',
 };
 
 export function FormCollectionPage() {
@@ -54,7 +54,7 @@ export function FormCollectionPage() {
     total: filtered.length,
     synced: filtered.filter((s) => s.syncStatus === 'synced').length,
     pending: filtered.filter((s) => s.syncStatus === 'pending').length,
-    failed: filtered.filter((s) => s.syncStatus === 'failed').length,
+    failed: filtered.filter((s) => s.syncStatus === 'conflict').length,
     withGps: filtered.filter((s) => s.gpsLocation || hasGpsInData(s.data)).length,
     withMedia: filtered.filter((s) => hasMediaInData(s.data)).length,
   }), [filtered]);
@@ -86,7 +86,7 @@ export function FormCollectionPage() {
           <option value="">Todo sync</option>
           <option value="synced">Sincronizado</option>
           <option value="pending">Pendiente</option>
-          <option value="failed">Error</option>
+          <option value="conflict">Conflicto</option>
         </select>
         <button type="button" className="btn btn-sm" onClick={() => load()}>Actualizar</button>
       </div>

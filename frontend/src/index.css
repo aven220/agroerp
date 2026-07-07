@@ -2524,4 +2524,4 @@ a:hover {
 
 .badge.sync-synced { background: #dcfce7; color: #166534; }
 .badge.sync-pending { background: #fef3c7; color: #92400e; }
-.badge.sync-failed { background: #fee2e2; color: #991b1b; }
+.badge.sync-conflict { background: #fee2e2; color: #991b1b; }

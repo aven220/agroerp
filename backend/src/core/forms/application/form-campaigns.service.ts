@@ -244,7 +244,7 @@ export class FormCampaignsService {
 
     const synced = forCampaign.filter((s) => s.syncStatus === 'synced').length;
     const pending = forCampaign.filter((s) => s.syncStatus === 'pending').length;
-    const failed = forCampaign.filter((s) => s.syncStatus === 'failed').length;
+    const failed = forCampaign.filter((s) => s.syncStatus === 'conflict').length;
     const withGps = forCampaign.filter((s) => s.gpsLocation != null).length;
 
     return {
