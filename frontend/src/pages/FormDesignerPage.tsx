@@ -12,6 +12,12 @@ import { ComponentLibraryPanel } from '../form-studio/ComponentLibraryPanel';
 import { FormSimulator } from '../form-studio/FormSimulator';
 import { FormStudioPreview, type PreviewDevice } from '../form-studio/FormStudioPreview';
 import { FormStudioRenderer } from '../form-studio/FormStudioRenderer';
+import {
+  CaptureConfigurationPanel,
+  captureValueFromForm,
+  captureValueToPayload,
+  type CaptureConfigurationValue,
+} from '../form-studio/CaptureConfigurationPanel';
 import { TemplateLibraryModal } from '../form-studio/TemplateLibraryModal';
 import type { FormStudioTemplate } from '../form-studio/form-templates-library';
 import { DYNAMIC_CATALOGS } from '../form-studio/form-dynamic-catalogs';
@@ -29,11 +35,15 @@ import {
   type FormDefinitionSchema,
   type FormFieldDefinition,
   type FormVersionHistoryItem,
+  type FormRenderPayload,
 } from '../api/forms';
+import type { FormCaptureMetadata } from '../api/forms';
 import { FORM_STATUS_LABELS, getNextLifecycleHint } from '../form-studio/form-lifecycle';
 import { FORM_STUDIO_TEMPLATES } from '../form-studio/form-templates-library';
+import { LayoutBuilder } from '../form-studio/layout/LayoutBuilder';
+import type { FormLayoutNode } from '../form-studio/layout/layout-types';
 
-type StudioTab = 'design' | 'preview' | 'simulator' | 'components' | 'rules' | 'versions';
+type StudioTab = 'design' | 'layout' | 'capture' | 'preview' | 'simulator' | 'components' | 'rules' | 'versions';
 
 export function FormDesignerPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,7 +59,12 @@ export function FormDesignerPage() {
   const [description, setDescription] = useState('');
   const [fields, setFields] = useState<FormFieldDefinition[]>([]);
   const [sections, setSections] = useState<FormDefinitionSchema['sections']>([]);
+  const [layout, setLayout] = useState<FormLayoutNode[]>([]);
   const [layoutMode, setLayoutMode] = useState<'flat' | 'tabs' | 'accordion'>('flat');
+  const [captureConfig, setCaptureConfig] = useState<CaptureConfigurationValue>(() => captureValueFromForm());
+  const [previewRender, setPreviewRender] = useState<FormRenderPayload | null>(null);
+  const [previewMetadata, setPreviewMetadata] = useState<FormCaptureMetadata | Record<string, unknown>>({});
+  const [previewCatalogKeys, setPreviewCatalogKeys] = useState<string[]>([]);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [previewData, setPreviewData] = useState<Record<string, unknown>>({});
   const [serverFields, setServerFields] = useState<Array<FormFieldDefinition & { visible?: boolean; effectiveRequired?: boolean }>>([]);
@@ -74,7 +89,9 @@ export function FormDesignerPage() {
       setDescription(f.description ?? '');
       setFields(f.schema.fields ?? []);
       setSections(f.schema.sections ?? []);
+      setLayout((f.schema.layout as FormLayoutNode[] | undefined) ?? []);
       setLayoutMode(f.schema.settings?.layoutMode ?? 'flat');
+      setCaptureConfig(captureValueFromForm(f.schema, f.metadata as FormCaptureMetadata));
       setFormStatus(f.status);
     });
     getFormVersionHistory(id).then(setVersions).catch(() => setVersions([]));
@@ -86,7 +103,19 @@ export function FormDesignerPage() {
     setFormKey(t.templateKey.replace(/^tpl-/, ''));
     setFields(t.schema.fields ?? []);
     setSections(t.schema.sections ?? []);
+    setLayout(t.schema.layout ?? []);
     setLayoutMode(t.schema.settings?.layoutMode ?? 'flat');
+    setCaptureConfig(
+      captureValueFromForm(t.schema, {
+        processingType: t.captureMetadata?.processingType,
+        requiredCatalogKeys: t.requiredCatalogKeys,
+        catalogRequirements: t.requiredCatalogKeys?.map((catalogKey) => ({
+          catalogKey,
+          source: 'builtin',
+          offline: true,
+        })),
+      }),
+    );
     setTemplateLoaded(true);
     setDirty(true);
     setShowTemplates(false);
@@ -137,11 +166,24 @@ export function FormDesignerPage() {
   }
 
   function buildSchema(): FormDefinitionSchema {
+    const { schemaSettings } = captureValueToPayload(captureConfig);
     return {
       version: 1,
       fields,
       sections: sections?.length ? sections : undefined,
-      settings: { offlineCapable: true, allowDraft: true, layoutMode },
+      layout: layout.length ? layout : undefined,
+      settings: { ...schemaSettings, layoutMode },
+    };
+  }
+
+  function buildSavePayload() {
+    const { metadata, requiredCatalogKeys } = captureValueToPayload(captureConfig);
+    return {
+      name,
+      description,
+      schema: buildSchema(),
+      metadata,
+      requiredCatalogKeys,
     };
   }
 
@@ -154,7 +196,7 @@ export function FormDesignerPage() {
     setSaveError(null);
     try {
       if (isNew) {
-        const created = await createForm({ formKey, name, description, schema: buildSchema() });
+        const created = await createForm({ formKey, ...buildSavePayload() });
         setDirty(false);
         setTemplateLoaded(false);
         setLastSavedAt(new Date().toISOString());
@@ -166,7 +208,7 @@ export function FormDesignerPage() {
         );
         navigate(`/formularios/${created.id}/disenar`, { replace: true });
       } else if (id) {
-        const updated = await updateForm(id, { name, description, schema: buildSchema() });
+        const updated = await updateForm(id, buildSavePayload());
         setDirty(false);
         setLastSavedAt(new Date().toISOString());
         setSavedFormId(updated.id);
@@ -231,13 +273,25 @@ export function FormDesignerPage() {
     if (id) {
       try {
         const rendered = await renderForm(id, previewData);
-        setServerFields(rendered.fields);
+        const payload = rendered.render ?? {
+          schemaVersion: rendered.schemaVersion ?? 1,
+          settings: rendered.settings,
+          fields: rendered.fields,
+          resolvedData: rendered.resolvedData ?? {},
+        };
+        setPreviewRender(payload);
+        setServerFields(payload.fields);
+        setPreviewMetadata(rendered.metadata ?? {});
+        setPreviewCatalogKeys(rendered.requiredCatalogKeys ?? []);
         return;
       } catch {
         /* cliente local */
       }
     }
     setServerFields([]);
+    setPreviewRender(null);
+    setPreviewMetadata({});
+    setPreviewCatalogKeys([]);
   }
 
   useEffect(() => {
@@ -249,6 +303,8 @@ export function FormDesignerPage() {
 
   const tabs: { id: StudioTab; label: string }[] = [
     { id: 'design', label: 'Diseño' },
+    { id: 'layout', label: 'Layout' },
+    { id: 'capture', label: 'Capture' },
     { id: 'components', label: 'Componentes' },
     { id: 'preview', label: 'Vista previa' },
     { id: 'simulator', label: 'Probar formulario' },
@@ -454,6 +510,33 @@ export function FormDesignerPage() {
         </div>
       )}
 
+      {tab === 'layout' && (
+        <LayoutBuilder
+          layout={layout}
+          fields={fields}
+          disabled={formStatus !== 'draft' && !isNew}
+          onLayoutChange={(next) => {
+            setLayout(next);
+            markDirty();
+          }}
+          onFieldsChange={(next) => {
+            setFields(next);
+            markDirty();
+          }}
+        />
+      )}
+
+      {tab === 'capture' && (
+        <CaptureConfigurationPanel
+          value={captureConfig}
+          disabled={formStatus !== 'draft' && !isNew}
+          onChange={(next) => {
+            setCaptureConfig(next);
+            markDirty();
+          }}
+        />
+      )}
+
       {tab === 'components' && (
         <div className="designer-layout">
           <ComponentLibraryPanel onAdd={(f) => { addField(f); setTab('design'); }} />
@@ -465,30 +548,82 @@ export function FormDesignerPage() {
         </div>
       )}
 
-      {tab === 'preview' && (
-        <FormStudioPreview device={previewDevice} onDeviceChange={setPreviewDevice}>
-          <FormStudioRenderer
-            fields={fields}
-            data={previewData}
-            serverFields={serverFields.length ? serverFields : undefined}
-            onChange={(key, val) => setPreviewData((d) => ({ ...d, [key]: val }))}
-            onButtonAction={(action, field) => {
-              if (action === 'reset') setPreviewData({});
-              if (action === 'link') {
-                const url = field.metadata?.url ?? field.description;
-                if (url) window.open(String(url), '_blank', 'noopener,noreferrer');
-              }
-            }}
-          />
-        </FormStudioPreview>
-      )}
+      {tab === 'preview' && (() => {
+        const localPayload = captureValueToPayload(captureConfig);
+        const displaySettings = previewRender?.settings ?? buildSchema().settings;
+        const displayMetadata = (previewMetadata as FormCaptureMetadata).processingType
+          ? previewMetadata
+          : localPayload.metadata;
+        const displayCatalogKeys = previewCatalogKeys.length
+          ? previewCatalogKeys
+          : localPayload.requiredCatalogKeys;
+        return (
+        <>
+          <div className="panel capture-preview-package">
+            <h3>Paquete Capture (vista previa)</h3>
+            <p className="muted">Misma estructura que consume Android: <code>render</code> + <code>settings</code> + <code>metadata</code>.</p>
+            <div className="capture-preview-meta">
+              <div>
+                <strong>processingType</strong>
+                <span>{String((displayMetadata as FormCaptureMetadata).processingType ?? '—')}</span>
+              </div>
+              <div>
+                <strong>requiredCatalogKeys</strong>
+                <span>{displayCatalogKeys.length ? displayCatalogKeys.join(', ') : '—'}</span>
+              </div>
+              <div>
+                <strong>Offline</strong>
+                <span>
+                  {displaySettings?.allowOffline !== false ? 'allowOffline' : 'off'}
+                  {' · '}
+                  {displaySettings?.allowDraft !== false ? 'allowDraft' : 'no draft'}
+                  {' · '}
+                  {displaySettings?.requiresSync ? 'requiresSync' : 'sync opcional'}
+                </span>
+              </div>
+              <div>
+                <strong>GPS</strong>
+                <span>
+                  {displaySettings?.location?.enabled
+                    ? `enabled${displaySettings.location.required ? ' (required)' : ''} · ${displaySettings.location.accuracy ?? 50}m`
+                    : 'disabled'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <FormStudioPreview device={previewDevice} onDeviceChange={setPreviewDevice}>
+            <FormStudioRenderer
+              fields={fields}
+              layout={layout}
+              data={previewRender?.resolvedData ?? previewData}
+              serverFields={serverFields.length ? serverFields : undefined}
+              onChange={(key, val) => setPreviewData((d) => ({ ...d, [key]: val }))}
+              onButtonAction={(action, field) => {
+                if (action === 'reset') setPreviewData({});
+                if (action === 'link') {
+                  const url = field.metadata?.url ?? field.description;
+                  if (url) window.open(String(url), '_blank', 'noopener,noreferrer');
+                }
+              }}
+            />
+          </FormStudioPreview>
+        </>
+        );
+      })()}
 
-      {tab === 'simulator' && <FormSimulator fields={fields} formName={name || 'Formulario'} />}
+      {tab === 'simulator' && (
+        <FormSimulator fields={fields} layout={layout} formName={name || 'Formulario'} />
+      )}
 
       {tab === 'rules' && (
         <div className="panel">
           <p>Esquema JSON compatible con Web y móvil. Las reglas <code>visibleWhen</code> / <code>requiredWhen</code> se evalúan en servidor y cliente.</p>
+          <h4>Schema</h4>
           <pre className="code-block">{JSON.stringify(buildSchema(), null, 2)}</pre>
+          <h4>Layout</h4>
+          <pre className="code-block">{JSON.stringify(layout, null, 2)}</pre>
+          <h4>Capture metadata</h4>
+          <pre className="code-block">{JSON.stringify(captureValueToPayload(captureConfig).metadata, null, 2)}</pre>
         </div>
       )}
 

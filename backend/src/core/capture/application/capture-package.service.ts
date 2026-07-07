@@ -58,9 +58,7 @@ export class CapturePackageService {
           requireGps: settings.requireGps === true,
           geofence: settings.geofence,
         },
-        requiredCatalogKeys: this.catalogs.extractCatalogKeysFromSchemas([
-          detail.schema,
-        ]),
+        requiredCatalogKeys: this.resolveRequiredCatalogKeys(detail, schema),
       });
     }
 
@@ -147,6 +145,17 @@ export class CapturePackageService {
       forms: formEntries,
       catalogsChanged: hasChanges,
     };
+  }
+
+  private resolveRequiredCatalogKeys(
+    detail: { metadata?: unknown },
+    schema: FormDefinitionSchema,
+  ): string[] {
+    const meta = (detail.metadata ?? {}) as { requiredCatalogKeys?: string[] };
+    if (Array.isArray(meta.requiredCatalogKeys) && meta.requiredCatalogKeys.length > 0) {
+      return meta.requiredCatalogKeys;
+    }
+    return this.catalogs.extractCatalogKeysFromSchemas([schema]);
   }
 
   private mapAssignment(assignment: {

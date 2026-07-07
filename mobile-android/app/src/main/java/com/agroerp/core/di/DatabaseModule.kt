@@ -3,12 +3,17 @@ package com.agroerp.core.di
 import android.content.Context
 import androidx.room.Room
 import com.agroerp.core.database.AppDatabase
+import com.agroerp.data.local.dao.CapturePackageDao
+import com.agroerp.data.local.dao.CatalogDao
+import com.agroerp.data.local.dao.DynamicFormDao
 import com.agroerp.data.local.dao.FormDao
 import com.agroerp.data.local.dao.FormSubmissionDao
 import com.agroerp.data.local.dao.LocalEventDao
 import com.agroerp.data.local.dao.MediaFileDao
+import com.agroerp.data.local.dao.MediaPendingDao
 import com.agroerp.data.local.dao.ResourceCacheDao
 import com.agroerp.data.local.dao.SessionDao
+import com.agroerp.data.local.dao.SubmissionQueueDao
 import com.agroerp.data.local.dao.SyncQueueDao
 import com.agroerp.data.local.dao.SyncStateDao
 import dagger.Module
@@ -37,4 +42,9 @@ object DatabaseModule {
     @Provides fun provideMediaFileDao(db: AppDatabase): MediaFileDao = db.mediaFileDao()
     @Provides fun provideResourceCacheDao(db: AppDatabase): ResourceCacheDao = db.resourceCacheDao()
     @Provides fun provideSessionDao(db: AppDatabase): SessionDao = db.sessionDao()
+    @Provides fun provideCapturePackageDao(db: AppDatabase): CapturePackageDao = db.capturePackageDao()
+    @Provides fun provideDynamicFormDao(db: AppDatabase): DynamicFormDao = db.dynamicFormDao()
+    @Provides fun provideCatalogDao(db: AppDatabase): CatalogDao = db.catalogDao()
+    @Provides fun provideSubmissionQueueDao(db: AppDatabase): SubmissionQueueDao = db.submissionQueueDao()
+    @Provides fun provideMediaPendingDao(db: AppDatabase): MediaPendingDao = db.mediaPendingDao()
 }

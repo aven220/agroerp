@@ -9,6 +9,7 @@ export const EVENT_TYPES = {
   FORM_CREATED: 'FormCreated',
   FORM_PUBLISHED: 'FormPublished',
   FORM_SUBMITTED: 'FormSubmitted',
+  CAPTURE_ANALYTICS_EVENT: 'CaptureAnalyticsEvent',
   FORM_ARCHIVED: 'FormArchived',
   FORM_RESTORED: 'FormRestored',
   FORM_APPROVED: 'FormApproved',
@@ -806,6 +807,66 @@ export interface FormSectionDefinition {
   order?: number;
 }
 
+export type FormLayoutNodeType =
+  | 'section'
+  | 'accordion'
+  | 'tabs'
+  | 'tab'
+  | 'repeat_group'
+  | 'matrix'
+  | 'field';
+
+export type FormLayoutChild = string | FormLayoutNode;
+
+export interface FormLayoutNodeBase {
+  key: string;
+  title?: string;
+  description?: string;
+}
+
+export interface FormLayoutSectionNode extends FormLayoutNodeBase {
+  type: 'section' | 'accordion';
+  children: FormLayoutChild[];
+}
+
+export interface FormLayoutTabNode extends FormLayoutNodeBase {
+  type: 'tab';
+  children: FormLayoutChild[];
+}
+
+export interface FormLayoutTabsNode extends FormLayoutNodeBase {
+  type: 'tabs';
+  children: FormLayoutTabNode[];
+}
+
+export interface FormLayoutRepeatGroupNode extends FormLayoutNodeBase {
+  type: 'repeat_group';
+  min?: number;
+  max?: number;
+  children?: FormLayoutChild[];
+}
+
+export type FormMatrixResponseType = 'select' | 'radio' | 'number' | 'text' | 'checkbox';
+
+export interface FormLayoutMatrixNode extends FormLayoutNodeBase {
+  type: 'matrix';
+  rows: string[];
+  columns: Array<{ value: string; label: string }>;
+  responseType?: FormMatrixResponseType;
+}
+
+export interface FormLayoutFieldNode extends FormLayoutNodeBase {
+  type: 'field';
+}
+
+export type FormLayoutNode =
+  | FormLayoutSectionNode
+  | FormLayoutTabsNode
+  | FormLayoutTabNode
+  | FormLayoutRepeatGroupNode
+  | FormLayoutMatrixNode
+  | FormLayoutFieldNode;
+
 export interface FormWorkflowBinding {
   workflowKey: string;
   initialState?: string;
@@ -823,17 +884,41 @@ export interface FormGeofence {
   radiusMeters: number;
 }
 
+export interface FormLocationSettings {
+  enabled?: boolean;
+  required?: boolean;
+  accuracy?: number;
+}
+
+export interface FormMediaSettings {
+  allowPhotos?: boolean;
+  multiplePhotos?: boolean;
+  allowFiles?: boolean;
+}
+
 export interface FormSettings {
   requireGps?: boolean;
   geofence?: FormGeofence;
   allowDraft?: boolean;
   offlineCapable?: boolean;
+  allowOffline?: boolean;
+  requiresSync?: boolean;
+  layoutMode?: 'flat' | 'tabs' | 'accordion';
+  location?: FormLocationSettings;
+  media?: FormMediaSettings;
+}
+
+export interface FormCatalogRequirement {
+  catalogKey: string;
+  source?: 'builtin' | 'api' | 'remote' | string;
+  offline?: boolean;
 }
 
 export interface FormDefinitionSchema {
   version: number;
   fields: FormFieldDefinition[];
   sections?: FormSectionDefinition[];
+  layout?: FormLayoutNode[];
   settings?: FormSettings;
   workflow?: FormWorkflowBinding;
   aiReadiness?: Record<string, string>;
@@ -852,6 +937,33 @@ export const FORM_STATUS = {
 export type FormStatus = (typeof FORM_STATUS)[keyof typeof FORM_STATUS];
 
 export const FORM_SUBMISSION_RESOURCE_TYPE = 'form_submission';
+
+/** Capture Processing Engine — routes submissions to ERP actions via form.metadata.processingType */
+export const CAPTURE_PROCESSING_TYPES = {
+  PRODUCER_CREATE: 'PRODUCER_CREATE',
+  FARM_CREATE: 'FARM_CREATE',
+  PRODUCTION_CREATE: 'PRODUCTION_CREATE',
+} as const;
+
+export type CaptureProcessingType =
+  (typeof CAPTURE_PROCESSING_TYPES)[keyof typeof CAPTURE_PROCESSING_TYPES];
+
+export interface FormCaptureMetadata {
+  processingType?: CaptureProcessingType | string;
+  requiredCatalogKeys?: string[];
+  catalogRequirements?: FormCatalogRequirement[];
+}
+
+/** Capture Analytics — semantic event types for EBIAP BI ingestion */
+export const CAPTURE_ANALYTICS_EVENT_TYPES = {
+  PRODUCER_CREATED: 'PRODUCER_CREATED',
+  FARM_CREATED: 'FARM_CREATED',
+  PRODUCTION_REGISTERED: 'PRODUCTION_REGISTERED',
+  FORM_COMPLETED: 'FORM_COMPLETED',
+} as const;
+
+export type CaptureAnalyticsEventType =
+  (typeof CAPTURE_ANALYTICS_EVENT_TYPES)[keyof typeof CAPTURE_ANALYTICS_EVENT_TYPES];
 
 export const FIELD_TYPES = [
   'string',

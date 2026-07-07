@@ -17,12 +17,6 @@ interface AgroErpApi {
     @GET("auth/me")
     suspend fun getProfile(): Response<UserProfileResponse>
 
-    @GET("forms/bootstrap")
-    suspend fun bootstrapForms(): Response<FormsBootstrapResponse>
-
-    @POST("form-submissions/sync")
-    suspend fun syncSubmissions(@Body request: SyncSubmissionsRequest): Response<SyncSubmissionsResponse>
-
     @POST("files/register")
     suspend fun registerFile(@Body request: RegisterFileRequest): Response<FileResourceResponse>
 
@@ -67,11 +61,6 @@ data class UserProfileResponse(
 data class OrganizationDto(val id: String, val name: String, val slug: String)
 data class RoleDto(val id: String, val name: String, val slug: String)
 
-data class FormsBootstrapResponse(
-    val syncedAt: String,
-    val forms: List<FormDto>,
-)
-
 data class FormDto(
     val id: String,
     val formKey: String,
@@ -81,27 +70,6 @@ data class FormDto(
     val status: String? = "published",
     val schema: Map<String, Any?>,
     val publishedAt: String?,
-)
-
-data class SyncSubmissionsRequest(val submissions: List<SyncSubmissionItem>)
-
-data class SyncSubmissionItem(
-    val formId: String,
-    val data: Map<String, Any?>,
-    val externalId: String,
-    val gpsLocation: Map<String, Any?>? = null,
-    val gpsTrack: List<Map<String, Any?>>? = null,
-    val deviceInfo: Map<String, Any?>? = null,
-    val clientCreatedAt: String? = null,
-)
-
-data class SyncSubmissionsResponse(val results: List<SyncSubmissionResult>)
-
-data class SyncSubmissionResult(
-    val externalId: String,
-    val status: String,
-    val submissionId: String? = null,
-    val error: String? = null,
 )
 
 data class RegisterFileRequest(

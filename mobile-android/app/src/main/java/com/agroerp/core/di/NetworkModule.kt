@@ -6,6 +6,7 @@ import com.agroerp.core.network.DeviceHeadersInterceptor
 import com.agroerp.core.security.DeviceIdProvider
 import com.agroerp.core.security.TokenManager
 import com.agroerp.data.api.AgroErpApi
+import com.agroerp.data.api.CaptureApi
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import dagger.Module
@@ -63,4 +64,9 @@ object NetworkModule {
     @Singleton
     fun provideApi(retrofit: Retrofit): AgroErpApi =
         retrofit.create(AgroErpApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideCaptureApi(retrofit: Retrofit): CaptureApi =
+        retrofit.create(CaptureApi::class.java)
 }

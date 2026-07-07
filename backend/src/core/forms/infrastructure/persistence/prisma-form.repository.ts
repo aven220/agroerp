@@ -73,6 +73,7 @@ export class PrismaFormRepository implements FormRepository {
         schema: data.schema,
         status: data.status,
         createdBy: data.createdBy,
+        ...(data.metadata !== undefined ? { metadata: data.metadata } : {}),
       },
     }) as Promise<FormDefinition>;
   }
@@ -84,6 +85,7 @@ export class PrismaFormRepository implements FormRepository {
         name: data.name,
         description: data.description,
         schema: data.schema,
+        ...(data.metadata !== undefined ? { metadata: data.metadata } : {}),
       },
     }) as Promise<FormDefinition>;
   }

@@ -33,6 +33,17 @@ export class CreateFormDto {
   @ApiProperty({ type: 'object', additionalProperties: true })
   @IsObject()
   schema!: FormDefinitionSchema;
+
+  @ApiPropertyOptional({ type: 'object', additionalProperties: true })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, unknown>;
+
+  @ApiPropertyOptional({ type: [String], description: 'Catalog keys required for offline capture' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  requiredCatalogKeys?: string[];
 }
 
 export class UpdateFormDto {
@@ -51,6 +62,17 @@ export class UpdateFormDto {
   @IsOptional()
   @IsObject()
   schema?: FormDefinitionSchema;
+
+  @ApiPropertyOptional({ type: 'object', additionalProperties: true })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, unknown>;
+
+  @ApiPropertyOptional({ type: [String], description: 'Catalog keys required for offline capture' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  requiredCatalogKeys?: string[];
 }
 
 export class RenderFormDto {

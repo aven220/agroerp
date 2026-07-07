@@ -1,11 +1,12 @@
 package com.agroerp.sync
 
+import com.agroerp.BuildConfig
 import com.agroerp.core.network.NetworkMonitor
 import com.agroerp.core.util.JsonHelper
 import com.agroerp.data.api.AgroErpApi
+import com.agroerp.data.api.CaptureSyncFileItem
+import com.agroerp.data.api.CaptureSyncSubmissionItem
 import com.agroerp.data.api.RegisterFileRequest
-import com.agroerp.data.api.SyncSubmissionItem
-import com.agroerp.data.api.SyncSubmissionsRequest
 import com.agroerp.data.local.dao.FormSubmissionDao
 import com.agroerp.data.local.dao.MediaFileDao
 import com.agroerp.data.local.dao.SyncQueueDao
@@ -16,7 +17,7 @@ import com.agroerp.data.local.entities.SyncQueueEntity
 import com.agroerp.data.local.entities.SyncQueueStatus
 import com.agroerp.data.local.entities.SyncStateEntity
 import com.agroerp.data.repository.AuthRepository
-import com.agroerp.data.repository.FormRepository
+import com.agroerp.data.repository.CaptureRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,9 +38,9 @@ data class SyncProgress(
 @Singleton
 class SyncEngine @Inject constructor(
     private val api: AgroErpApi,
+    private val captureRepository: CaptureRepository,
     private val networkMonitor: NetworkMonitor,
     private val authRepository: AuthRepository,
-    private val formRepository: FormRepository,
     private val mediaFileDao: MediaFileDao,
     private val submissionDao: FormSubmissionDao,
     private val syncQueueDao: SyncQueueDao,
@@ -70,6 +71,9 @@ class SyncEngine @Inject constructor(
         val summary = SyncSummary()
 
         try {
+            captureRepository.refreshMediaPendingQueue()
+            captureRepository.refreshSubmissionQueue()
+
             _progress.value = _progress.value.copy(phase = "media", message = "Subiendo archivos...")
             summary.mediaUploaded = pushMediaFiles()
 
@@ -80,7 +84,8 @@ class SyncEngine @Inject constructor(
             summary.eventsPulled = pullEvents()
 
             _progress.value = _progress.value.copy(phase = "forms", message = "Actualizando formularios...")
-            formRepository.bootstrapForms().onSuccess { summary.formsDownloaded = it }
+            captureRepository.downloadOfflinePackage(force = true)
+                .onSuccess { summary.formsDownloaded = it }
 
             processSyncQueue()
 
@@ -124,7 +129,9 @@ class SyncEngine @Inject constructor(
         val pending = mediaFileDao.getPending()
         for (media in pending) {
             if (!shouldRetry(media.retryCount, media.lastError)) continue
-            mediaFileDao.update(media.copy(syncStatus = SyncQueueStatus.SYNCING))
+            val syncing = media.copy(syncStatus = SyncQueueStatus.SYNCING)
+            mediaFileDao.update(syncing)
+            captureRepository.updateMediaPending(syncing)
             try {
                 val file = File(media.localPath)
                 val response = api.registerFile(
@@ -144,13 +151,13 @@ class SyncEngine @Inject constructor(
                     ),
                 )
                 if (response.isSuccessful && response.body() != null) {
-                    mediaFileDao.update(
-                        media.copy(
-                            serverResourceId = response.body()!!.id,
-                            syncStatus = SyncQueueStatus.SYNCED,
-                            lastError = null,
-                        ),
+                    val synced = media.copy(
+                        serverResourceId = response.body()!!.id,
+                        syncStatus = SyncQueueStatus.SYNCED,
+                        lastError = null,
                     )
+                    mediaFileDao.update(synced)
+                    captureRepository.updateMediaPending(synced)
                     count++
                 } else {
                     markMediaFailed(media, "Register failed: ${response.code()}")
@@ -163,23 +170,22 @@ class SyncEngine @Inject constructor(
     }
 
     private suspend fun markMediaFailed(media: MediaFileEntity, error: String) {
-        mediaFileDao.update(
-            media.copy(
-                syncStatus = SyncQueueStatus.FAILED,
-                retryCount = media.retryCount + 1,
-                lastError = error,
-            ),
+        val failed = media.copy(
+            syncStatus = SyncQueueStatus.FAILED,
+            retryCount = media.retryCount + 1,
+            lastError = error,
         )
+        mediaFileDao.update(failed)
+        captureRepository.updateMediaPending(failed)
     }
 
     private suspend fun pushSubmissions(): Int {
         val pending = submissionDao.getPending()
         if (pending.isEmpty()) return 0
 
-        // Replace local media ids with server resource ids in submission data
         val resolved = pending.map { resolveMediaRefs(it) }
         val items = resolved.map { entity ->
-            SyncSubmissionItem(
+            CaptureSyncSubmissionItem(
                 formId = entity.formId,
                 data = JsonHelper.fromJson(entity.dataJson),
                 externalId = entity.externalId,
@@ -196,52 +202,80 @@ class SyncEngine @Inject constructor(
             )
         }
 
+        val fileRefs = buildCaptureFileRefs(resolved)
+
         for (entity in resolved) {
-            submissionDao.update(entity.copy(syncStatus = SyncQueueStatus.SYNCING))
+            val syncing = entity.copy(syncStatus = SyncQueueStatus.SYNCING)
+            submissionDao.update(syncing)
+            captureRepository.updateSubmissionQueue(syncing)
         }
 
-        val response = api.syncSubmissions(SyncSubmissionsRequest(items))
-        if (!response.isSuccessful || response.body() == null) {
-            val detail = response.errorBody()?.string()?.take(200) ?: "HTTP ${response.code()}"
+        val syncResult = captureRepository.syncSubmissions(
+            submissions = items,
+            files = fileRefs,
+            deviceInfo = deviceInfo(),
+        )
+
+        if (syncResult.isFailure) {
+            val detail = syncResult.exceptionOrNull()?.message ?: "Error desconocido"
             for (entity in resolved) {
-                submissionDao.update(
-                    entity.copy(
-                        syncStatus = SyncQueueStatus.FAILED,
-                        retryCount = entity.retryCount + 1,
-                        lastError = "Error de sincronización: $detail",
-                    ),
+                val failed = entity.copy(
+                    syncStatus = SyncQueueStatus.FAILED,
+                    retryCount = entity.retryCount + 1,
+                    lastError = "Error de sincronización: $detail",
                 )
+                submissionDao.update(failed)
+                captureRepository.updateSubmissionQueue(failed)
             }
             throw Exception("Error al sincronizar envíos: $detail")
         }
 
         var synced = 0
-        val resultsByExternal = response.body()!!.results.associateBy { it.externalId }
+        val resultsByExternal = syncResult.getOrThrow().results.associateBy { it.externalId }
         for (entity in resolved) {
             val result = resultsByExternal[entity.externalId]
             when (result?.status) {
                 "created", "duplicate" -> {
-                    submissionDao.update(
-                        entity.copy(
-                            syncStatus = SyncQueueStatus.SYNCED,
-                            serverSubmissionId = result.submissionId,
-                            lastError = null,
-                        ),
+                    val updated = entity.copy(
+                        syncStatus = SyncQueueStatus.SYNCED,
+                        serverSubmissionId = result.submissionId,
+                        lastError = null,
                     )
+                    submissionDao.update(updated)
+                    captureRepository.updateSubmissionQueue(updated)
                     synced++
                 }
                 else -> {
-                    submissionDao.update(
-                        entity.copy(
-                            syncStatus = SyncQueueStatus.FAILED,
-                            retryCount = entity.retryCount + 1,
-                            lastError = result?.error ?: "Unknown error",
-                        ),
+                    val failed = entity.copy(
+                        syncStatus = SyncQueueStatus.FAILED,
+                        retryCount = entity.retryCount + 1,
+                        lastError = result?.error ?: "Unknown error",
                     )
+                    submissionDao.update(failed)
+                    captureRepository.updateSubmissionQueue(failed)
                 }
             }
         }
         return synced
+    }
+
+    private suspend fun buildCaptureFileRefs(
+        submissions: List<FormSubmissionEntity>,
+    ): List<CaptureSyncFileItem> {
+        val externalIds = submissions.map { it.externalId }.toSet()
+        return mediaFileDao.getPending()
+            .filter { it.submissionExternalId in externalIds || it.serverResourceId != null }
+            .map { media ->
+                CaptureSyncFileItem(
+                    externalId = media.id,
+                    filename = media.filename,
+                    mimeType = media.mimeType,
+                    resourceId = media.serverResourceId,
+                    fieldKey = media.fieldKey,
+                    storageKey = media.serverResourceId?.let { "resource://$it" }
+                        ?: "local://${media.id}",
+                )
+            }
     }
 
     private suspend fun resolveMediaRefs(entity: FormSubmissionEntity): FormSubmissionEntity {
@@ -306,6 +340,11 @@ class SyncEngine @Inject constructor(
         (BASE_BACKOFF_MS * 2.0.pow(retryCount.toDouble())).toLong().let {
             min(it, 3600_000L)
         }
+
+    private fun deviceInfo(): Map<String, Any?> = mapOf(
+        "platform" to "android",
+        "appVersion" to BuildConfig.APP_VERSION,
+    )
 }
 
 data class SyncSummary(

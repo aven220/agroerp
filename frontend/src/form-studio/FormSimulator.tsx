@@ -6,11 +6,12 @@ import { resolvePreviewFields } from './client-conditional';
 
 interface Props {
   fields: FormFieldDefinition[];
+  layout?: import('../api/forms').FormLayoutNode[];
   formName: string;
   onClose?: () => void;
 }
 
-export function FormSimulator({ fields, formName, onClose }: Props) {
+export function FormSimulator({ fields, layout, formName, onClose }: Props) {
   const [data, setData] = useState<Record<string, unknown>>({});
   const [device, setDevice] = useState<PreviewDevice>('phone-portrait');
   const [submitted, setSubmitted] = useState(false);
@@ -71,6 +72,7 @@ export function FormSimulator({ fields, formName, onClose }: Props) {
       <FormStudioPreview device={device} onDeviceChange={setDevice}>
         <FormStudioRenderer
           fields={fields}
+          layout={layout}
           data={data}
           onChange={(key, val) => setData((d) => ({ ...d, [key]: val }))}
           onButtonAction={(action) => {

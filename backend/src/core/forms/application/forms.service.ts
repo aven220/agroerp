@@ -86,6 +86,7 @@ export class FormsService {
 
     const version = (latest?.version ?? 0) + 1;
     const schema = this.normalizeSchema(dto.schema, version);
+    const metadata = this.buildFormMetadata(dto);
 
     const form = await this.formRepository.create({
       organizationId,
@@ -96,6 +97,7 @@ export class FormsService {
       schema: schema as object,
       status: 'draft',
       createdBy: userId,
+      metadata,
     });
 
     await this.core.emitFormCreated(
@@ -133,6 +135,11 @@ export class FormsService {
       name: dto.name ?? existing.name,
       description: dto.description ?? existing.description,
       schema: schema as object,
+      ...(dto.metadata !== undefined || dto.requiredCatalogKeys !== undefined
+        ? {
+            metadata: this.buildFormMetadata(dto, existing.metadata as Record<string, unknown>),
+          }
+        : {}),
     });
 
     await this.core.emitUserAction(
@@ -209,6 +216,7 @@ export class FormsService {
       schema: newSchema as object,
       status: 'draft',
       createdBy: userId,
+      metadata: (latest.metadata ?? {}) as object,
     });
 
     await this.core.emitFormCreated(
@@ -234,13 +242,21 @@ export class FormsService {
   ) {
     const form = await this.findOne(organizationId, id);
     const schema = form.schema as unknown as FormDefinitionSchema;
+    const renderResult = this.renderer.render(schema, partialData);
+    const meta = (form.metadata ?? {}) as Record<string, unknown>;
+
     return {
       formId: form.id,
       formKey: form.formKey,
       name: form.name,
       version: form.version,
       status: form.status,
-      ...this.renderer.render(schema, partialData),
+      metadata: meta,
+      requiredCatalogKeys: Array.isArray(meta.requiredCatalogKeys)
+        ? (meta.requiredCatalogKeys as string[])
+        : [],
+      render: renderResult,
+      ...renderResult,
     };
   }
 
@@ -290,11 +306,34 @@ export class FormsService {
     return {
       ...schema,
       version,
-      settings: {
-        offlineCapable: true,
-        allowDraft: true,
-        ...schema.settings,
-      },
+      settings: this.normalizeSettings(schema.settings),
     };
+  }
+
+  private normalizeSettings(
+    settings: FormDefinitionSchema['settings'] = {},
+  ): FormDefinitionSchema['settings'] {
+    const allowOffline =
+      settings.allowOffline ?? settings.offlineCapable ?? true;
+    return {
+      allowDraft: true,
+      ...settings,
+      allowOffline,
+      offlineCapable: settings.offlineCapable ?? allowOffline,
+    };
+  }
+
+  private buildFormMetadata(
+    dto: Pick<CreateFormDto, 'metadata' | 'requiredCatalogKeys'>,
+    existing: Record<string, unknown> = {},
+  ): object {
+    const meta: Record<string, unknown> = {
+      ...existing,
+      ...(dto.metadata ?? {}),
+    };
+    if (dto.requiredCatalogKeys !== undefined) {
+      meta.requiredCatalogKeys = dto.requiredCatalogKeys;
+    }
+    return meta;
   }
 }

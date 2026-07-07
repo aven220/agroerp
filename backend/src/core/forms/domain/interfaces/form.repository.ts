@@ -16,12 +16,14 @@ export interface FormCreateData {
   schema: object;
   status: FormStatus;
   createdBy: string;
+  metadata?: object;
 }
 
 export interface FormUpdateData {
   name?: string;
   description?: string | null;
   schema?: object;
+  metadata?: object;
 }
 
 export interface FormRepository {

@@ -2,6 +2,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -17,15 +18,19 @@ import {
 import { FormValidationEngine } from './form-validation.engine';
 import { FormsService } from './forms.service';
 import { SubmitFormDto, SyncSubmissionsDto } from '../presentation/forms.dto';
+import { SubmissionProcessorService } from '@/core/capture-processing/application/submission-processor.service';
 
 @Injectable()
 export class FormSubmissionsService {
+  private readonly logger = new Logger(FormSubmissionsService.name);
+
   constructor(
     @Inject(FORM_SUBMISSION_REPOSITORY)
     private readonly submissionRepository: FormSubmissionRepository,
     private readonly forms: FormsService,
     private readonly validator: FormValidationEngine,
     private readonly core: CoreEngineService,
+    private readonly submissionProcessor: SubmissionProcessorService,
   ) {}
 
   async findAll(
@@ -179,7 +184,49 @@ export class FormSubmissionsService {
       { ctx: { ...ctx, userId, organizationId } },
     );
 
+    if (!dto.draft) {
+      await this.runCaptureProcessing({
+        organizationId,
+        userId,
+        form,
+        submission,
+        resource,
+        ctx,
+      });
+    }
+
     return { submission, resource, duplicate: false };
+  }
+
+  private async runCaptureProcessing(input: {
+    organizationId: string;
+    userId: string;
+    form: Awaited<ReturnType<FormsService['findOne']>>;
+    submission: Awaited<ReturnType<FormSubmissionRepository['create']>>;
+    resource: Awaited<ReturnType<FormSubmissionRepository['createResource']>>;
+    ctx?: RequestContext;
+  }) {
+    try {
+      await this.submissionProcessor.processSubmission({
+        organizationId: input.organizationId,
+        userId: input.userId,
+        form: {
+          id: input.form.id,
+          formKey: input.form.formKey,
+          version: input.form.version,
+          metadata: input.form.metadata,
+          schema: input.form.schema,
+        },
+        submission: input.submission,
+        resource: input.resource,
+        draft: false,
+        ctx: input.ctx,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Capture processing failed for submission ${input.submission.id}: ${(err as Error).message}`,
+      );
+    }
   }
 
   async syncBatch(

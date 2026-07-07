@@ -3,6 +3,7 @@ package com.agroerp.presentation.formfill
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.agroerp.data.mapper.CaptureFormMapper.toFormDefinition
 import com.agroerp.data.repository.FormRepository
 import com.agroerp.data.repository.MediaRepository
 import com.agroerp.data.repository.SubmissionRepository
@@ -61,11 +62,29 @@ class FormFillViewModel @Inject constructor(
 
     private fun loadForm() {
         viewModelScope.launch {
-            val form = formRepository.getForm(formId)
-            if (form == null) {
-                _state.update { it.copy(isLoading = false, error = "Formulario no encontrado") }
+            val dynamicForm = formRepository.getDynamicForm(formId)
+            if (dynamicForm == null) {
+                val fallback = formRepository.getForm(formId)
+                if (fallback == null) {
+                    _state.update { it.copy(isLoading = false, error = "Formulario no encontrado") }
+                    return@launch
+                }
+                applyLoadedForm(fallback)
                 return@launch
             }
+
+            val legacyForm = formRepository.getLegacyForm(formId)
+            val form = dynamicForm.toFormDefinition(legacyForm)
+            if (form.status != "published") {
+                _state.update { it.copy(isLoading = false, error = "Formulario no disponible") }
+                return@launch
+            }
+            applyLoadedForm(form)
+        }
+    }
+
+    private fun applyLoadedForm(form: FormDefinition) {
+        viewModelScope.launch {
             localEventService.recordFormOpened(formId)
             val rendered = renderer.render(form.schema)
             _state.update {

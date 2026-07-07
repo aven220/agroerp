@@ -1,5 +1,29 @@
 import { apiRequest } from './client';
 
+export interface FormLocationSettings {
+  enabled?: boolean;
+  required?: boolean;
+  accuracy?: number;
+}
+
+export interface FormMediaSettings {
+  allowPhotos?: boolean;
+  multiplePhotos?: boolean;
+  allowFiles?: boolean;
+}
+
+export interface FormCatalogRequirement {
+  catalogKey: string;
+  source?: 'builtin' | 'api' | 'remote' | string;
+  offline?: boolean;
+}
+
+export interface FormCaptureMetadata {
+  processingType?: string;
+  requiredCatalogKeys?: string[];
+  catalogRequirements?: FormCatalogRequirement[];
+}
+
 export interface FormFieldDefinition {
   key: string;
   type: string;
@@ -23,18 +47,84 @@ export interface FormFieldDefinition {
   };
   calculate?: { expression: string; dependsOn: string[] };
   fields?: FormFieldDefinition[];
+  matrix?: { rows: string[]; columns: string[] };
   metadata?: Record<string, unknown>;
 }
+
+export type FormLayoutNodeType =
+  | 'section'
+  | 'accordion'
+  | 'tabs'
+  | 'tab'
+  | 'repeat_group'
+  | 'matrix'
+  | 'field';
+
+export type FormLayoutChild = string | FormLayoutNode;
+
+export interface FormLayoutNodeBase {
+  key: string;
+  title?: string;
+  description?: string;
+}
+
+export interface FormLayoutSectionNode extends FormLayoutNodeBase {
+  type: 'section' | 'accordion';
+  children: FormLayoutChild[];
+}
+
+export interface FormLayoutTabNode extends FormLayoutNodeBase {
+  type: 'tab';
+  children: FormLayoutChild[];
+}
+
+export interface FormLayoutTabsNode extends FormLayoutNodeBase {
+  type: 'tabs';
+  children: FormLayoutTabNode[];
+}
+
+export interface FormLayoutRepeatGroupNode extends FormLayoutNodeBase {
+  type: 'repeat_group';
+  min?: number;
+  max?: number;
+  children?: FormLayoutChild[];
+}
+
+export type FormMatrixResponseType = 'select' | 'radio' | 'number' | 'text' | 'checkbox';
+
+export interface FormLayoutMatrixNode extends FormLayoutNodeBase {
+  type: 'matrix';
+  rows: string[];
+  columns: Array<{ value: string; label: string }>;
+  responseType?: FormMatrixResponseType;
+}
+
+export interface FormLayoutFieldNode extends FormLayoutNodeBase {
+  type: 'field';
+}
+
+export type FormLayoutNode =
+  | FormLayoutSectionNode
+  | FormLayoutTabsNode
+  | FormLayoutTabNode
+  | FormLayoutRepeatGroupNode
+  | FormLayoutMatrixNode
+  | FormLayoutFieldNode;
 
 export interface FormDefinitionSchema {
   version: number;
   fields: FormFieldDefinition[];
   sections?: Array<{ key: string; title: string; description?: string }>;
+  layout?: FormLayoutNode[];
   settings?: {
     requireGps?: boolean;
     allowDraft?: boolean;
     offlineCapable?: boolean;
+    allowOffline?: boolean;
+    requiresSync?: boolean;
     layoutMode?: 'flat' | 'tabs' | 'accordion';
+    location?: FormLocationSettings;
+    media?: FormMediaSettings;
   };
 }
 
@@ -60,6 +150,7 @@ export interface FormDefinition {
   status: string;
   sectorCode?: string | null;
   tags?: string[];
+  metadata?: FormCaptureMetadata | Record<string, unknown>;
   publishedAt?: string | null;
   createdBy?: string | null;
   createdAt: string;
@@ -95,15 +186,26 @@ export interface FormDashboard {
   topForms: Array<{ formId: string; formKey?: string; name?: string; submissions: number }>;
 }
 
+export interface FormRenderPayload {
+  schemaVersion: number;
+  settings?: FormDefinitionSchema['settings'];
+  fields: Array<FormFieldDefinition & { visible: boolean; effectiveRequired: boolean }>;
+  resolvedData: Record<string, unknown>;
+}
+
 export interface RenderedForm {
   formId: string;
   formKey: string;
   name: string;
   version: number;
   status: string;
-  fields: Array<FormFieldDefinition & { visible: boolean; effectiveRequired: boolean }>;
-  resolvedData: Record<string, unknown>;
+  render: FormRenderPayload;
+  metadata?: FormCaptureMetadata | Record<string, unknown>;
+  requiredCatalogKeys?: string[];
+  fields: FormRenderPayload['fields'];
+  resolvedData?: Record<string, unknown>;
   settings?: FormDefinitionSchema['settings'];
+  schemaVersion?: number;
 }
 
 export function listForms(filters?: { status?: string; search?: string }) {
@@ -123,11 +225,22 @@ export function createForm(data: {
   name: string;
   description?: string;
   schema: FormDefinitionSchema;
+  metadata?: Record<string, unknown>;
+  requiredCatalogKeys?: string[];
 }) {
   return apiRequest<FormDefinition>('/forms', { method: 'POST', body: JSON.stringify(data) });
 }
 
-export function updateForm(id: string, data: { name?: string; description?: string; schema?: FormDefinitionSchema }) {
+export function updateForm(
+  id: string,
+  data: {
+    name?: string;
+    description?: string;
+    schema?: FormDefinitionSchema;
+    metadata?: Record<string, unknown>;
+    requiredCatalogKeys?: string[];
+  },
+) {
   return apiRequest<FormDefinition>(`/forms/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 

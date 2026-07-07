@@ -3,6 +3,9 @@ import { FormFieldControl } from '../components/forms/FormFieldControl';
 import type { FormFieldDefinition } from '../api/forms';
 import { resolveCatalogOptions } from './form-dynamic-catalogs';
 import { resolvePreviewFields } from './client-conditional';
+import type { FormLayoutNode } from './layout/layout-types';
+import { effectiveLayout } from './layout/layout-utils';
+import { buildFieldsMap, LayoutRenderer } from './layout/LayoutRenderer';
 
 type Field = FormFieldDefinition & {
   visible?: boolean;
@@ -17,6 +20,7 @@ interface Props {
   onButtonAction?: (action: string, field: FormFieldDefinition) => void;
   useServerRender?: boolean;
   serverFields?: Field[];
+  layout?: FormLayoutNode[];
 }
 
 function enrichFieldOptions(field: FormFieldDefinition, data: Record<string, unknown>): FormFieldDefinition {
@@ -33,6 +37,7 @@ export function FormStudioRenderer({
   onChange,
   onButtonAction,
   serverFields,
+  layout,
 }: Props) {
   const resolved = useMemo(() => {
     if (serverFields?.length) {
@@ -44,6 +49,26 @@ export function FormStudioRenderer({
       .filter((f) => f.visible)
       .map((f) => enrichFieldOptions(f, data));
   }, [fields, data, serverFields]);
+
+  const activeLayout = useMemo(
+    () => effectiveLayout(layout, fields),
+    [layout, fields],
+  );
+
+  const useLayoutEngine = Boolean(layout && layout.length > 0);
+  const fieldsByKey = useMemo(() => buildFieldsMap(resolved), [resolved]);
+
+  if (useLayoutEngine) {
+    return (
+      <LayoutRenderer
+        layout={activeLayout}
+        fieldsByKey={fieldsByKey}
+        data={data}
+        onChange={onChange}
+        onButtonAction={onButtonAction}
+      />
+    );
+  }
 
   return (
     <>

@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -44,8 +43,15 @@ class HomeViewModel @Inject constructor(
     private val _syncState = MutableStateFlow(SyncProgress())
     private val _isLoading = MutableStateFlow(true)
 
+    private val captureFormsFlow = combine(
+        formRepository.dynamicFormsFlow,
+        formRepository.legacyFormsFlow,
+    ) { dynamicForms, legacyForms ->
+        FormRepository.mapDynamicFormsToDefinitions(dynamicForms, legacyForms)
+    }
+
     val uiState: StateFlow<HomeUiState> = combine(
-        formRepository.formsFlow,
+        captureFormsFlow,
         submissionRepository.pendingCountFlow,
         networkMonitor.connectivityFlow,
         _syncState,

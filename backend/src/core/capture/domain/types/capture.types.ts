@@ -26,6 +26,7 @@ export interface CaptureFormDetailResponse {
   status: string;
   publishedAt: Date | null;
   schema: unknown;
+  metadata?: unknown;
   render: {
     schemaVersion: number;
     settings?: unknown;

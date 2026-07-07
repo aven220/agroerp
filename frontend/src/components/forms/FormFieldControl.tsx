@@ -213,20 +213,145 @@ export function FormFieldControl({ field, value, onChange, readOnly, onButtonAct
 
   if (field.type === 'repeat_group' || field.type === 'subform') {
     const nested = field.fields ?? [];
-    const row = (typeof value === 'object' && value && !Array.isArray(value) ? value : {}) as Record<string, unknown>;
+    const min = field.validation?.min ?? Number(field.metadata?.min ?? 0);
+    const max = field.validation?.max ?? Number(field.metadata?.max ?? 20);
+    const rows: Record<string, unknown>[] = Array.isArray(value)
+      ? (value as Record<string, unknown>[])
+      : value && typeof value === 'object'
+        ? [value as Record<string, unknown>]
+        : [];
+
+    function setRows(next: Record<string, unknown>[]) {
+      onChange(field.key, next);
+    }
+
+    function updateRow(rowIndex: number, subKey: string, val: unknown) {
+      const next = rows.map((row, i) => (i === rowIndex ? { ...row, [subKey]: val } : row));
+      setRows(next);
+    }
+
     return (
       <fieldset className="form-repeat-group">
         <legend>{field.label}</legend>
-        {nested.map((sub) => (
-          <FormFieldControl
-            key={sub.key}
-            field={sub}
-            value={row[sub.key]}
-            onChange={(_, val) => onChange(field.key, { ...row, [sub.key]: val })}
-            readOnly={readOnly}
-          />
+        {rows.length === 0 && (
+          <p className="muted">Sin filas. Agregue al menos {min > 0 ? min : 'una'}.</p>
+        )}
+        {rows.map((row, rowIndex) => (
+          <div key={rowIndex} className="form-repeat-row">
+            <div className="form-repeat-row-header">
+              <strong>Fila {rowIndex + 1}</strong>
+              {!disabled && rows.length > min && (
+                <button type="button" className="btn btn-sm btn-danger" onClick={() => setRows(rows.filter((_, i) => i !== rowIndex))}>
+                  Eliminar
+                </button>
+              )}
+            </div>
+            {nested.map((sub) => (
+              <FormFieldControl
+                key={`${rowIndex}-${sub.key}`}
+                field={sub}
+                value={row[sub.key]}
+                onChange={(_, val) => updateRow(rowIndex, sub.key, val)}
+                readOnly={readOnly}
+              />
+            ))}
+          </div>
         ))}
+        {!disabled && rows.length < max && (
+          <button type="button" className="btn btn-sm" onClick={() => setRows([...rows, {}])}>
+            + Agregar fila
+          </button>
+        )}
+        <span className="muted form-repeat-meta">{rows.length} / {max} filas</span>
       </fieldset>
+    );
+  }
+
+  if (field.type === 'matrix') {
+    const rows = field.matrix?.rows ?? (field.metadata?.rows as string[] | undefined) ?? [];
+    const columns = field.options ?? [];
+    const responseType = String(field.metadata?.responseType ?? 'select');
+    const matrixValue = (value as Record<string, Record<string, unknown>> | undefined) ?? {};
+
+    function setCell(rowKey: string, colValue: string, cellValue: unknown) {
+      onChange(field.key, {
+        ...matrixValue,
+        [rowKey]: { ...(matrixValue[rowKey] ?? {}), [colValue]: cellValue },
+      });
+    }
+
+    return (
+      <div className="form-group form-matrix">
+        <label>{field.label}{required ? ' *' : ''}</label>
+        <div className="form-matrix-scroll">
+          <table className="form-matrix-table">
+            <thead>
+              <tr>
+                <th>Criterio</th>
+                {columns.map((col) => (
+                  <th key={col.value}>{col.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((rowLabel) => {
+                const rowKey = rowLabel.toLowerCase().replace(/\s+/g, '_');
+                const rowData = matrixValue[rowKey] ?? matrixValue[rowLabel] ?? {};
+                return (
+                  <tr key={rowLabel}>
+                    <td>{rowLabel}</td>
+                    {columns.map((col) => (
+                      <td key={col.value}>
+                        {responseType === 'radio' ? (
+                          <input
+                            type="radio"
+                            name={`${field.key}-${rowKey}`}
+                            checked={rowData[col.value] === col.value}
+                            disabled={disabled}
+                            onChange={() => setCell(rowKey, col.value, col.value)}
+                          />
+                        ) : responseType === 'checkbox' ? (
+                          <input
+                            type="checkbox"
+                            checked={Boolean(rowData[col.value])}
+                            disabled={disabled}
+                            onChange={(e) => setCell(rowKey, col.value, e.target.checked)}
+                          />
+                        ) : responseType === 'number' ? (
+                          <input
+                            type="number"
+                            value={rowData[col.value] != null ? String(rowData[col.value]) : ''}
+                            disabled={disabled}
+                            onChange={(e) => setCell(rowKey, col.value, e.target.value === '' ? undefined : Number(e.target.value))}
+                          />
+                        ) : responseType === 'text' ? (
+                          <input
+                            type="text"
+                            value={String(rowData[col.value] ?? '')}
+                            disabled={disabled}
+                            onChange={(e) => setCell(rowKey, col.value, e.target.value)}
+                          />
+                        ) : (
+                          <select
+                            value={String(rowData[col.value] ?? '')}
+                            disabled={disabled}
+                            onChange={(e) => setCell(rowKey, col.value, e.target.value)}
+                          >
+                            <option value="">—</option>
+                            {columns.map((opt) => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     );
   }
 

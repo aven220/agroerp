@@ -1,5 +1,6 @@
 import type { FormDefinitionSchema, FormFieldDefinition } from '../api/forms';
-import { buildGeoCascadeFields } from './form-dynamic-catalogs';
+import type { FormCaptureMetadata } from '../api/forms';
+import { buildGeoCascadeFields, catalogFieldDefaults } from './form-dynamic-catalogs';
 
 export type FormStudioTemplate = {
   templateKey: string;
@@ -8,6 +9,8 @@ export type FormStudioTemplate = {
   category: string;
   tags: string[];
   schema: FormDefinitionSchema;
+  captureMetadata?: FormCaptureMetadata;
+  requiredCatalogKeys?: string[];
 };
 
 const settings = { offlineCapable: true, allowDraft: true };
@@ -19,6 +22,130 @@ function f(fields: FormFieldDefinition[], extra: Partial<FormDefinitionSchema> =
 const SI_NO = [{ value: 'si', label: 'Sí' }, { value: 'no', label: 'No' }];
 
 export const FORM_STUDIO_TEMPLATES: FormStudioTemplate[] = [
+  {
+    templateKey: 'tpl-visita-tecnica-agricola',
+    name: 'Visita técnica agrícola',
+    category: 'Campo / Agronomía',
+    description: 'Visita de campo con secciones, lotes repetibles y matriz de evaluación.',
+    tags: ['visita', 'campo', 'layout', 'matrix', 'repeat_group'],
+    schema: f([
+      { key: 'prod_nombre', type: 'text', label: 'Nombre productor', required: true },
+      { key: 'prod_documento', type: 'text', label: 'Documento' },
+      { key: 'prod_telefono', type: 'text', label: 'Teléfono', metadata: { inputType: 'tel' } },
+      { key: 'finca_nombre', type: 'text', label: 'Nombre finca', required: true },
+      { key: 'finca_area', type: 'number', label: 'Área total (ha)', validation: { min: 0 } },
+      { key: 'finca_gps', type: 'geo', label: 'Ubicación GPS finca' },
+      {
+        key: 'lotes',
+        type: 'repeat_group',
+        label: 'Lotes visitados',
+        validation: { min: 0, max: 20 },
+        fields: [
+          { key: 'lote_codigo', type: 'text', label: 'Código lote' },
+          { key: 'lote_area', type: 'number', label: 'Área (ha)' },
+          {
+            key: 'lote_cultivo',
+            type: 'select',
+            label: 'Cultivo',
+            options: [
+              { value: 'cafe', label: 'Café' },
+              { value: 'cacao', label: 'Cacao' },
+              { value: 'platano', label: 'Plátano' },
+              { value: 'maiz', label: 'Maíz' },
+            ],
+          },
+        ],
+      },
+      {
+        key: 'eval_cultivo',
+        type: 'matrix',
+        label: 'Evaluación cultivo',
+        options: [
+          { value: '1', label: 'Deficiente' },
+          { value: '2', label: 'Regular' },
+          { value: '3', label: 'Bueno' },
+          { value: '4', label: 'Excelente' },
+        ],
+        matrix: {
+          rows: ['Sanidad', 'Nutrición', 'Manejo', 'Riego'],
+          columns: ['1', '2', '3', '4'],
+        },
+        metadata: {
+          rows: ['Sanidad', 'Nutrición', 'Manejo', 'Riego'],
+          responseType: 'select',
+        },
+      },
+    ], {
+      layout: [
+        {
+          type: 'section',
+          key: 'sec_productor',
+          title: 'Datos productor',
+          children: ['prod_nombre', 'prod_documento', 'prod_telefono'],
+        },
+        {
+          type: 'section',
+          key: 'sec_finca',
+          title: 'Datos finca',
+          children: ['finca_nombre', 'finca_area', 'finca_gps'],
+        },
+        {
+          type: 'repeat_group',
+          key: 'lotes',
+          title: 'Lotes visitados',
+          min: 0,
+          max: 20,
+        },
+        {
+          type: 'matrix',
+          key: 'eval_cultivo',
+          title: 'Matriz evaluación cultivo',
+          rows: ['Sanidad', 'Nutrición', 'Manejo', 'Riego'],
+          columns: [
+            { value: '1', label: 'Deficiente' },
+            { value: '2', label: 'Regular' },
+            { value: '3', label: 'Bueno' },
+            { value: '4', label: 'Excelente' },
+          ],
+          responseType: 'select',
+        },
+      ],
+      settings: {
+        ...settings,
+        allowOffline: true,
+        requiresSync: true,
+        location: { enabled: true, required: true, accuracy: 30 },
+      },
+    }),
+  },
+  {
+    templateKey: 'tpl-registro-productor',
+    name: 'Registro productor',
+    category: 'Captura / ERP',
+    description: 'Alta de productor con ubicación, foto y sincronización ERP.',
+    tags: ['productor', 'capture', 'erp', 'gps'],
+    captureMetadata: { processingType: 'PRODUCER_CREATE' },
+    requiredCatalogKeys: ['departamentos', 'municipios'],
+    schema: f([
+      { key: 'titulo', type: 'heading', label: 'Registro de productor' },
+      { key: 'nombre', type: 'text', label: 'Nombre', required: true },
+      { key: 'edad', type: 'number', label: 'Edad', validation: { min: 0, max: 120 } },
+      { key: 'pais', type: 'hidden', label: 'País', defaultValue: 'co' },
+      catalogFieldDefaults('departamentos', 'Departamento', 'departamento'),
+      catalogFieldDefaults('municipios', 'Municipio', 'municipio'),
+      { key: 'foto', type: 'photo', label: 'Foto' },
+      { key: 'ubicacion', type: 'geo', label: 'GPS', required: true },
+    ], {
+      settings: {
+        ...settings,
+        allowOffline: true,
+        requiresSync: true,
+        requireGps: true,
+        location: { enabled: true, required: true, accuracy: 50 },
+        media: { allowPhotos: true, multiplePhotos: false, allowFiles: false },
+      },
+    }),
+  },
   {
     templateKey: 'tpl-registro-personas',
     name: 'Registro de personas',

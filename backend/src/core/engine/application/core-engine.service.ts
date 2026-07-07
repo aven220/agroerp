@@ -236,6 +236,30 @@ export class CoreEngineService {
     );
   }
 
+  async emitCaptureAnalyticsEvent(
+    organizationId: string,
+    entityId: string,
+    payload: Record<string, unknown>,
+    options?: EmitOptions,
+  ) {
+    return this.emit(
+      {
+        organizationId,
+        aggregateType: 'CaptureAnalytics',
+        aggregateId: entityId,
+        eventType: EVENT_TYPES.CAPTURE_ANALYTICS_EVENT,
+        payload: {
+          ...payload,
+          integration: 'ebiap',
+          captureModule: 'capture-analytics',
+        },
+        metadata: buildEventMetadata(options?.ctx),
+      },
+      'ACTION',
+      { ...options, enqueueSync: false },
+    );
+  }
+
   async emitFieldValidated(
     organizationId: string,
     formId: string,

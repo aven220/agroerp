@@ -46,6 +46,7 @@ export class CaptureQueryService {
       status: form.status,
       publishedAt: form.publishedAt,
       schema: form.schema,
+      metadata: form.metadata,
       render: {
         schemaVersion: rendered.schemaVersion,
         settings: rendered.settings,
