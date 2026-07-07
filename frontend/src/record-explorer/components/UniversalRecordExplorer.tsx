@@ -1,9 +1,17 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { LoadingState } from '../../components/ux/LoadingState';
 import { useRecordExplorer } from '../hooks/useRecordExplorer';
 import { DEFAULT_URE_WIDGETS } from './widget-registry';
 import { URE_NAV_SECTIONS } from '../types';
 import type { UreWidgetDefinition } from './widget-registry';
+import type { UreRecordExplorerResponse } from '../types';
+import {
+  registerLegacyWidgets,
+  WidgetContextProvider,
+  WidgetRenderer,
+  useWidgets,
+  URE_DEFAULT_LAYOUT_ID,
+} from '../../widget-platform';
 
 export interface UniversalRecordExplorerProps {
   entityType: string;
@@ -19,6 +27,19 @@ export function UniversalRecordExplorer({
   const { data, loading, error } = useRecordExplorer(entityType, recordId);
   const [activeSection, setActiveSection] = useState(URE_NAV_SECTIONS[0].id);
 
+  const layoutWidgetIds = useMemo(() => {
+    registerLegacyWidgets<UreRecordExplorerResponse>(widgets);
+    return widgets.map((w) => w.id);
+  }, [widgets]);
+
+  const widgetData = (data ?? {}) as UreRecordExplorerResponse;
+
+  const { widgets: resolvedWidgets } = useWidgets<UreRecordExplorerResponse>({
+    data: widgetData,
+    layoutId: URE_DEFAULT_LAYOUT_ID,
+    layoutWidgetIds,
+  });
+
   function scrollToSection(anchor: string, sectionId: typeof activeSection) {
     setActiveSection(sectionId);
     document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -33,37 +54,43 @@ export function UniversalRecordExplorer({
   }
 
   return (
-    <div className="ure-layout">
-      <aside className="ure-sidebar" aria-label="Secciones del expediente">
-        <nav>
-          <ul className="ure-nav">
-            {URE_NAV_SECTIONS.map((section) => (
-              <li key={section.id}>
-                <button
-                  type="button"
-                  className={`ure-nav-item${activeSection === section.id ? ' active' : ''}`}
-                  onClick={() => scrollToSection(section.anchor, section.id)}
-                >
-                  {section.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </aside>
+    <WidgetContextProvider
+      value={{
+        data,
+        entityType,
+        recordId,
+        layoutId: URE_DEFAULT_LAYOUT_ID,
+      }}
+    >
+      <div className="ure-layout">
+        <aside className="ure-sidebar" aria-label="Secciones del expediente">
+          <nav>
+            <ul className="ure-nav">
+              {URE_NAV_SECTIONS.map((section) => (
+                <li key={section.id}>
+                  <button
+                    type="button"
+                    className={`ure-nav-item${activeSection === section.id ? ' active' : ''}`}
+                    onClick={() => scrollToSection(section.anchor, section.id)}
+                  >
+                    {section.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </aside>
 
-      <div className="ure-panel">
-        <div className="ure-widgets">
-          {widgets.map((widget) => {
-            const Widget = widget.render;
-            return (
-              <div key={widget.id} className="ure-widget-slot">
-                <Widget data={data} />
-              </div>
-            );
-          })}
+        <div className="ure-panel">
+          <div className="ure-widgets">
+            <WidgetRenderer
+              widgets={resolvedWidgets}
+              data={data}
+              slotClassName="ure-widget-slot"
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </WidgetContextProvider>
   );
 }
