@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import type { DomainEventPayload } from '@agroerp/shared';
 import { EventService } from '@/core/events/application/event.service';
 import { buildEventMetadata } from '@/core/engine/middleware/request-context.middleware';
@@ -12,6 +12,7 @@ import {
   type WorkflowStartedEventPayload,
   type WorkflowTransitionEventPayload,
 } from '../events/workflow-transition.event';
+import { WorkflowActionExecutorService } from '@/core/workflow-actions/application/workflow-action-executor.service';
 import { WorkflowDefinitionService } from './workflow-definition.service';
 import { WorkflowTransitionService } from './workflow-transition.service';
 
@@ -33,6 +34,7 @@ export class WorkflowEngineService {
     private readonly definitions: WorkflowDefinitionService,
     private readonly transitions: WorkflowTransitionService,
     private readonly events: EventService,
+    @Optional() private readonly actionExecutor?: WorkflowActionExecutorService,
   ) {}
 
   async onSubmissionSaved(context: WorkflowSubmissionContext): Promise<void> {
@@ -204,6 +206,27 @@ export class WorkflowEngineService {
       payload: payload as unknown as DomainEventPayload,
       metadata: buildEventMetadata({ userId: input.userId }),
     });
+
+    if (this.actionExecutor) {
+      try {
+        await this.actionExecutor.executeAfterTransition({
+          organizationId: input.organizationId,
+          submissionId: input.submissionId,
+          formId: input.formId,
+          formKey: input.formKey,
+          userId: input.userId,
+          action: input.action,
+          fromStateId: current.stateId,
+          fromStateName: current.stateName,
+          toStateId: toState.id,
+          toStateName: toState.name,
+        });
+      } catch (err) {
+        this.logger.warn(
+          `Workflow action execution failed for submission ${input.submissionId}: ${(err as Error).message}`,
+        );
+      }
+    }
 
     return { stateId: toState.id, stateName: toState.name };
   }

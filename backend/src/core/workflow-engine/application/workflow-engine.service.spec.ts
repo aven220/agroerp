@@ -113,6 +113,49 @@ describe('WorkflowEngineService', () => {
     expect(events.emit).not.toHaveBeenCalled();
   });
 
+  it('does not break transition when action executor fails', async () => {
+    events.getByAggregate.mockResolvedValue([
+      {
+        eventType: FORM_WORKFLOW_EVENT_TYPES.STARTED,
+        occurredAt: new Date('2026-03-01T10:00:00.000Z'),
+        payload: { stateId: 'review', stateName: 'Revisión' },
+      },
+    ]);
+
+    const actionExecutor = {
+      executeAfterTransition: jest.fn().mockRejectedValue(new Error('action failed')),
+    };
+    engine = new WorkflowEngineService(
+      definitions,
+      transitions,
+      events as never,
+      actionExecutor as never,
+    );
+    const warnSpy = jest.spyOn(engine['logger'], 'warn');
+
+    const definition = {
+      ...validDefinition,
+      transitions: [
+        ...validDefinition.transitions,
+        { from: 'review', to: 'approved', action: 'APPROVE' },
+      ],
+    };
+
+    const result = await engine.executeTransition({
+      organizationId: 'org-1',
+      submissionId: 'sub-1',
+      formId: 'form-1',
+      userId: 'user-1',
+      definition,
+      action: 'APPROVE',
+    });
+
+    expect(result).toEqual({ stateId: 'approved', stateName: 'Aprobado' });
+    expect(events.emit).toHaveBeenCalled();
+    expect(actionExecutor.executeAfterTransition).toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
   it('emits transition event for valid manual transition', async () => {
     events.getByAggregate.mockResolvedValue([
       {

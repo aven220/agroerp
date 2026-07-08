@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { CoreEngineModule } from '@/core/engine/core-engine.module';
 import { CaptureProcessingModule } from '@/core/capture-processing/processing.module';
 import { SubmissionFlowModule } from '@/core/submission-flow/submission-flow.module';
@@ -46,7 +46,12 @@ import {
 import { UdfeController } from './presentation/udfe.controller';
 
 @Module({
-  imports: [CoreEngineModule, CaptureProcessingModule, SubmissionFlowModule, WorkflowEngineModule],
+  imports: [
+    CoreEngineModule,
+    CaptureProcessingModule,
+    SubmissionFlowModule,
+    forwardRef(() => WorkflowEngineModule),
+  ],
   controllers: [FormsController, FormSubmissionsController, UdfeController],
   providers: [
     FormsService,
@@ -75,6 +80,7 @@ import { UdfeController } from './presentation/udfe.controller';
   ],
   exports: [
     FormsService,
+    FORM_SUBMISSION_REPOSITORY,
     FormSubmissionsService,
     FormValidationEngine,
     FormLifecycleService,
