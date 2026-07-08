@@ -72,6 +72,8 @@ export interface UreRecordExplorerResponse {
   summary: UreRecordSummary;
   entity: Record<string, unknown>;
   forms: UreFormLink[];
+  /** Reserved for future API support; rules fall back to forms[].status. */
+  pendingForms?: UreFormLink[];
   relationships: UreRelationship[];
   documents: UreDocument[];
   photos: UrePhoto[];

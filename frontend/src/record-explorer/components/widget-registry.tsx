@@ -9,6 +9,8 @@ import { DocumentsWidget } from '../widgets/DocumentsWidget';
 import { GalleryWidget } from '../widgets/GalleryWidget';
 import { AnalyticsWidget } from '../widgets/AnalyticsWidget';
 import { QuickActionsWidget } from '../widgets/QuickActionsWidget';
+import { InsightsWidget } from '../../record-insights/widgets/InsightsWidget';
+import { widgetRegistry } from '../../widget-platform';
 
 export interface UreWidgetDefinition {
   id: string;
@@ -51,6 +53,23 @@ function ActionsSlot({ data }: { data: UreRecordExplorerResponse }) {
   return <QuickActionsWidget actions={data.quickActions} />;
 }
 
+function InsightsSlot({ data }: { data: UreRecordExplorerResponse }) {
+  return <InsightsWidget record={data} />;
+}
+
+const INSIGHTS_WIDGET_DEFINITION: UreWidgetDefinition = {
+  id: 'insights',
+  render: InsightsSlot,
+};
+
+if (!widgetRegistry.exists('insights')) {
+  widgetRegistry.register({
+    id: 'insights',
+    priority: 100,
+    render: InsightsSlot,
+  });
+}
+
 /** Default widget pipeline — extensible by registering more definitions */
 export const DEFAULT_URE_WIDGETS: UreWidgetDefinition[] = [
   { id: 'summary', render: SummarySlot },
@@ -62,4 +81,5 @@ export const DEFAULT_URE_WIDGETS: UreWidgetDefinition[] = [
   { id: 'documents', render: DocsSlot },
   { id: 'photos', render: PhotosSlot },
   { id: 'analytics', render: AnalyticsSlot },
+  INSIGHTS_WIDGET_DEFINITION,
 ];
