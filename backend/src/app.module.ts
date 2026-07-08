@@ -53,6 +53,8 @@ import { EaceModule } from '@/core/eace/eace.module';
 import { EiampModule } from '@/core/eiamp/eiamp.module';
 import { CoreEngineModule } from '@/core/engine/core-engine.module';
 import { RecordExplorerModule } from '@/core/record-explorer/record-explorer.module';
+import { AgriculturalTimelineModule } from '@/core/agricultural-timeline/agricultural-timeline.module';
+import { EntityWorkspaceModule } from '@/core/entity-workspace/entity-workspace.module';
 import { HealthController } from '@/core/platform/health.controller';
 import { JwtAuthGuard } from '@/shared/infrastructure/guards/jwt-auth.guard';
 import { PermissionsGuard } from '@/shared/infrastructure/guards/permissions.guard';
@@ -81,6 +83,8 @@ import { RequestContextMiddleware } from '@/core/engine/middleware/request-conte
     FtipModule,
     FmdtModule,
     RecordExplorerModule,
+    AgriculturalTimelineModule,
+    EntityWorkspaceModule,
     EgsipModule,
     EneacModule,
     EbiapModule,
