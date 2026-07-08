@@ -30,7 +30,9 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "NODE_OPTIONS=--max-old-space-size=8192 ts-node --transpile-only prisma/seed.ts",
     "db:seed:minimal": "NODE_OPTIONS=--max-old-space-size=8192 ts-node --transpile-only prisma/seed-minimal.ts",
+    "db:seed:e2e": "NODE_OPTIONS=--max-old-space-size=8192 ts-node --transpile-only prisma/seeds/e2e-registration.seed.ts",
     "db:seed:core": "node prisma/seed-core.mjs",
+    "test:e2e": "NODE_OPTIONS=--max-old-space-size=8192 jest --config jest.e2e.config.js --runInBand",
     "db:studio": "prisma studio",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "test": "jest"

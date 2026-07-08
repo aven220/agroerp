@@ -19,6 +19,7 @@
     "db:migrate:deploy": "pnpm --filter @agroerp/backend db:migrate:deploy",
     "db:push": "pnpm --filter @agroerp/backend exec prisma db push",
     "db:seed": "pnpm --filter @agroerp/backend db:seed",
+    "db:seed:e2e": "pnpm --filter @agroerp/backend db:seed:e2e",
     "db:studio": "pnpm --filter @agroerp/backend db:studio",
     "setup": "pnpm install && pnpm --filter @agroerp/shared build && pnpm --filter @agroerp/backend db:generate",
     "setup:db": "pnpm db:push && pnpm --filter @agroerp/backend db:push:bpms && pnpm db:seed",
