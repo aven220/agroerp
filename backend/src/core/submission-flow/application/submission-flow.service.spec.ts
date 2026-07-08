@@ -2,15 +2,22 @@ import { CAPTURE_PROCESSING_TYPES } from '@agroerp/shared';
 import { SubmissionFlowService } from './submission-flow.service';
 import { SubmissionContextBuilder } from './submission-context.builder';
 import { SubmissionDecisionService } from './submission-decision.service';
-import type { ProcessableSubmission } from '@/core/capture-processing/domain/types/processable-submission';
+import { EntityResolutionService } from '@/core/entity-resolution/application/entity-resolution.service';
 import { FLOW_ACTIONS } from '../domain/flow-context';
+import type { ProcessableSubmission } from '@/core/capture-processing/domain/types/processable-submission';
+import { unresolvedResult } from '@/core/entity-resolution/domain/entity-resolution.types';
 
 describe('SubmissionFlowService', () => {
   let service: SubmissionFlowService;
+  const entityResolution = {
+    resolve: jest.fn(),
+  };
 
   beforeEach(() => {
+    jest.clearAllMocks();
+    entityResolution.resolve.mockResolvedValue(unresolvedResult('Producer'));
     service = new SubmissionFlowService(
-      new SubmissionContextBuilder(),
+      new SubmissionContextBuilder(entityResolution as unknown as EntityResolutionService),
       new SubmissionDecisionService(),
     );
   });
@@ -65,8 +72,8 @@ describe('SubmissionFlowService', () => {
     };
   }
 
-  it('decides CREATE_ENTITY for FARM_CREATE legacy form', () => {
-    const decision = service.decide(
+  it('decides CREATE_ENTITY for FARM_CREATE legacy form', async () => {
+    const decision = await service.decide(
       buildInput({ processingType: CAPTURE_PROCESSING_TYPES.FARM_CREATE }),
     );
     expect(decision?.action).toBe(FLOW_ACTIONS.CREATE_ENTITY);

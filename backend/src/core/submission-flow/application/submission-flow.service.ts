@@ -12,8 +12,8 @@ export class SubmissionFlowService {
   ) {}
 
   /** Builds flow context and returns a processing decision (no ERP side effects). */
-  decide(input: ProcessableSubmission): SubmissionDecision | null {
-    const context = this.contextBuilder.build(input);
+  async decide(input: ProcessableSubmission): Promise<SubmissionDecision | null> {
+    const context = await this.contextBuilder.build(input);
     return this.decisionService.decide(context);
   }
 }

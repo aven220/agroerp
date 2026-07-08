@@ -1,4 +1,7 @@
 /** Supported flow actions — decision only, execution is delegated to processors. */
+import type { ResolutionResult, ResolvedEntityRef } from '@/core/entity-resolution/domain/entity-resolution.types';
+
+export type { ResolutionResult, ResolvedEntityRef };
 export const FLOW_ACTIONS = {
   CREATE_ENTITY: 'CREATE_ENTITY',
   UPDATE_ENTITY: 'UPDATE_ENTITY',
@@ -39,6 +42,8 @@ export interface FlowContext {
   organizationId: string;
   currentUser: FlowContextUser;
   existingEntities: FlowExistingEntity[];
+  resolvedEntity?: ResolvedEntityRef | null;
+  resolutionResult?: ResolutionResult;
 }
 
 export interface SubmissionDecision {

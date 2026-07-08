@@ -225,7 +225,7 @@ export class FormSubmissionsService {
         ctx: input.ctx,
       };
 
-      const decision = this.submissionFlow.decide(processable);
+      const decision = await this.submissionFlow.decide(processable);
       await this.submissionProcessor.processSubmission(processable, decision);
     } catch (err) {
       this.logger.warn(

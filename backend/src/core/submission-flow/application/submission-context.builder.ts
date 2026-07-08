@@ -1,6 +1,8 @@
-import { type FormEntityMapping } from '@agroerp/shared';
+import { Injectable } from '@nestjs/common';
+import { CAPTURE_PROCESSING_TYPES, type FormEntityMapping } from '@agroerp/shared';
 import type { ProcessableSubmission } from '@/core/capture-processing/domain/types/processable-submission';
 import { resolveProcessingType } from '@/core/capture-processing/domain/types/processing-type';
+import { EntityResolutionService } from '@/core/entity-resolution/application/entity-resolution.service';
 import type { FlowContext, FlowExistingEntity } from '../domain/flow-context';
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -22,12 +24,37 @@ const ENTITY_ID_KEYS: Array<{ keys: string[]; entityType: string }> = [
   { keys: ['entityId', 'entity_id', 'targetEntityId', 'target_entity_id'], entityType: '*' },
 ];
 
+@Injectable()
 export class SubmissionContextBuilder {
-  build(input: ProcessableSubmission): FlowContext {
+  constructor(private readonly entityResolution: EntityResolutionService) {}
+
+  async build(input: ProcessableSubmission): Promise<FlowContext> {
     const data = asRecord(input.submission.data);
     const submissionContext = asRecord(input.submission.context);
     const metadata = asRecord(input.form.metadata);
     const entityMapping = metadata.entityMapping as FormEntityMapping | undefined;
+    const processingType = resolveProcessingType(input.form);
+
+    const resolutionPayload = {
+      ...submissionContext,
+      ...data,
+    };
+
+    const entityType = this.resolveEntityType(processingType, entityMapping);
+    const resolutionResult = await this.entityResolution.resolve({
+      entityType,
+      organizationId: input.organizationId,
+      processingType,
+      payload: resolutionPayload,
+    });
+
+    const resolvedEntity =
+      resolutionResult.resolved && resolutionResult.entityId
+        ? {
+            entityType: resolutionResult.entityType,
+            entityId: resolutionResult.entityId,
+          }
+        : null;
 
     return {
       submission: {
@@ -44,12 +71,32 @@ export class SubmissionContextBuilder {
         metadata: input.form.metadata,
         schema: input.form.schema,
       },
-      processingType: resolveProcessingType(input.form),
+      processingType,
       entityMapping,
       organizationId: input.organizationId,
       currentUser: { id: input.userId },
       existingEntities: this.resolveExistingEntities(data, submissionContext, entityMapping),
+      resolvedEntity,
+      resolutionResult,
     };
+  }
+
+  private resolveEntityType(
+    processingType: string | null,
+    entityMapping?: FormEntityMapping,
+  ): string {
+    if (entityMapping?.targetEntity) return entityMapping.targetEntity;
+
+    switch (processingType) {
+      case CAPTURE_PROCESSING_TYPES.PRODUCER_CREATE:
+        return 'Producer';
+      case CAPTURE_PROCESSING_TYPES.FARM_CREATE:
+        return 'Farm';
+      case CAPTURE_PROCESSING_TYPES.PRODUCTION_CREATE:
+        return 'Lot';
+      default:
+        return 'Producer';
+    }
   }
 
   private resolveExistingEntities(
