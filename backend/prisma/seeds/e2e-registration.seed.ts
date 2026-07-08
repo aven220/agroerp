@@ -1,3 +1,4 @@
+import { loadPrismaEnv } from '../load-env';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { DATA_PROVIDER_TYPES, SYSTEM_ROLES } from '@agroerp/shared';
@@ -275,6 +276,7 @@ export async function seedE2eRegistration(prisma: PrismaClient) {
 }
 
 async function main() {
+  loadPrismaEnv();
   const prisma = new PrismaClient();
   try {
     await seedE2eRegistration(prisma);

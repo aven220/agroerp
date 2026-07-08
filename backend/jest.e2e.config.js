@@ -10,5 +10,6 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  setupFiles: ['<rootDir>/prisma/jest-e2e.setup.ts'],
   testTimeout: 120000,
 };
