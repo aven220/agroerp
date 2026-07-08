@@ -1,0 +1,618 @@
+/* =========================================================
+   Enterprise UI — Phase 4
+   Lean layer: density, controls, permission matrix, 320px,
+   scrollbars, cascade hygiene. No brand change.
+   Loaded last (after enterprise-ui-polish.css).
+   ========================================================= */
+
+:root {
+  --ux-density: 1;
+  --ux-control-h: 38px;
+  --ux-touch-min: var(--ds-touch-min, 44px);
+  --ux-scrollbar-size: 8px;
+  --ux-scrollbar-thumb: color-mix(in srgb, var(--ds-text-muted) 35%, transparent);
+  --ux-scrollbar-track: transparent;
+}
+
+[data-density='compact'] {
+  --ux-density: 0.92;
+  --ux-control-h: 34px;
+  --ux-btn-h: 32px;
+  --ux-chip-h: 24px;
+  --ux-table-row-h: 36px;
+  --ux-card-pad: var(--ds-space-4);
+  --ux-widget-min-h: 120px;
+}
+
+[data-density='comfortable'] {
+  --ux-density: 1.06;
+  --ux-control-h: 40px;
+  --ux-btn-h: 40px;
+  --ux-table-row-h: 48px;
+  --ux-card-pad: var(--ds-space-6);
+  --ux-widget-min-h: 160px;
+}
+
+/* ─── Unified scrollbars (thin / enterprise) ─── */
+.erp-content,
+.sidebar-nav,
+.table-wrap,
+.edw-table-scroll,
+.ure-sidebar,
+.ure-panel,
+.inspector-body,
+.perm-matrix-body,
+.ds-drawer-body,
+.modal-body,
+.palette-grid,
+.form-studio-component-list,
+.designer-layout > * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ux-scrollbar-thumb) var(--ux-scrollbar-track);
+}
+
+.erp-content::-webkit-scrollbar,
+.table-wrap::-webkit-scrollbar,
+.edw-table-scroll::-webkit-scrollbar,
+.perm-matrix-body::-webkit-scrollbar,
+.inspector-body::-webkit-scrollbar,
+.ure-sidebar::-webkit-scrollbar {
+  width: var(--ux-scrollbar-size);
+  height: var(--ux-scrollbar-size);
+}
+
+.erp-content::-webkit-scrollbar-thumb,
+.table-wrap::-webkit-scrollbar-thumb,
+.edw-table-scroll::-webkit-scrollbar-thumb,
+.perm-matrix-body::-webkit-scrollbar-thumb,
+.inspector-body::-webkit-scrollbar-thumb,
+.ure-sidebar::-webkit-scrollbar-thumb {
+  background: var(--ux-scrollbar-thumb);
+  border-radius: var(--ds-radius-full);
+}
+
+.erp-content::-webkit-scrollbar-track,
+.table-wrap::-webkit-scrollbar-track,
+.edw-table-scroll::-webkit-scrollbar-track,
+.perm-matrix-body::-webkit-scrollbar-track {
+  background: var(--ux-scrollbar-track);
+}
+
+/* ─── Controls: checkbox / radio / switch / select / date ─── */
+input[type='checkbox'],
+input[type='radio'],
+.ds-checkbox input,
+.ds-radio input {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  accent-color: var(--ds-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+input[type='checkbox']:disabled,
+input[type='radio']:disabled,
+.ds-switch input:disabled + .ds-switch-track,
+select:disabled,
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ds-switch-track {
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+select,
+input[type='date'],
+input[type='datetime-local'],
+input[type='time'],
+input[type='month'],
+input[type='week'] {
+  min-height: var(--ux-control-h);
+  color-scheme: inherit;
+}
+
+.ds-popover,
+.edw-views-dropdown {
+  border-radius: var(--ds-radius-md);
+  border: 1px solid var(--ds-border);
+  box-shadow: var(--ds-shadow-lg);
+  background: var(--ds-surface);
+  padding: var(--ds-space-2);
+  z-index: 200;
+}
+
+.ds-dropdown-item,
+.edw-views-dropdown button {
+  min-height: 36px;
+  border-radius: var(--ds-radius-sm);
+  transition: background 160ms var(--ds-ease);
+}
+
+.ds-tooltip {
+  max-width: min(280px, 80vw);
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: var(--ds-leading-normal);
+}
+
+/* Touch targets on interactive chrome */
+.btn,
+.tab,
+.tab-btn,
+.nav-item,
+.filter-chip,
+.ds-dropdown-item,
+.theme-toggle,
+.perm-collapse-btn,
+.ure-nav-item {
+  min-height: max(var(--ux-btn-h, 36px), calc(var(--ux-touch-min) * 0.82));
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .tab,
+  .tab-btn,
+  .nav-item,
+  .filter-chip,
+  .ds-dropdown-item,
+  .theme-toggle {
+    min-height: var(--ux-touch-min);
+  }
+}
+
+/* ─── Sidebar — DS tokens over legacy hardcodes ─── */
+.sidebar {
+  background: var(--ds-sidebar-bg);
+  color: var(--ds-sidebar-text);
+}
+
+.sidebar-brand {
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-5) var(--ds-space-4);
+  border-bottom-color: color-mix(in srgb, var(--ds-sidebar-text) 10%, transparent);
+}
+
+.sidebar-brand span {
+  color: var(--ds-sidebar-muted);
+}
+
+.brand-logo {
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-primary);
+  color: var(--ds-text-on-primary);
+}
+
+.sidebar-nav {
+  padding: var(--ds-space-4) var(--ds-space-3);
+}
+
+.nav-item {
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-sidebar-muted);
+  margin-bottom: var(--ds-space-1);
+  font-size: var(--ds-text-base);
+  transition: background 160ms var(--ds-ease), color 160ms var(--ds-ease);
+}
+
+.nav-item:hover {
+  background: var(--ds-sidebar-hover);
+  color: var(--ds-sidebar-text);
+}
+
+.nav-item.active {
+  background: var(--ds-sidebar-active);
+  color: var(--ds-text-on-primary);
+}
+
+.nav-item:focus-visible {
+  outline: 2px solid var(--ds-primary-muted);
+  outline-offset: 2px;
+}
+
+.sidebar-footer {
+  border-top: 1px solid color-mix(in srgb, var(--ds-sidebar-text) 10%, transparent);
+  padding: var(--ds-space-4);
+}
+
+/* ─── Permission Matrix — Enterprise tool chrome ─── */
+.perm-matrix {
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-xl);
+  background: var(--ds-surface-sunken);
+  box-shadow: var(--ds-shadow-xs);
+}
+
+.perm-matrix-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  margin: calc(var(--ds-space-3) * -1) calc(var(--ds-space-3) * -1) 0;
+  background: color-mix(in srgb, var(--ds-surface-sunken) 92%, var(--ds-surface));
+  border-bottom: 1px solid var(--ds-border);
+  backdrop-filter: blur(6px);
+}
+
+.perm-matrix-search {
+  position: relative;
+  flex: 1;
+  min-width: min(100%, 240px);
+}
+
+.perm-matrix-search input {
+  width: 100%;
+  min-height: var(--ux-control-h);
+  padding-inline: var(--ds-space-4);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-surface);
+  box-shadow: var(--ds-shadow-xs);
+}
+
+.perm-matrix-search input:focus {
+  outline: none;
+  border-color: var(--ds-primary);
+  box-shadow: 0 0 0 3px var(--ds-primary-subtle);
+}
+
+.perm-matrix-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+
+.perm-matrix-stats > *,
+.perm-matrix-actions .btn {
+  min-height: var(--ux-chip-h, 28px);
+}
+
+.perm-matrix-stats span,
+.perm-matrix-stats .badge,
+.perm-matrix-stats .chip {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  color: var(--ds-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.perm-matrix-body {
+  max-height: min(60vh, 560px);
+  overflow: auto;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-1);
+  scroll-padding-top: var(--ds-space-2);
+}
+
+.perm-module {
+  border-radius: var(--ds-radius-lg);
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface);
+  box-shadow: var(--ds-shadow-xs);
+  overflow: clip;
+}
+
+.perm-module-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  background: color-mix(in srgb, var(--ds-primary-subtle) 40%, var(--ds-surface));
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.perm-resource-header {
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  background: var(--ds-surface);
+}
+
+.perm-resource-card {
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-bg-subtle);
+  border-color: var(--ds-border);
+}
+
+.perm-actions-grid {
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3);
+}
+
+.perm-action-item {
+  min-height: 52px;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  transition:
+    border-color 160ms var(--ds-ease),
+    background 160ms var(--ds-ease),
+    box-shadow 160ms var(--ds-ease);
+}
+
+.perm-action-item:hover {
+  border-color: var(--ds-border-strong);
+  box-shadow: var(--ds-shadow-xs);
+}
+
+.perm-action-item:has(input:checked) {
+  border-color: var(--ds-primary-muted);
+  background: var(--ds-primary-subtle);
+  box-shadow: inset 0 0 0 1px var(--ds-primary-muted);
+}
+
+.perm-action-item:focus-within {
+  outline: 2px solid var(--ds-primary);
+  outline-offset: 1px;
+}
+
+.perm-action-label,
+.perm-resource-title {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.perm-action-key,
+.perm-resource-code {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-text-xs);
+  letter-spacing: 0.01em;
+}
+
+/* ─── Record Explorer / Workspace density lock ─── */
+.ure-widgets > .ure-widget-slot,
+.ws-grid > .ws-widget {
+  display: flex;
+  flex-direction: column;
+}
+
+.ure-widget-slot > *,
+.ws-widget {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: var(--ux-widget-min-h, 140px);
+}
+
+.ure-summary-head,
+.ws-widget-header,
+.ure-widget-slot .panel > h2,
+.ure-widget-slot .panel > h3 {
+  flex-shrink: 0;
+}
+
+.ure-widget-slot .panel-body,
+.ws-widget-body,
+.ure-summary-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ure-badges,
+.ure-quick-actions {
+  margin-top: var(--ds-space-3);
+}
+
+.ure-badge,
+.ure-status-badge {
+  max-width: 100%;
+}
+
+/* Gallery / documents / forms list rhythm */
+.ure-rel-list,
+.ure-doc-list,
+.ure-form-list,
+.ure-timeline {
+  gap: var(--ds-space-3);
+}
+
+.ure-gallery {
+  gap: var(--ds-space-3);
+}
+
+.ure-gallery-item {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ure-gallery-item img,
+.ure-gallery-placeholder {
+  width: 100%;
+  max-width: 100%;
+  border-radius: var(--ds-radius-md);
+}
+
+/* ─── Form Studio inspector — design-panel feel ─── */
+.inspector-panel {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-sm);
+}
+
+.inspector-header {
+  padding-bottom: var(--ds-space-3);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.inspector-tabs {
+  padding: var(--ds-space-2) 0;
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.inspector-body {
+  padding-top: var(--ds-space-3);
+}
+
+.inspector-section-body label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.inspector-section-body input,
+.inspector-section-body select,
+.inspector-section-body textarea,
+.inspector-property-control input,
+.inspector-property-control select,
+.inspector-property-control textarea {
+  min-height: var(--ux-control-h);
+}
+
+/* ─── Tables: selection + disabled row tone ─── */
+.data-table tr.selected td,
+.ds-table tr.selected td,
+.edw-table tr.selected td,
+.selected-row td {
+  background: var(--ds-primary-subtle);
+}
+
+.data-table tr[aria-disabled='true'],
+.ds-table tr[aria-disabled='true'] {
+  opacity: 0.55;
+}
+
+.data-table th,
+.ds-table th,
+.edw-table th {
+  letter-spacing: 0.03em;
+}
+
+/* ─── Visual hierarchy lock (titles) ─── */
+.topbar h1,
+.page-topbar h1 {
+  font-size: var(--ds-text-3xl);
+  font-weight: var(--ds-weight-bold);
+  letter-spacing: -0.02em;
+  line-height: var(--ds-leading-tight);
+}
+
+.panel > h2,
+.card > h2,
+.ws-widget-title,
+.modal-header h2,
+.ds-drawer-header h2 {
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+}
+
+.panel > h3,
+.card > h3,
+.detail-section h3 {
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-semibold);
+}
+
+.topbar-sub,
+.page-topbar .topbar-sub {
+  font-size: var(--ds-text-md);
+  color: var(--ds-text-muted);
+  line-height: var(--ds-leading-normal);
+}
+
+/* ─── Login surface: use DS tokens without redesign ─── */
+.login-page {
+  padding: var(--ds-space-8);
+}
+
+.login-panel {
+  border-radius: var(--ds-radius-2xl);
+  box-shadow: var(--ds-shadow-xl);
+  overflow: hidden;
+}
+
+/* ─── Responsive: 390 / 360 / 320 ─── */
+@media (max-width: 390px) {
+  :root {
+    --ux-page-pad-x: var(--ds-space-3);
+    --ux-card-pad: var(--ds-space-3);
+  }
+
+  .perm-matrix-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .perm-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 360px) {
+  .designer-layout,
+  .bi-designer-layout,
+  .ai-chat-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .table-wrap .data-table,
+  .edw-table-scroll .edw-table {
+    min-width: 400px;
+  }
+}
+
+@media (max-width: 320px) {
+  :root {
+    --ux-page-pad-x: var(--ds-space-2);
+    --ux-page-pad-b: var(--ds-space-4);
+    --ux-card-pad: var(--ds-space-2);
+    --ux-modal-pad: var(--ds-space-3);
+  }
+
+  .topbar h1,
+  .page-topbar h1 {
+    font-size: var(--ds-text-xl);
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .btn,
+  .topbar-right .btn,
+  .modal-footer .btn,
+  .form-actions .btn {
+    width: 100%;
+  }
+
+  .table-wrap .data-table,
+  .edw-table-scroll .edw-table {
+    min-width: 360px;
+  }
+
+  .perm-matrix {
+    padding: var(--ds-space-2);
+  }
+
+  .ure-field-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Guard: never allow page-level horizontal scroll */
+html,
+body,
+#root,
+.erp-shell,
+.erp-main {
+  max-width: 100%;
+  overflow-x: clip;
+}

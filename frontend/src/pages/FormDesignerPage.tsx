@@ -98,25 +98,30 @@ export function FormDesignerPage() {
 
   useEffect(() => {
     if (!id) return;
-    getForm(id).then((f) => {
-      setFormKey(f.formKey);
-      setName(f.name);
-      setDescription(f.description ?? '');
-      setFields(f.schema.fields ?? []);
-      setSections(f.schema.sections ?? []);
-      setLayout((f.schema.layout as FormLayoutNode[] | undefined) ?? []);
-      setDataMapping(
-        dataMappingFromForm(
-          f.schema.fields ?? [],
-          f.metadata as FormCaptureMetadata,
-          f.schema.universalCatalogs,
-        ),
-      );
-      setLayoutMode(f.schema.settings?.layoutMode ?? 'flat');
-      setCaptureConfig(captureValueFromForm(f.schema, f.metadata as FormCaptureMetadata));
-      setWorkflowConfig(workflowFromMetadata(f.metadata as Record<string, unknown>));
-      setFormStatus(f.status);
-    });
+    getForm(id)
+      .then((f) => {
+        setFormKey(f.formKey);
+        setName(f.name);
+        setDescription(f.description ?? '');
+        setFields(f.schema.fields ?? []);
+        setSections(f.schema.sections ?? []);
+        setLayout((f.schema.layout as FormLayoutNode[] | undefined) ?? []);
+        setDataMapping(
+          dataMappingFromForm(
+            f.schema.fields ?? [],
+            f.metadata as FormCaptureMetadata,
+            f.schema.universalCatalogs,
+          ),
+        );
+        setLayoutMode(f.schema.settings?.layoutMode ?? 'flat');
+        setCaptureConfig(captureValueFromForm(f.schema, f.metadata as FormCaptureMetadata));
+        setWorkflowConfig(workflowFromMetadata(f.metadata as Record<string, unknown>));
+        setFormStatus(f.status);
+        setSaveError(null);
+      })
+      .catch((err) => {
+        setSaveError(err instanceof Error ? err.message : 'No se pudo cargar el formulario');
+      });
     getFormVersionHistory(id).then(setVersions).catch(() => setVersions([]));
   }, [id]);
 
@@ -284,35 +289,51 @@ export function FormDesignerPage() {
       return;
     }
     if (!confirm(`¿Publicar "${name}"?\n\nQuedará disponible en Web y en el próximo sync de Android.`)) return;
-    await publishForm(targetId);
-    setFormStatus('published');
-    toast.success('Publicado. Verifique en Mis Formularios → Verificar sync.', 'Publicado');
+    try {
+      await publishForm(targetId);
+      setFormStatus('published');
+      toast.success('Publicado. Verifique en Mis Formularios → Verificar sync.', 'Publicado');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo publicar');
+    }
   }
 
   async function handleSaveAsTemplate() {
     const templateKey = prompt('Clave de plantilla (template_key):', `${formKey}-tpl`);
     if (!templateKey) return;
-    await saveAsTemplate({
-      templateKey,
-      name: name || templateKey,
-      description,
-      schema: buildSchema(),
-      tags: ['studio', 'custom'],
-    });
-    alert('Plantilla guardada en la biblioteca.');
+    try {
+      await saveAsTemplate({
+        templateKey,
+        name: name || templateKey,
+        description,
+        schema: buildSchema(),
+        tags: ['studio', 'custom'],
+      });
+      toast.success('Plantilla guardada en la biblioteca.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo guardar la plantilla');
+    }
   }
 
   async function handleNewVersion() {
     if (!formKey) return;
-    const created = await newFormVersion(formKey);
-    navigate(`/formularios/${created.id}/disenar`);
+    try {
+      const created = await newFormVersion(formKey);
+      navigate(`/formularios/${created.id}/disenar`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo crear la nueva versión');
+    }
   }
 
   async function handleSubmitReview() {
     if (!id) return;
-    await submitFormForReview(id);
-    setFormStatus('in_review');
-    alert('Formulario enviado a revisión.');
+    try {
+      await submitFormForReview(id);
+      setFormStatus('in_review');
+      toast.success('Formulario enviado a revisión.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo enviar a revisión');
+    }
   }
 
   async function refreshPreview() {

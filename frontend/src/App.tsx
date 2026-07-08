@@ -732,12 +732,12 @@ export function App() {
             <Route path="/comercial/listas-precios" element={<EscmPriceListsPage />} />
             <Route path="/comercial/condiciones" element={<EscmConditionsPage />} />
             <Route path="/comercial/crm" element={<EscmCrmPage />} />
+            <Route path="/comercial/crm/dashboard" element={<EscmCrmDashboardPage />} />
             <Route path="/comercial/historial" element={<EscmCommercialHistoryPage />} />
             <Route path="/comercial/configuracion" element={<EscmConfigPage />} />
             <Route path="/comercial/catalogos" element={<EscmCatalogsPage />} />
             <Route path="/comercial/parametros" element={<EscmParametersPage />} />
             <Route path="/comercial/auditoria" element={<EscmAuditPage />} />
-            <Route path="/comercial/crm" element={<EscmCrmDashboardPage />} />
             <Route path="/comercial/pipeline" element={<EscmPipelinePage />} />
             <Route path="/comercial/oportunidades" element={<EscmOpportunitiesPage />} />
             <Route path="/comercial/cotizaciones" element={<EscmQuotationsPage />} />

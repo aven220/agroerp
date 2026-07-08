@@ -23,7 +23,7 @@ export function EscmCenterPage() {
             <button className="btn" onClick={() => seedEscm().then(reload).catch((e) => setError(e.message))}>
               Sembrar catálogos
             </button>
-            <Link to="/comercial/crm" className="btn">Dashboard CRM</Link>
+            <Link to="/comercial/crm/dashboard" className="btn">Dashboard CRM</Link>
             <Link to="/comercial/pipeline" className="btn">Pipeline</Link>
             <Link to="/comercial/oportunidades" className="btn">Oportunidades</Link>
             <Link to="/comercial/cotizaciones" className="btn">Cotizaciones</Link>

@@ -46,6 +46,13 @@
   .btn {
     border-width: 2px;
   }
+
+  .badge,
+  .chip,
+  .filter-chip,
+  .perm-action-item {
+    border-width: 2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -54,3 +61,14 @@
     background: var(--ds-surface-sunken);
   }
 }
+
+/* Ensure interactive controls meet minimum touch guidance on coarse pointers */
+@media (pointer: coarse) {
+  .btn-icon,
+  .theme-toggle,
+  .nav-fav-btn {
+    min-width: var(--ds-touch-min);
+    min-height: var(--ds-touch-min);
+  }
+}
+

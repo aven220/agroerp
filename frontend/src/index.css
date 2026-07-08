@@ -2722,5 +2722,7 @@ a:hover {
 
 /* Enterprise UI Polish Phase 3 — must load after all legacy module CSS */
 @import './design-system/enterprise-ui-polish.css';
+/* Enterprise UI Phase 4 — density, matrix, 320px, cascade hygiene */
+@import './design-system/enterprise-ui-phase4.css';
 
 

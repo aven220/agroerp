@@ -253,9 +253,11 @@ export function EnterpriseDataGrid<T extends { id: string }>({
             onChange={(e) => grid.setQuickSearch(e.target.value)}
             aria-label="Búsqueda instantánea"
           />
-          <button type="button" className="btn btn-sm" onClick={() => setFiltersOpen(true)}>
-            Filtros{grid.filters.length ? ` (${grid.filters.length})` : ''}
-          </button>
+          {!serverSide ? (
+            <button type="button" className="btn btn-sm" onClick={() => setFiltersOpen(true)}>
+              Filtros{grid.filters.length ? ` (${grid.filters.length})` : ''}
+            </button>
+          ) : null}
           <button type="button" className="btn btn-sm" onClick={() => setColumnsOpen(true)}>Columnas</button>
           <select
             className="ds-input edw-density-select"
@@ -334,13 +336,23 @@ export function EnterpriseDataGrid<T extends { id: string }>({
                     <th
                       key={col.key}
                       className={[
-                        col.sortable !== false ? 'sortable' : '',
-                        sort ? `sorted-${sort.direction}` : '',
+                        !serverSide && col.sortable !== false ? 'sortable' : '',
+                        !serverSide && sort ? `sorted-${sort.direction}` : '',
                         grid.columnState.frozen.includes(col.key) ? 'edw-frozen-col' : '',
                       ].filter(Boolean).join(' ')}
                       style={{ width: w, minWidth: col.minWidth ?? 80 }}
-                      onClick={col.sortable !== false ? (e) => grid.toggleSort(col.key, e.shiftKey) : undefined}
-                      aria-sort={sort ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined}
+                      onClick={
+                        !serverSide && col.sortable !== false
+                          ? (e) => grid.toggleSort(col.key, e.shiftKey)
+                          : undefined
+                      }
+                      aria-sort={
+                        !serverSide && sort
+                          ? sort.direction === 'asc'
+                            ? 'ascending'
+                            : 'descending'
+                          : undefined
+                      }
                     >
                       <span className="edw-th-label">{col.label}</span>
                       <span

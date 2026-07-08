@@ -39,29 +39,35 @@ export function ProducerFormPage() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    getProducer(id).then((p) => {
-      const next = {
-        producerTypeCode: p.producerTypeCode,
-        legalName: p.legalName,
-        commercialName: p.commercialName ?? undefined,
-        firstName: p.firstName ?? undefined,
-        lastName: p.lastName ?? undefined,
-        documentTypeCode: p.documentTypeCode,
-        documentNumber: p.documentNumber,
-        taxId: p.taxId ?? undefined,
-        municipalityCode: p.municipalityCode ?? undefined,
-        veredaCode: p.veredaCode ?? undefined,
-        categoryCode: p.categoryCode ?? undefined,
-        leadSourceCode: p.leadSourceCode ?? undefined,
-        yearsExperience: p.yearsExperience ?? undefined,
-        latitude: p.latitude != null ? Number(p.latitude) : undefined,
-        longitude: p.longitude != null ? Number(p.longitude) : undefined,
-        notes: p.notes ?? undefined,
-      };
-      setForm(next);
-      savedSnapshot.current = JSON.stringify(next);
-      setVersion(p.version);
-    }).finally(() => setLoading(false));
+    setError(null);
+    getProducer(id)
+      .then((p) => {
+        const next = {
+          producerTypeCode: p.producerTypeCode,
+          legalName: p.legalName,
+          commercialName: p.commercialName ?? undefined,
+          firstName: p.firstName ?? undefined,
+          lastName: p.lastName ?? undefined,
+          documentTypeCode: p.documentTypeCode,
+          documentNumber: p.documentNumber,
+          taxId: p.taxId ?? undefined,
+          municipalityCode: p.municipalityCode ?? undefined,
+          veredaCode: p.veredaCode ?? undefined,
+          categoryCode: p.categoryCode ?? undefined,
+          leadSourceCode: p.leadSourceCode ?? undefined,
+          yearsExperience: p.yearsExperience ?? undefined,
+          latitude: p.latitude != null ? Number(p.latitude) : undefined,
+          longitude: p.longitude != null ? Number(p.longitude) : undefined,
+          notes: p.notes ?? undefined,
+        };
+        setForm(next);
+        savedSnapshot.current = JSON.stringify(next);
+        setVersion(p.version);
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'No se pudo cargar el productor');
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   const dirty = JSON.stringify(form) !== savedSnapshot.current;

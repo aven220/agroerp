@@ -31,6 +31,7 @@ export function ProducerDetailPage() {
   const [tab, setTab] = useState<Tab>('perfil');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
   const [lifecycleOpen, setLifecycleOpen] = useState(false);
   const [lifecycleStatus, setLifecycleStatus] = useState('active');
@@ -51,26 +52,43 @@ export function ProducerDetailPage() {
   async function handleAddNote(e: React.FormEvent) {
     e.preventDefault();
     if (!id || !noteText.trim()) return;
-    await addProducerNote(id, noteText);
-    setNoteText('');
-    const p = await getProducer(id);
-    setProducer(p);
-    const tl = await getProducerTimeline(id);
-    setTimeline(tl.items);
+    try {
+      await addProducerNote(id, noteText);
+      setNoteText('');
+      const [p, tl] = await Promise.all([getProducer(id), getProducerTimeline(id)]);
+      setProducer(p);
+      setTimeline(tl.items);
+      setActionError(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo agregar la nota');
+    }
   }
 
   async function handleLifecycle(e: React.FormEvent) {
     e.preventDefault();
     if (!id) return;
-    await transitionLifecycle(id, {
-      toStatus: lifecycleStatus,
-      reasonNotes: lifecycleReason,
-    });
-    setLifecycleOpen(false);
-    const p = await getProducer(id);
-    setProducer(p);
-    const tl = await getProducerTimeline(id);
-    setTimeline(tl.items);
+    const destructive = ['suspended', 'inactive', 'archived'].includes(lifecycleStatus);
+    if (
+      destructive &&
+      !confirm(
+        `¿Cambiar el estado del productor a «${LIFECYCLE_LABELS[lifecycleStatus] ?? lifecycleStatus}»?`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await transitionLifecycle(id, {
+        toStatus: lifecycleStatus,
+        reasonNotes: lifecycleReason,
+      });
+      setLifecycleOpen(false);
+      const [p, tl] = await Promise.all([getProducer(id), getProducerTimeline(id)]);
+      setProducer(p);
+      setTimeline(tl.items);
+      setActionError(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo cambiar el estado');
+    }
   }
 
   if (loading) return <LoadingState variant="page" message="Cargando expediente..." />;
@@ -96,6 +114,7 @@ export function ProducerDetailPage() {
         }
       />
 
+      {actionError ? <div className="alert alert-error">{actionError}</div> : null}
       <div className="detail-scores">
         <div className="score-chip">Calidad: {producer.qualityScore}</div>
         <div className="score-chip">Riesgo: {producer.riskScore}</div>

@@ -5,7 +5,15 @@ import { listIamUsers } from '../api/iam';
 
 export function IamUsersPage() {
   const [users, setUsers] = useState<Array<Record<string, unknown>>>([]);
-  useEffect(() => { listIamUsers().then((u) => setUsers(u as Array<Record<string, unknown>>)); }, []);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    listIamUsers()
+      .then((u) => {
+        setUsers(u as Array<Record<string, unknown>>);
+        setError(null);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'No se pudieron cargar los usuarios'));
+  }, []);
 
   return (
     <>
@@ -27,6 +35,7 @@ export function IamUsersPage() {
         Para crear, editar o eliminar cuentas use{' '}
         <Link to="/administracion/usuarios">Administración → Usuarios del sistema</Link>.
       </p>
+      {error ? <div className="alert alert-error">{error}</div> : null}
       <table className="data-table">
         <thead><tr><th>Email</th><th>Nombre</th><th>Estado</th><th>MFA</th><th>Último acceso</th></tr></thead>
         <tbody>
@@ -41,6 +50,7 @@ export function IamUsersPage() {
           ))}
         </tbody>
       </table>
+      {!error && users.length === 0 ? <p className="text-muted">No hay usuarios para mostrar.</p> : null}
     </>
   );
 }

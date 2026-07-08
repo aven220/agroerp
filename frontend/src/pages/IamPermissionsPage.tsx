@@ -27,6 +27,10 @@ export function IamPermissionsPage() {
         setPerms(normalized);
         setEffective(eff as typeof effective);
       })
+      .catch(() => {
+        setPerms([]);
+        setEffective(null);
+      })
       .finally(() => setLoading(false));
   }, []);
 

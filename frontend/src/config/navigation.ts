@@ -205,7 +205,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
         permission: 'user:read',
         keywords: ['usuarios', 'crear usuario', 'editar usuario', 'eliminar usuario', 'administrar usuarios'],
       }),
-      item('adm-admin', '/administracion', 'Roles y permisos', '⚙', { permission: 'organization:read', keywords: ['admin', 'configuración', 'roles'] }),
+      item('adm-admin', '/administracion', 'Administración (roles)', '⚙', { permission: 'organization:read', keywords: ['admin', 'configuración', 'roles', 'permisos'] }),
       item('adm-iam', '/iam', 'Identity & Access', '🔐', { permission: 'role:read', keywords: ['usuarios', 'roles', 'permisos'] }),
       item('adm-apis', '/apis', 'API Management', '🔌', { permission: 'api:read', keywords: ['apis', 'desarrolladores'] }),
       item('adm-bpms', '/bpms', 'BPMS', '⚡', { permission: 'bpms:read', keywords: ['procesos', 'automatización'] }),

@@ -201,18 +201,28 @@ textarea.ds-input,
 
 /* Form layout */
 .form-grid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-space-1);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ds-space-4);
+  align-items: start;
 }
 
-.form-grid label {
+.form-grid > label,
+.form-grid .form-group,
+.form-grid .ds-field {
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-1);
+  min-width: 0;
   font-size: var(--ds-text-sm);
   font-weight: var(--ds-weight-semibold);
   color: var(--ds-text-secondary);
+}
+
+@media (max-width: 1024px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .form-section {

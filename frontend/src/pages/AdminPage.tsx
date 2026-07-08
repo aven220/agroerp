@@ -47,6 +47,8 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
   const [roleName, setRoleName] = useState('');
   const [roleSlug, setRoleSlug] = useState('');
   const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
+  const [roleSaving, setRoleSaving] = useState(false);
+  const [roleError, setRoleError] = useState<string | null>(null);
 
   const [userModal, setUserModal] = useState(false);
   const [userModalMode, setUserModalMode] = useState<'create' | 'edit'>('create');
@@ -118,6 +120,7 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
 
   async function load() {
     setLoading(true);
+    setUserError(null);
     try {
       const [r, u, p] = await Promise.all([
         listRoles(),
@@ -127,6 +130,8 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
       setRoles(r);
       setUsers(u);
       setPermissions(p);
+    } catch (err) {
+      setUserError(err instanceof Error ? err.message : 'No se pudo cargar administración');
     } finally {
       setLoading(false);
     }
@@ -145,6 +150,7 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
     setRoleName('');
     setRoleSlug('');
     setSelectedPerms([]);
+    setRoleError(null);
     setRoleModal(true);
   }
 
@@ -157,26 +163,41 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
         (rp) => `${rp.permission.resource}:${rp.permission.action}`,
       ),
     );
+    setRoleError(null);
     setRoleModal(true);
   }
 
   async function saveRole(e: React.FormEvent) {
     e.preventDefault();
-    if (editingRole) {
-      await updateRole(editingRole.id, {
-        name: roleName,
-        slug: roleSlug,
-        permissionKeys: selectedPerms,
-      });
-    } else {
-      await createRole({
-        name: roleName,
-        slug: roleSlug,
-        permissionKeys: selectedPerms,
-      });
+    setRoleSaving(true);
+    setRoleError(null);
+    try {
+      if (editingRole) {
+        await updateRole(editingRole.id, {
+          name: roleName,
+          slug: roleSlug,
+          permissionKeys: selectedPerms,
+        });
+      } else {
+        await createRole({
+          name: roleName,
+          slug: roleSlug,
+          permissionKeys: selectedPerms,
+        });
+      }
+      setRoleModal(false);
+      await load();
+    } catch (err) {
+      setRoleError(
+        err instanceof Error
+          ? err.message
+          : editingRole
+            ? 'No se pudo actualizar el rol'
+            : 'No se pudo crear el rol',
+      );
+    } finally {
+      setRoleSaving(false);
     }
-    setRoleModal(false);
-    load();
   }
 
   async function saveUser(e: React.FormEvent) {
@@ -390,17 +411,23 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
       <Modal
         open={roleModal}
         title={editingRole ? 'Editar rol' : 'Nuevo rol'}
-        onClose={() => setRoleModal(false)}
+        onClose={() => !roleSaving && setRoleModal(false)}
         wide
       >
         <form onSubmit={saveRole} className="form-grid">
+          {roleError ? <div className="alert alert-error" style={{ gridColumn: '1 / -1' }}>{roleError}</div> : null}
+          {editingRole?.isSystem ? (
+            <p className="text-muted" style={{ gridColumn: '1 / -1', margin: 0 }}>
+              Rol de sistema: nombre y slug bloqueados. Los permisos pueden ajustarse según política de la organización.
+            </p>
+          ) : null}
           <label>
             Nombre
             <input
               value={roleName}
               onChange={(e) => setRoleName(e.target.value)}
               required
-              disabled={editingRole?.isSystem}
+              disabled={editingRole?.isSystem || roleSaving}
             />
           </label>
           <label>
@@ -409,7 +436,7 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
               value={roleSlug}
               onChange={(e) => setRoleSlug(e.target.value)}
               required
-              disabled={editingRole?.isSystem}
+              disabled={editingRole?.isSystem || roleSaving}
             />
           </label>
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -421,11 +448,11 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
             />
           </div>
           <div className="form-actions">
-            <button type="button" className="btn" onClick={() => setRoleModal(false)}>
+            <button type="button" className="btn" onClick={() => setRoleModal(false)} disabled={roleSaving}>
               Cancelar
             </button>
-            <button type="submit" className="btn btn-primary">
-              Guardar rol
+            <button type="submit" className="btn btn-primary" disabled={roleSaving}>
+              {roleSaving ? 'Guardando…' : 'Guardar rol'}
             </button>
           </div>
         </form>

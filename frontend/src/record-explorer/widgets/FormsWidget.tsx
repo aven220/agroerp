@@ -18,7 +18,7 @@ export function FormsWidget({ forms }: FormsWidgetProps) {
             </div>
             {form.formId ? (
               <Link to={`/formularios/${form.formId}`} className="ure-form-link">
-                Ver envío
+                Ver formulario
               </Link>
             ) : null}
           </li>

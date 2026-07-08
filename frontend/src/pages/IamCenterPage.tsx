@@ -6,8 +6,18 @@ import { LoadingState } from '../components/ux/LoadingState';
 
 export function IamCenterPage() {
   const [center, setCenter] = useState<IamCenter | null>(null);
-  useEffect(() => { getIamCenter().then(setCenter); }, []);
-  if (!center) return <LoadingState variant="dashboard" message="Cargando Centro de Seguridad..." />;
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    getIamCenter()
+      .then((c) => {
+        setCenter(c);
+        setError(null);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar el Centro de Seguridad'));
+  }, []);
+  if (!center && !error) return <LoadingState variant="dashboard" message="Cargando Centro de Seguridad..." />;
+  if (error && !center) return <div className="alert alert-error">{error}</div>;
+  if (!center) return null;
 
   return (
     <>
