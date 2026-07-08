@@ -1,6 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CoreEngineService } from '@/core/engine/application/core-engine.service';
 import { AnalyticsEventService } from '@/core/capture-analytics/application/analytics-event.service';
+import { FLOW_ACTIONS } from '@/core/submission-flow/domain/flow-context';
+import type { SubmissionDecision } from '@/core/submission-flow/domain/flow-context';
 import { resolveProcessingType } from '../domain/types/processing-type';
 import type {
   ProcessableSubmission,
@@ -24,11 +26,46 @@ export class SubmissionProcessorService {
 
   async processSubmission(
     input: ProcessableSubmission,
+    decision?: SubmissionDecision | null,
   ): Promise<SubmissionProcessingOutcome> {
     if (input.draft) {
       return this.skipped(input, 'draft');
     }
 
+    if (decision?.action === FLOW_ACTIONS.SKIP) {
+      return this.skipped(input, 'flow_skip', decision.reason);
+    }
+
+    if (!decision) {
+      return this.processLegacy(input);
+    }
+
+    if (
+      decision.action === FLOW_ACTIONS.REGISTER_EVENT ||
+      decision.action === FLOW_ACTIONS.UPDATE_ENTITY
+    ) {
+      if (!decision.processor) {
+        return this.skipped(
+          input,
+          `${decision.action.toLowerCase()}_pending`,
+          decision.reason,
+        );
+      }
+    }
+
+    const processingType = resolveProcessingType(input.form);
+    const processor = this.resolveProcessor(input, decision);
+    if (!processor) {
+      return this.skipped(input, 'no_processor', processingType ?? undefined);
+    }
+
+    return this.executeProcessor(input, processor, processingType ?? undefined);
+  }
+
+  /** Legacy routing — unchanged behavior when Submission Flow returns no decision. */
+  private async processLegacy(
+    input: ProcessableSubmission,
+  ): Promise<SubmissionProcessingOutcome> {
     const processingType = resolveProcessingType(input.form);
     if (!processingType) {
       return this.skipped(input, 'no_processing_type');
@@ -39,6 +76,25 @@ export class SubmissionProcessorService {
       return this.skipped(input, 'no_processor', processingType);
     }
 
+    return this.executeProcessor(input, processor, processingType);
+  }
+
+  private resolveProcessor(
+    input: ProcessableSubmission,
+    decision: SubmissionDecision,
+  ): SubmissionProcessor | undefined {
+    if (decision.processor) {
+      const byKey = this.processors.find((p) => p.key === decision.processor);
+      if (byKey) return byKey;
+    }
+    return this.processors.find((p) => p.canProcess(input));
+  }
+
+  private async executeProcessor(
+    input: ProcessableSubmission,
+    processor: SubmissionProcessor,
+    processingType?: string,
+  ): Promise<SubmissionProcessingOutcome> {
     try {
       const result = await processor.process(input);
 
@@ -104,15 +160,15 @@ export class SubmissionProcessorService {
   private skipped(
     input: ProcessableSubmission,
     reason: string,
-    processingType?: string,
+    detail?: string,
   ): SubmissionProcessingOutcome {
     this.logger.debug(
-      `Skipping capture processing for submission ${input.submission.id}: ${reason}`,
+      `Skipping capture processing for submission ${input.submission.id}: ${reason}${detail ? ` (${detail})` : ''}`,
     );
     return {
       processed: false,
       skippedReason: reason,
-      processingType,
+      processingType: resolveProcessingType(input.form) ?? undefined,
     };
   }
 }

@@ -19,6 +19,7 @@ import { FormValidationEngine } from './form-validation.engine';
 import { FormsService } from './forms.service';
 import { SubmitFormDto, SyncSubmissionsDto } from '../presentation/forms.dto';
 import { SubmissionProcessorService } from '@/core/capture-processing/application/submission-processor.service';
+import { SubmissionFlowService } from '@/core/submission-flow/application/submission-flow.service';
 
 @Injectable()
 export class FormSubmissionsService {
@@ -31,6 +32,7 @@ export class FormSubmissionsService {
     private readonly validator: FormValidationEngine,
     private readonly core: CoreEngineService,
     private readonly submissionProcessor: SubmissionProcessorService,
+    private readonly submissionFlow: SubmissionFlowService,
   ) {}
 
   async findAll(
@@ -207,7 +209,7 @@ export class FormSubmissionsService {
     ctx?: RequestContext;
   }) {
     try {
-      await this.submissionProcessor.processSubmission({
+      const processable = {
         organizationId: input.organizationId,
         userId: input.userId,
         form: {
@@ -221,7 +223,10 @@ export class FormSubmissionsService {
         resource: input.resource,
         draft: false,
         ctx: input.ctx,
-      });
+      };
+
+      const decision = this.submissionFlow.decide(processable);
+      await this.submissionProcessor.processSubmission(processable, decision);
     } catch (err) {
       this.logger.warn(
         `Capture processing failed for submission ${input.submission.id}: ${(err as Error).message}`,
