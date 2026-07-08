@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CoreEngineModule } from '@/core/engine/core-engine.module';
 import { CaptureProcessingModule } from '@/core/capture-processing/processing.module';
 import { SubmissionFlowModule } from '@/core/submission-flow/submission-flow.module';
+import { WorkflowEngineModule } from '@/core/workflow-engine/workflow-engine.module';
 import { FormsService } from './application/forms.service';
 import { FormSubmissionsService } from './application/form-submissions.service';
 import { ConditionalLogicEngine } from './application/conditional-logic.engine';
@@ -45,7 +46,7 @@ import {
 import { UdfeController } from './presentation/udfe.controller';
 
 @Module({
-  imports: [CoreEngineModule, CaptureProcessingModule, SubmissionFlowModule],
+  imports: [CoreEngineModule, CaptureProcessingModule, SubmissionFlowModule, WorkflowEngineModule],
   controllers: [FormsController, FormSubmissionsController, UdfeController],
   providers: [
     FormsService,

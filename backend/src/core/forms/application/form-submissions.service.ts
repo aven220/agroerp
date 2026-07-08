@@ -20,6 +20,7 @@ import { FormsService } from './forms.service';
 import { SubmitFormDto, SyncSubmissionsDto } from '../presentation/forms.dto';
 import { SubmissionProcessorService } from '@/core/capture-processing/application/submission-processor.service';
 import { SubmissionFlowService } from '@/core/submission-flow/application/submission-flow.service';
+import { WorkflowEngineService } from '@/core/workflow-engine/application/workflow-engine.service';
 
 @Injectable()
 export class FormSubmissionsService {
@@ -33,6 +34,7 @@ export class FormSubmissionsService {
     private readonly core: CoreEngineService,
     private readonly submissionProcessor: SubmissionProcessorService,
     private readonly submissionFlow: SubmissionFlowService,
+    private readonly workflowEngine: WorkflowEngineService,
   ) {}
 
   async findAll(
@@ -186,6 +188,14 @@ export class FormSubmissionsService {
       { ctx: { ...ctx, userId, organizationId } },
     );
 
+    await this.runFormWorkflow({
+      organizationId,
+      userId,
+      form,
+      submission,
+      draft: dto.draft ?? false,
+    });
+
     if (!dto.draft) {
       await this.runCaptureProcessing({
         organizationId,
@@ -198,6 +208,30 @@ export class FormSubmissionsService {
     }
 
     return { submission, resource, duplicate: false };
+  }
+
+  private async runFormWorkflow(input: {
+    organizationId: string;
+    userId: string;
+    form: Awaited<ReturnType<FormsService['findOne']>>;
+    submission: Awaited<ReturnType<FormSubmissionRepository['create']>>;
+    draft: boolean;
+  }) {
+    try {
+      await this.workflowEngine.onSubmissionSaved({
+        organizationId: input.organizationId,
+        submissionId: input.submission.id,
+        formId: input.form.id,
+        formKey: input.form.formKey,
+        userId: input.userId,
+        formMetadata: input.form.metadata,
+        draft: input.draft,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Form workflow runtime failed for submission ${input.submission.id}: ${(err as Error).message}`,
+      );
+    }
   }
 
   private async runCaptureProcessing(input: {

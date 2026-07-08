@@ -3,24 +3,17 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { FormLifecycleStepper } from '../components/forms/FormLifecycleStepper';
 import { useToast } from '../context/ToastContext';
-import {
-  fieldTypeUsesOptions,
-  FieldOptionsEditor,
-} from '../components/forms/FieldOptionsEditor';
-import { ConditionalRuleEditor } from '../components/forms/ConditionalRuleEditor';
 import { ComponentLibraryPanel } from '../form-studio/ComponentLibraryPanel';
 import { FormSimulator } from '../form-studio/FormSimulator';
 import { FormStudioPreview, type PreviewDevice } from '../form-studio/FormStudioPreview';
 import { FormStudioRenderer } from '../form-studio/FormStudioRenderer';
 import {
-  CaptureConfigurationPanel,
   captureValueFromForm,
   captureValueToPayload,
   type CaptureConfigurationValue,
 } from '../form-studio/CaptureConfigurationPanel';
 import { TemplateLibraryModal } from '../form-studio/TemplateLibraryModal';
 import type { FormStudioTemplate } from '../form-studio/form-templates-library';
-import { DYNAMIC_CATALOGS } from '../form-studio/form-dynamic-catalogs';
 import { findComponentByType } from '../form-studio/form-field-catalog';
 import {
   createForm,
@@ -42,15 +35,24 @@ import { FORM_STATUS_LABELS, getNextLifecycleHint } from '../form-studio/form-li
 import { FORM_STUDIO_TEMPLATES } from '../form-studio/form-templates-library';
 import { LayoutBuilder } from '../form-studio/layout/LayoutBuilder';
 import type { FormLayoutNode } from '../form-studio/layout/layout-types';
+import { InspectorPanel } from '../form-studio/inspector';
+import type { ErpMappingInspectorContext, WorkflowInspectorContext } from '../form-studio/inspector';
+import type { InspectorSelection } from '../form-studio/inspector';
 import {
-  DataMappingPanel,
   dataMappingFromForm,
   type DataMappingValue,
 } from '../form-studio/DataMappingPanel';
 import { UcemPreviewBanner } from '../form-studio/UcemPreviewBanner';
 import { buildClientUcemPreview } from '../form-studio/ucem/data-provider-utils';
+import type { FormWorkflowDefinition } from '../form-studio/workflow/workflow.types';
+import {
+  defaultWorkflow,
+  workflowFromMetadata,
+  workflowToMetadata,
+} from '../form-studio/workflow/workflow.utils';
 
-type StudioTab = 'design' | 'layout' | 'mapping' | 'capture' | 'preview' | 'simulator' | 'components' | 'rules' | 'versions';
+type StudioTab = 'design' | 'layout' | 'preview' | 'simulator' | 'components' | 'rules' | 'versions';
+type DesignInspectorTarget = 'form' | 'field';
 
 export function FormDesignerPage() {
   const { id } = useParams<{ id: string }>();
@@ -72,11 +74,13 @@ export function FormDesignerPage() {
   );
   const [layoutMode, setLayoutMode] = useState<'flat' | 'tabs' | 'accordion'>('flat');
   const [captureConfig, setCaptureConfig] = useState<CaptureConfigurationValue>(() => captureValueFromForm());
+  const [workflowConfig, setWorkflowConfig] = useState<FormWorkflowDefinition>(() => defaultWorkflow());
   const [previewRender, setPreviewRender] = useState<FormRenderPayload | null>(null);
   const [previewMetadata, setPreviewMetadata] = useState<FormCaptureMetadata | Record<string, unknown>>({});
   const [previewCatalogKeys, setPreviewCatalogKeys] = useState<string[]>([]);
   const [previewUcem, setPreviewUcem] = useState<import('../api/forms').FormUcemPreview | null>(null);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [designInspectorTarget, setDesignInspectorTarget] = useState<DesignInspectorTarget>('form');
   const [previewData, setPreviewData] = useState<Record<string, unknown>>({});
   const [serverFields, setServerFields] = useState<Array<FormFieldDefinition & { visible?: boolean; effectiveRequired?: boolean }>>([]);
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>('desktop');
@@ -110,6 +114,7 @@ export function FormDesignerPage() {
       );
       setLayoutMode(f.schema.settings?.layoutMode ?? 'flat');
       setCaptureConfig(captureValueFromForm(f.schema, f.metadata as FormCaptureMetadata));
+      setWorkflowConfig(workflowFromMetadata(f.metadata as Record<string, unknown>));
       setFormStatus(f.status);
     });
     getFormVersionHistory(id).then(setVersions).catch(() => setVersions([]));
@@ -141,6 +146,11 @@ export function FormDesignerPage() {
           offline: true,
         })),
       }),
+    );
+    setWorkflowConfig(
+      workflowFromMetadata(
+        (t.captureMetadata as { workflow?: FormWorkflowDefinition } | undefined) ?? undefined,
+      ),
     );
     setTemplateLoaded(true);
     setDirty(true);
@@ -207,6 +217,7 @@ export function FormDesignerPage() {
 
   function buildSavePayload() {
     const { metadata, requiredCatalogKeys } = captureValueToPayload(captureConfig);
+    const workflow = workflowToMetadata(workflowConfig);
     return {
       name,
       description,
@@ -216,6 +227,7 @@ export function FormDesignerPage() {
         entityMapping: dataMapping.entityMapping.mappings.length
           ? dataMapping.entityMapping
           : undefined,
+        workflow,
       },
       requiredCatalogKeys,
     };
@@ -337,11 +349,81 @@ export function FormDesignerPage() {
   const selected = selectedIdx != null ? fields[selectedIdx] : null;
   const learning = selected ? findComponentByType(selected.type) : null;
 
+  const captureDisabled = formStatus !== 'draft' && !isNew;
+
+  const buildErpMappingContext = (
+    scope: ErpMappingInspectorContext['scope'],
+    field?: FormFieldDefinition,
+    fieldIndex?: number,
+  ): ErpMappingInspectorContext => ({
+    scope,
+    fields,
+    field,
+    fieldIndex,
+    value: dataMapping,
+    processingType: captureConfig.metadata.processingType,
+    disabled: captureDisabled,
+    onChange: (next: DataMappingValue) => {
+      setDataMapping(next);
+      markDirty();
+    },
+    onFieldsChange: (next: FormFieldDefinition[]) => {
+      setFields(next);
+      markDirty();
+    },
+  });
+
+  const buildWorkflowContext = (): WorkflowInspectorContext => ({
+    value: workflowConfig,
+    disabled: captureDisabled,
+    onChange: (next: FormWorkflowDefinition) => {
+      setWorkflowConfig(next);
+      markDirty();
+    },
+  });
+
+  const designInspectorSelections: InspectorSelection[] =
+    designInspectorTarget === 'form'
+      ? [
+          {
+            type: 'CAPTURE',
+            context: {
+              value: captureConfig,
+              disabled: captureDisabled,
+              onChange: (next: CaptureConfigurationValue) => {
+                setCaptureConfig(next);
+                markDirty();
+              },
+            },
+          },
+          {
+            type: 'ERP_MAPPING',
+            context: buildErpMappingContext('form'),
+          },
+          {
+            type: 'WORKFLOW',
+            context: buildWorkflowContext(),
+          },
+        ]
+      : selected && selectedIdx != null
+        ? [
+            {
+              type: 'FIELD',
+              context: {
+                field: selected,
+                fieldIndex: selectedIdx,
+                fields,
+                sections,
+                learning,
+                onChange: (patch: Partial<FormFieldDefinition>) => updateField(selectedIdx, patch),
+              },
+            },
+          ]
+        : [];
+
   const tabs: { id: StudioTab; label: string }[] = [
     { id: 'design', label: 'Diseño' },
     { id: 'layout', label: 'Layout' },
-    { id: 'mapping', label: 'Mapeo ERP' },
-    { id: 'capture', label: 'Capture' },
     { id: 'components', label: 'Componentes' },
     { id: 'preview', label: 'Vista previa' },
     { id: 'simulator', label: 'Probar formulario' },
@@ -459,9 +541,26 @@ export function FormDesignerPage() {
               </div>
             )}
             <textarea placeholder="Descripción" value={description} onChange={(e) => { setDescription(e.target.value); markDirty(); }} rows={2} />
+            <div
+              className={`designer-field designer-form-target ${designInspectorTarget === 'form' ? 'selected' : ''}`}
+              onClick={() => {
+                setDesignInspectorTarget('form');
+                setSelectedIdx(null);
+              }}
+            >
+              <strong>{name || formKey || 'Formulario'}</strong>
+              <span className="muted">Capture · UCEM · Workflow · Offline · GPS · ERP</span>
+            </div>
             <h3>Campos ({fields.length})</h3>
             {fields.map((f, idx) => (
-              <div key={`${f.key}-${idx}`} className={`designer-field ${selectedIdx === idx ? 'selected' : ''}`} onClick={() => setSelectedIdx(idx)}>
+              <div
+                key={`${f.key}-${idx}`}
+                className={`designer-field ${designInspectorTarget === 'field' && selectedIdx === idx ? 'selected' : ''}`}
+                onClick={() => {
+                  setDesignInspectorTarget('field');
+                  setSelectedIdx(idx);
+                }}
+              >
                 <strong>{f.label}</strong> <span className="muted">({f.type})</span>
                 {f.visibleWhen ? <span className="badge">condicional</span> : null}
                 <div className="row-actions">
@@ -473,77 +572,11 @@ export function FormDesignerPage() {
             ))}
           </section>
 
-          <aside className="designer-inspector panel">
-            <h3>Propiedades</h3>
-            {selected ? (
-              <div className="form-panel">
-                <div className="form-group">
-                  <label>Clave</label>
-                  <input value={selected.key} onChange={(e) => updateField(selectedIdx!, { key: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label>Etiqueta</label>
-                  <input value={selected.label} onChange={(e) => updateField(selectedIdx!, { label: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label>Sección</label>
-                  <select
-                    value={selected.sectionKey ?? ''}
-                    onChange={(e) => updateField(selectedIdx!, { sectionKey: e.target.value || undefined })}
-                  >
-                    <option value="">— Sin sección —</option>
-                    {(sections ?? []).map((s) => (
-                      <option key={s.key} value={s.key}>{s.title}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group form-check">
-                  <label>
-                    <input type="checkbox" checked={Boolean(selected.required)} onChange={(e) => updateField(selectedIdx!, { required: e.target.checked })} />
-                    Obligatorio
-                  </label>
-                </div>
-                <div className="form-group">
-                  <label>Descripción / ayuda</label>
-                  <textarea value={selected.description ?? ''} onChange={(e) => updateField(selectedIdx!, { description: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label>Lista dinámica</label>
-                  <select
-                    value={String(selected.metadata?.catalogKey ?? '')}
-                    onChange={(e) => {
-                      const catalogKey = e.target.value || undefined;
-                      const cat = catalogKey ? DYNAMIC_CATALOGS[catalogKey] : undefined;
-                      updateField(selectedIdx!, {
-                        type: 'select',
-                        metadata: { ...selected.metadata, catalogKey, dynamicList: !!catalogKey },
-                        options: cat && !cat.dependsOn ? cat.options.map((o) => ({ value: o.value, label: o.label })) : selected.options,
-                      });
-                    }}
-                  >
-                    <option value="">— Manual —</option>
-                    {Object.values(DYNAMIC_CATALOGS).map((c) => (
-                      <option key={c.key} value={c.key}>{c.label}{c.dependsOn ? ` (depende de ${c.dependsOn})` : ''}</option>
-                    ))}
-                  </select>
-                </div>
-                {fieldTypeUsesOptions(selected.type) && (
-                  <FieldOptionsEditor options={selected.options} onChange={(options) => updateField(selectedIdx!, { options })} />
-                )}
-                <ConditionalRuleEditor label="Mostrar solo si" ruleKey="visibleWhen" field={selected} allFields={fields} onChange={(p) => updateField(selectedIdx!, p)} />
-                <ConditionalRuleEditor label="Obligatorio solo si" ruleKey="requiredWhen" field={selected} allFields={fields} onChange={(p) => updateField(selectedIdx!, p)} />
-                {learning && (
-                  <div className="form-studio-learning compact">
-                    <h4>Modo aprendizaje</h4>
-                    <p>{learning.description}</p>
-                    <p className="muted">Ejemplo: {learning.example}</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="muted">Seleccione un campo o use la biblioteca de componentes.</p>
-            )}
-          </aside>
+          <InspectorPanel
+            variant="design"
+            emptyMessage="Seleccione el formulario o un campo para editar propiedades."
+            selections={designInspectorSelections}
+          />
         </div>
       )}
 
@@ -558,33 +591,6 @@ export function FormDesignerPage() {
           }}
           onFieldsChange={(next) => {
             setFields(next);
-            markDirty();
-          }}
-        />
-      )}
-
-      {tab === 'mapping' && (
-        <DataMappingPanel
-          fields={fields}
-          value={dataMapping}
-          disabled={formStatus !== 'draft' && !isNew}
-          onChange={(next) => {
-            setDataMapping(next);
-            markDirty();
-          }}
-          onFieldsChange={(next) => {
-            setFields(next);
-            markDirty();
-          }}
-        />
-      )}
-
-      {tab === 'capture' && (
-        <CaptureConfigurationPanel
-          value={captureConfig}
-          disabled={formStatus !== 'draft' && !isNew}
-          onChange={(next) => {
-            setCaptureConfig(next);
             markDirty();
           }}
         />
@@ -692,7 +698,7 @@ export function FormDesignerPage() {
           <h4>Layout</h4>
           <pre className="code-block">{JSON.stringify(layout, null, 2)}</pre>
           <h4>Capture metadata</h4>
-          <pre className="code-block">{JSON.stringify({ ...captureValueToPayload(captureConfig).metadata, entityMapping: dataMapping.entityMapping }, null, 2)}</pre>
+          <pre className="code-block">{JSON.stringify(buildSavePayload().metadata, null, 2)}</pre>
         </div>
       )}
 
