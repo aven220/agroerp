@@ -10,6 +10,7 @@ import { GalleryWidget } from '../widgets/GalleryWidget';
 import { AnalyticsWidget } from '../widgets/AnalyticsWidget';
 import { QuickActionsWidget } from '../widgets/QuickActionsWidget';
 import { InsightsWidget } from '../../record-insights/widgets/InsightsWidget';
+import { RecordHealthWidget } from '../../record-health/widgets/RecordHealthWidget';
 import { widgetRegistry } from '../../widget-platform';
 
 export interface UreWidgetDefinition {
@@ -19,6 +20,10 @@ export interface UreWidgetDefinition {
 
 function SummarySlot({ data }: { data: UreRecordExplorerResponse }) {
   return <SummaryWidget summary={data.summary} />;
+}
+
+function RecordHealthSlot({ data }: { data: UreRecordExplorerResponse }) {
+  return <RecordHealthWidget record={data} />;
 }
 
 function InfoSlot({ data }: { data: UreRecordExplorerResponse }) {
@@ -57,15 +62,28 @@ function InsightsSlot({ data }: { data: UreRecordExplorerResponse }) {
   return <InsightsWidget record={data} />;
 }
 
+const RECORD_HEALTH_WIDGET_DEFINITION: UreWidgetDefinition = {
+  id: 'record-health',
+  render: RecordHealthSlot,
+};
+
 const INSIGHTS_WIDGET_DEFINITION: UreWidgetDefinition = {
   id: 'insights',
   render: InsightsSlot,
 };
 
+if (!widgetRegistry.exists('record-health')) {
+  widgetRegistry.register({
+    id: 'record-health',
+    priority: 20,
+    render: RecordHealthSlot,
+  });
+}
+
 if (!widgetRegistry.exists('insights')) {
   widgetRegistry.register({
     id: 'insights',
-    priority: 100,
+    priority: 110,
     render: InsightsSlot,
   });
 }
@@ -73,7 +91,7 @@ if (!widgetRegistry.exists('insights')) {
 /** Default widget pipeline — extensible by registering more definitions */
 export const DEFAULT_URE_WIDGETS: UreWidgetDefinition[] = [
   { id: 'summary', render: SummarySlot },
-  { id: 'quick-actions', render: ActionsSlot },
+  RECORD_HEALTH_WIDGET_DEFINITION,
   { id: 'info', render: InfoSlot },
   { id: 'activity', render: ActivitySlot },
   { id: 'forms', render: FormsSlot },
@@ -81,5 +99,6 @@ export const DEFAULT_URE_WIDGETS: UreWidgetDefinition[] = [
   { id: 'documents', render: DocsSlot },
   { id: 'photos', render: PhotosSlot },
   { id: 'analytics', render: AnalyticsSlot },
+  { id: 'quick-actions', render: ActionsSlot },
   INSIGHTS_WIDGET_DEFINITION,
 ];
