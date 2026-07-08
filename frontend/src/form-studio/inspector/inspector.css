@@ -1,7 +1,7 @@
 .inspector-panel {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--ds-space-3);
   min-height: 0;
 }
 
@@ -9,7 +9,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--ds-space-3);
 }
 
 .inspector-header h3 {
@@ -17,13 +17,14 @@
 }
 
 .inspector-header-subtitle {
-  margin: 0.25rem 0 0;
-  font-size: 0.85rem;
+  margin: var(--ds-space-1) 0 0;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
 }
 
 .inspector-type-badge {
   flex-shrink: 0;
-  font-size: 0.7rem;
+  font-size: var(--ds-text-xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -31,57 +32,73 @@
 .inspector-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: var(--ds-space-1);
 }
 
 .inspector-tab {
-  border: 1px solid var(--border-color, #d8dee6);
-  background: var(--surface-muted, #f4f6f8);
-  color: inherit;
-  border-radius: 999px;
-  padding: 0.25rem 0.65rem;
-  font-size: 0.78rem;
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text-muted);
+  border-radius: var(--ds-radius-full);
+  padding: var(--ds-space-1) var(--ds-space-3);
+  font-size: var(--ds-text-sm);
   cursor: pointer;
+  transition: background 160ms var(--ds-ease), color 160ms var(--ds-ease), border-color 160ms var(--ds-ease);
+}
+
+.inspector-tab:hover {
+  color: var(--ds-text);
+  background: var(--ds-bg-subtle);
 }
 
 .inspector-tab.active {
-  background: var(--primary, #2563eb);
-  border-color: var(--primary, #2563eb);
-  color: #fff;
+  background: var(--ds-primary);
+  border-color: var(--ds-primary);
+  color: var(--ds-text-on-primary);
 }
 
 .inspector-body {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--ds-space-2);
+  min-height: 0;
+  overflow: auto;
 }
 
 .inspector-section {
-  border-top: 1px solid var(--border-color, #e5e7eb);
-  padding-top: 0.35rem;
+  border-top: 1px solid var(--ds-border);
+  padding-top: var(--ds-space-2);
 }
 
 .inspector-section-details > summary {
   cursor: pointer;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+  font-weight: var(--ds-weight-semibold);
+  margin-bottom: var(--ds-space-2);
 }
 
 .inspector-section-body {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--ds-space-2);
 }
 
 .inspector-property-description {
-  margin: 0.15rem 0 0.35rem;
-  font-size: 0.82rem;
+  margin: var(--ds-space-1) 0 var(--ds-space-2);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
 }
 
 .inspector-property-control input,
 .inspector-property-control select,
 .inspector-property-control textarea {
   width: 100%;
+  min-height: var(--ux-control-h, 38px);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font: inherit;
 }
 
 .inspector-empty {
@@ -91,10 +108,10 @@
 .inspector-composite-block {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding-bottom: 0.75rem;
-  margin-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  gap: var(--ds-space-2);
+  padding-bottom: var(--ds-space-3);
+  margin-bottom: var(--ds-space-3);
+  border-bottom: 1px solid var(--ds-border);
 }
 
 .inspector-composite-block:last-child {
@@ -104,30 +121,30 @@
 }
 
 .inspector-body-composite {
-  gap: 0.25rem;
+  gap: var(--ds-space-1);
 }
 
 .inspector-footer {
-  margin-top: 0.5rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border-color, #e5e7eb);
+  margin-top: var(--ds-space-2);
+  padding-top: var(--ds-space-3);
+  border-top: 1px solid var(--ds-border);
 }
 
 .workflow-state-list,
 .workflow-transition-list {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: var(--ds-space-3);
 }
 
 .workflow-state-row,
 .workflow-transition-row {
   display: grid;
-  gap: 0.5rem;
-  padding: 0.65rem;
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 0.5rem;
-  background: var(--surface-muted, #f9fafb);
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-sunken);
 }
 
 .workflow-transition-row {
@@ -142,7 +159,7 @@
 .workflow-json-preview {
   max-height: 240px;
   overflow: auto;
-  font-size: 0.78rem;
+  font-size: var(--ds-text-sm);
 }
 
 .muted-input {

@@ -66,15 +66,22 @@
 
   /* Spacing scale (4px base) */
   --ds-space-0: 0;
-  --ds-space-1: 0.25rem;
-  --ds-space-2: 0.5rem;
+  --ds-space-1: 0.25rem; /* xs */
+  --ds-space-2: 0.5rem; /* sm */
   --ds-space-3: 0.75rem;
-  --ds-space-4: 1rem;
+  --ds-space-4: 1rem; /* md */
   --ds-space-5: 1.25rem;
-  --ds-space-6: 1.5rem;
-  --ds-space-8: 2rem;
+  --ds-space-6: 1.5rem; /* lg */
+  --ds-space-8: 2rem; /* xl */
   --ds-space-10: 2.5rem;
   --ds-space-12: 3rem;
+
+  /* Semantic spacing aliases */
+  --spacing-xs: var(--ds-space-1);
+  --spacing-sm: var(--ds-space-2);
+  --spacing-md: var(--ds-space-4);
+  --spacing-lg: var(--ds-space-6);
+  --spacing-xl: var(--ds-space-8);
 
   /* Radius */
   --ds-radius-xs: 4px;

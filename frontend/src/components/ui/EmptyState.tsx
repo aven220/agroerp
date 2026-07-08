@@ -11,7 +11,7 @@ interface EmptyStateAction {
 
 interface EmptyStateProps {
   icon?: string;
-  illustration?: 'inbox' | 'search' | 'data' | 'folder' | 'error';
+  illustration?: 'inbox' | 'search' | 'data' | 'folder' | 'error' | 'permissions' | 'offline' | 'records';
   title: string;
   description?: string;
   hint?: string;
@@ -26,6 +26,9 @@ const ILLUSTRATIONS: Record<string, string> = {
   data: '📊',
   folder: '📁',
   error: '⚠️',
+  permissions: '🔒',
+  offline: '📡',
+  records: '📋',
 };
 
 export function EmptyState({

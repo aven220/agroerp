@@ -1,6 +1,7 @@
 import { LoadingState } from '../components/ux/LoadingState';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { PermissionMatrix } from '../components/admin/PermissionMatrix';
 import { Header } from '../components/layout/Header';
 import { DataTable } from '../components/ui/DataTable';
 import { Modal } from '../components/ui/Modal';
@@ -159,12 +160,6 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
     setRoleModal(true);
   }
 
-  function togglePerm(key: string) {
-    setSelectedPerms((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
-    );
-  }
-
   async function saveRole(e: React.FormEvent) {
     e.preventDefault();
     if (editingRole) {
@@ -241,13 +236,6 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
       setDeleteSaving(false);
     }
   }
-
-  const permGroups = permissions.reduce<Record<string, Permission[]>>((acc, p) => {
-    const k = p.resource;
-    if (!acc[k]) acc[k] = [];
-    acc[k].push(p);
-    return acc;
-  }, {});
 
   const headerActions =
     tab === 'roles' ? (
@@ -424,26 +412,13 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
               disabled={editingRole?.isSystem}
             />
           </label>
-          <div className="perm-grid">
-            <strong>Permisos</strong>
-            {Object.entries(permGroups).map(([resource, perms]) => (
-              <div key={resource} className="perm-group">
-                <div className="perm-resource">{resource}</div>
-                {perms.map((p) => {
-                  const key = `${p.resource}:${p.action}`;
-                  return (
-                    <label key={p.id} className="perm-check">
-                      <input
-                        type="checkbox"
-                        checked={selectedPerms.includes(key)}
-                        onChange={() => togglePerm(key)}
-                      />
-                      {p.action}
-                    </label>
-                  );
-                })}
-              </div>
-            ))}
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <span className="ds-field-label">Permisos del rol</span>
+            <PermissionMatrix
+              permissions={permissions}
+              selected={selectedPerms}
+              onChange={setSelectedPerms}
+            />
           </div>
           <div className="form-actions">
             <button type="button" className="btn" onClick={() => setRoleModal(false)}>

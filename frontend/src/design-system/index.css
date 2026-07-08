@@ -10,7 +10,11 @@
 @import './data-workspace.css';
 @import './mobile.css';
 @import './polish.css';
+@import './ux-stabilization.css';
 @import './accessibility.css';
+
+/* enterprise-ui-polish.css is imported at the end of src/index.css
+   so it wins over legacy module styles. */
 
 /* AGROERP Design System — Shell overrides for theme */
 

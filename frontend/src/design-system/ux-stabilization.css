@@ -1,0 +1,1004 @@
+/* UX Stabilization Phase 2 — Enterprise consistency layer
+   Visual polish only. No brand color changes. */
+
+:root {
+  --spacing-xs: var(--ds-space-1);
+  --spacing-sm: var(--ds-space-2);
+  --spacing-md: var(--ds-space-4);
+  --spacing-lg: var(--ds-space-6);
+  --spacing-xl: var(--ds-space-8);
+
+  --ux-page-pad-x: var(--ds-space-6);
+  --ux-page-pad-b: var(--ds-space-8);
+  --ux-card-pad: var(--ds-space-5);
+  --ux-section-gap: var(--ds-space-4);
+  --ux-control-h: 38px;
+  --ux-header-gap: var(--ds-space-4);
+  --ux-anim: var(--ds-duration-fast) var(--ds-ease);
+}
+
+/* ─── 1. Layout global ─── */
+.erp-content {
+  padding: 0 var(--ux-page-pad-x) var(--ux-page-pad-b);
+  max-width: var(--ds-content-max);
+  width: 100%;
+  min-width: 0;
+}
+
+.erp-main {
+  min-width: 0;
+  overflow-x: clip;
+}
+
+.page-stack,
+.ds-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ux-section-gap);
+}
+
+/* ─── 2. Cards / panels ─── */
+.card,
+.panel,
+.kpi-card,
+.ure-widget-slot > .ure-summary,
+.ure-widget-slot > .panel,
+.ws-widget,
+.form-panel {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-sm);
+}
+
+.panel,
+.card,
+.form-panel {
+  padding: var(--ux-card-pad);
+}
+
+.panel > h2,
+.panel > h3,
+.card > h2,
+.card > h3 {
+  margin: 0 0 var(--ds-space-3);
+  line-height: var(--ds-leading-tight);
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+}
+
+.card-header,
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  margin-bottom: var(--ds-space-4);
+  padding-bottom: var(--ds-space-3);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.card-body,
+.panel-body {
+  min-width: 0;
+}
+
+.card-footer,
+.panel-footer {
+  margin-top: var(--ds-space-4);
+  padding-top: var(--ds-space-3);
+  border-top: 1px solid var(--ds-border);
+}
+
+.page-section-title {
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+  line-height: var(--ds-leading-tight);
+}
+
+/* ─── 3. Headers ─── */
+.topbar,
+.page-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--ux-header-gap);
+  flex-wrap: wrap;
+  padding: var(--ds-space-6) 0 var(--ds-space-4);
+  margin-bottom: var(--ds-space-5);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.topbar h1,
+.page-topbar h1 {
+  margin: 0;
+  font-size: var(--ds-text-3xl);
+  font-weight: var(--ds-weight-bold);
+  color: var(--ds-text);
+  line-height: var(--ds-leading-tight);
+  letter-spacing: -0.02em;
+}
+
+.topbar-sub {
+  margin: var(--ds-space-1) 0 0;
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-md);
+  line-height: var(--ds-leading-normal);
+  max-width: 52rem;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+
+.breadcrumbs {
+  margin-bottom: var(--ds-space-3);
+  font-size: var(--ds-text-sm);
+}
+
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-1);
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── 4. Forms ─── */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ds-space-4);
+  align-items: start;
+}
+
+.form-grid > label,
+.form-group,
+.ds-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  min-width: 0;
+  margin: 0;
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-secondary);
+}
+
+.form-grid input:not([type='checkbox']):not([type='radio']):not([type='range']),
+.form-grid select,
+.form-grid textarea,
+.form-group input:not([type='checkbox']):not([type='radio']):not([type='range']),
+.form-group select,
+.form-group textarea {
+  min-height: var(--ux-control-h);
+  width: 100%;
+}
+
+.form-grid input[type='checkbox'],
+.form-grid input[type='radio'],
+.form-group input[type='checkbox'],
+.form-group input[type='radio'] {
+  width: auto;
+  min-height: auto;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--ds-space-2);
+  grid-column: 1 / -1;
+  margin-top: var(--ds-space-2);
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-border);
+}
+
+.filter-bar,
+.filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--ds-space-3);
+  margin-bottom: var(--ds-space-4);
+}
+
+/* ─── 5. Tables ─── */
+.table-wrap .data-table thead th,
+.edw-table-scroll .edw-table thead th,
+.table-scroll .data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--ds-surface-sunken);
+}
+
+.data-table tbody tr,
+.ds-table tbody tr,
+.edw-table tbody tr {
+  transition: background var(--ux-anim);
+}
+
+.data-table tbody tr:hover,
+.ds-table tbody tr:hover,
+.edw-table tbody tr:hover {
+  background: var(--ds-surface-sunken);
+}
+
+.data-table td,
+.ds-table td,
+.edw-table td {
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2);
+  justify-content: flex-end;
+}
+
+/* ─── 6. Record Explorer widgets ─── */
+.ure-layout {
+  gap: var(--ds-space-4);
+  padding: 0 0 var(--ds-space-6);
+}
+
+.ure-sidebar {
+  padding: var(--ds-space-3);
+}
+
+.ure-nav-item {
+  transition: background var(--ux-anim), color var(--ux-anim), border-color var(--ux-anim);
+}
+
+.ure-nav-item:focus-visible {
+  outline: 2px solid var(--ds-primary);
+  outline-offset: 2px;
+}
+
+.ure-widgets {
+  gap: var(--ds-space-4);
+}
+
+.ure-widget-slot,
+.ure-panel,
+.ure-widgets {
+  min-width: 0;
+}
+
+.ure-widget-slot > * {
+  min-height: 120px;
+  min-width: 0;
+}
+
+.ure-widget-slot > .ure-summary,
+.ure-widget-slot > .panel,
+.ure-widget-slot > .card {
+  padding: var(--ux-card-pad);
+  overflow: hidden;
+}
+
+.ure-summary-head {
+  gap: var(--ds-space-3);
+  align-items: flex-start;
+}
+
+.ure-summary-title,
+.ure-summary-head h1,
+.ure-summary-head h2,
+.ure-summary-head h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  line-height: var(--ds-leading-tight);
+}
+
+.ure-field-row {
+  align-items: start;
+}
+
+.ure-timeline-item,
+.ure-rel-list li,
+.ure-doc-list li,
+.ure-form-list li {
+  min-width: 0;
+}
+
+.ure-badge {
+  padding: var(--ds-space-1) var(--ds-space-2);
+}
+
+/* ─── 7. Entity / data workspace ─── */
+.edw-grid-wrap,
+.edw-toolbar {
+  border-radius: var(--ds-radius-lg);
+}
+
+.edw-toolbar {
+  padding: var(--ds-space-3) var(--ds-space-4);
+  gap: var(--ds-space-3);
+}
+
+.edw-table-scroll {
+  max-height: min(70vh, 640px);
+}
+
+/* ─── 8. Smart Form Studio / Inspector ─── */
+.inspector-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  min-height: 0;
+  padding: var(--ds-space-3);
+}
+
+.inspector-header {
+  gap: var(--ds-space-3);
+}
+
+.inspector-header h3 {
+  margin: 0;
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+}
+
+.inspector-header-subtitle {
+  margin: var(--ds-space-1) 0 0;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.inspector-type-badge {
+  font-size: var(--ds-text-xs);
+  padding: var(--ds-space-1) var(--ds-space-2);
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-primary-subtle);
+  color: var(--ds-primary);
+  border: 1px solid var(--ds-primary-muted);
+}
+
+.inspector-tabs {
+  gap: var(--ds-space-1);
+}
+
+.inspector-tab {
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text-muted);
+  border-radius: var(--ds-radius-full);
+  padding: var(--ds-space-1) var(--ds-space-3);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-medium);
+  transition: background var(--ux-anim), color var(--ux-anim), border-color var(--ux-anim);
+}
+
+.inspector-tab:hover {
+  color: var(--ds-text);
+  background: var(--ds-bg-subtle);
+}
+
+.inspector-tab.active {
+  background: var(--ds-primary);
+  border-color: var(--ds-primary);
+  color: var(--ds-text-on-primary);
+}
+
+.inspector-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  overflow: auto;
+  min-height: 0;
+}
+
+.inspector-section {
+  border-top: 1px solid var(--ds-border);
+  padding-top: var(--ds-space-3);
+}
+
+.inspector-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.inspector-section-body label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-secondary);
+}
+
+.inspector-section-body input,
+.inspector-section-body select,
+.inspector-section-body textarea {
+  min-height: 36px;
+  width: 100%;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font: inherit;
+}
+
+.inspector-composite-block {
+  gap: var(--ds-space-3);
+  padding-bottom: var(--ds-space-3);
+  margin-bottom: var(--ds-space-3);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.inspector-property-description {
+  margin: var(--ds-space-1) 0;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+/* ─── 9. Sidebar ─── */
+.sidebar-brand {
+  padding: var(--ds-space-5) var(--ds-space-4);
+  gap: var(--ds-space-3);
+}
+
+.sidebar-nav {
+  padding: var(--ds-space-4) var(--ds-space-3);
+}
+
+.page-topbar-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  min-width: 0;
+  flex: 1;
+}
+
+.page-topbar-crumb {
+  margin-bottom: var(--ds-space-1);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  margin-bottom: var(--ds-space-1);
+  transition: background var(--ux-anim), color var(--ux-anim);
+  min-height: 40px;
+}
+
+.nav-item:focus-visible {
+  outline: 2px solid var(--ds-primary-muted);
+  outline-offset: 2px;
+}
+
+.nav-icon {
+  width: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-footer {
+  padding: var(--ds-space-4);
+}
+
+/* ─── 10. Dashboard ─── */
+.ws-workspace {
+  gap: var(--ds-space-4);
+}
+
+.ws-toolbar {
+  padding: var(--ds-space-4);
+  gap: var(--ds-space-3);
+}
+
+.ws-grid {
+  gap: var(--ds-space-4);
+}
+
+.ws-widget {
+  min-height: 160px;
+  transition: box-shadow var(--ux-anim), border-color var(--ux-anim), opacity var(--ux-anim);
+}
+
+.ws-widget-header {
+  padding: var(--ds-space-3) var(--ds-space-4);
+  min-height: 48px;
+}
+
+.ws-widget-body,
+.ws-widget-content {
+  padding: var(--ds-space-4);
+  min-width: 0;
+  flex: 1;
+}
+
+.ws-view-tab-wrap {
+  gap: var(--ds-space-1);
+}
+
+.ws-view-remove {
+  padding: 0 var(--ds-space-1);
+}
+
+.ws-size-select {
+  padding: var(--ds-space-1) var(--ds-space-2);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--ds-space-4);
+}
+
+.kpi-card {
+  padding: var(--ux-card-pad);
+  min-height: 112px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+/* ─── 12. Motion ─── */
+.panel,
+.card,
+.ws-widget,
+.ure-nav-item,
+.btn,
+.tab,
+.inspector-tab {
+  transition-duration: 160ms;
+}
+
+details[open] > summary ~ * {
+  animation: ds-fade-in 160ms var(--ds-ease-out);
+}
+
+/* ─── 13. Loading unified ─── */
+.loading-inline,
+.ds-loading-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-sm);
+  padding: var(--ds-space-4);
+}
+
+.loading-card,
+.ds-loading-card {
+  padding: var(--ux-card-pad);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-sm);
+  min-height: 120px;
+}
+
+/* ─── 14. Empty states ─── */
+.empty-state,
+.ds-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-10) var(--ds-space-6);
+  text-align: center;
+  color: var(--ds-text-muted);
+  background: var(--ds-surface);
+  border: 1px dashed var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  min-height: 180px;
+}
+
+.ds-empty-state-icon {
+  font-size: 2.25rem;
+  line-height: 1;
+  opacity: 0.55;
+}
+
+.ds-empty-state-title {
+  margin: 0;
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+}
+
+.ds-empty-state-desc {
+  margin: 0;
+  font-size: var(--ds-text-sm);
+  max-width: 28rem;
+  line-height: var(--ds-leading-relaxed);
+}
+
+.ds-empty-state-actions,
+.ds-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  justify-content: center;
+  margin-top: var(--ds-space-2);
+}
+
+.ds-empty-state-hint {
+  margin: 0;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+  max-width: 28rem;
+}
+
+/* ─── Permission Matrix (from phase 1) ─── */
+.perm-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface-sunken);
+  padding: var(--ds-space-3);
+}
+
+.perm-matrix-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+}
+
+.perm-matrix-search {
+  flex: 1;
+  min-width: 220px;
+}
+
+.perm-matrix-search input {
+  width: 100%;
+  min-height: var(--ux-control-h);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font: inherit;
+}
+
+.perm-matrix-search input:focus {
+  outline: none;
+  border-color: var(--ds-primary);
+  box-shadow: 0 0 0 3px var(--ds-primary-subtle);
+}
+
+.perm-matrix-stats,
+.perm-matrix-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  align-items: center;
+}
+
+.perm-matrix-body {
+  max-height: min(56vh, 520px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  padding-right: var(--ds-space-1);
+}
+
+.perm-module {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--ds-shadow-xs);
+}
+
+.perm-module-header,
+.perm-resource-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  background: var(--ds-surface);
+}
+
+.perm-module-header {
+  border-bottom: 1px solid var(--ds-border);
+  background: color-mix(in srgb, var(--ds-primary-subtle) 55%, var(--ds-surface));
+}
+
+.perm-module-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3);
+}
+
+.perm-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--ds-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.perm-collapse-btn:focus-visible {
+  outline: 2px solid var(--ds-primary);
+  outline-offset: 2px;
+  border-radius: var(--ds-radius-sm);
+}
+
+.perm-resource-card {
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-sunken);
+  overflow: hidden;
+}
+
+.perm-resource-title {
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+}
+
+.perm-resource-code {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+  background: var(--ds-bg-subtle);
+  border-radius: var(--ds-radius-sm);
+  padding: var(--ds-space-1) var(--ds-space-2);
+}
+
+.perm-bulk-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+  font-weight: var(--ds-weight-medium);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.perm-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3);
+}
+
+.perm-action-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: var(--ds-space-2);
+  align-items: start;
+  margin: 0;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  font-weight: var(--ds-weight-normal);
+  cursor: pointer;
+  min-height: 52px;
+  transition: border-color var(--ux-anim), background var(--ux-anim);
+}
+
+.perm-action-item:has(input:checked) {
+  border-color: var(--ds-primary-muted);
+  background: var(--ds-primary-subtle);
+}
+
+.perm-action-item input {
+  grid-row: 1 / span 2;
+  margin: var(--ds-space-1) 0 0;
+}
+
+.perm-action-label {
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+}
+
+.perm-action-key {
+  grid-column: 2;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+
+/* ─── 11. Responsive ─── */
+@media (max-width: 1280px) {
+  :root {
+    --ux-page-pad-x: var(--ds-space-5);
+  }
+
+  .perm-actions-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ure-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ure-sidebar {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --ux-page-pad-x: var(--ds-space-4);
+    --ux-page-pad-b: var(--ds-space-6);
+    --ux-card-pad: var(--ds-space-4);
+  }
+
+  .topbar h1,
+  .page-topbar h1 {
+    font-size: var(--ds-text-2xl);
+  }
+
+  .perm-matrix-body {
+    max-height: 60vh;
+  }
+
+  .perm-module-header,
+  .perm-resource-header {
+    flex-wrap: wrap;
+  }
+
+  .perm-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ws-widget {
+    min-height: 140px;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar-right {
+    width: 100%;
+  }
+
+  .topbar-right .btn {
+    flex: 1;
+  }
+}
+
+/* Avoid horizontal page scroll from nested grids */
+.erp-content,
+.ure-panel,
+.ws-widget-body,
+.inspector-body,
+.table-wrap,
+.edw-grid-wrap,
+.designer-layout,
+.form-studio-preview,
+.form-studio-device-screen {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* ─── Form Studio shell polish ─── */
+.designer-layout {
+  gap: var(--ds-space-4);
+  align-items: stretch;
+  min-height: 0;
+}
+
+.designer-layout > .panel,
+.designer-layout > aside,
+.designer-layout > .inspector-panel {
+  min-width: 0;
+  min-height: 0;
+}
+
+.form-studio-component-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  overflow: auto;
+  min-height: 0;
+}
+
+.form-studio-group button,
+.designer-palette button {
+  transition: background var(--ux-anim), border-color var(--ux-anim), color var(--ux-anim);
+}
+
+/* ─── URE / EDW widget chrome ─── */
+.ure-widget-slot .panel > h2,
+.ure-widget-slot .panel > h3,
+.ure-widget-slot .ure-summary-title {
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-semibold);
+  line-height: var(--ds-leading-tight);
+}
+
+.ure-kpi-row,
+.ure-metrics-grid {
+  gap: var(--ds-space-3);
+}
+
+.edw-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ds-space-2);
+}
+
+/* ─── Skeleton / spinner unified ─── */
+.ds-skeleton {
+  border-radius: var(--ds-radius-sm);
+}
+
+.ds-loading-cards,
+.ds-loading-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.ds-loading-kpi-row,
+.ds-loading-widget-grid {
+  display: grid;
+  gap: var(--ds-space-4);
+}
+
+.ds-loading-kpi-row {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+.ds-loading-widget-grid {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.ds-loading-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-4);
+}
+
+.ds-loading-table-head,
+.ds-loading-table-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--ds-space-3);
+}
+
+.ds-spinner {
+  transition: opacity 160ms var(--ds-ease);
+}

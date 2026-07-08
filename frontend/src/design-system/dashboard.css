@@ -45,7 +45,7 @@
 .ws-view-tab-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--ds-space-1);
 }
 
 .ws-view-tab {
@@ -83,7 +83,7 @@
   color: var(--ds-text-muted);
   cursor: pointer;
   font-size: 0.9rem;
-  padding: 0 4px;
+  padding: 0 var(--ds-space-1);
 }
 
 .ws-rename-input {
@@ -184,7 +184,7 @@
 
 .ws-size-select {
   font-size: var(--ds-text-xs);
-  padding: 2px 6px;
+  padding: var(--ds-space-1) var(--ds-space-2);
   border: 1px solid var(--ds-border);
   border-radius: var(--ds-radius-sm);
   background: var(--ds-surface);
@@ -250,7 +250,7 @@
 .ws-notif {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--ds-space-1);
   padding: var(--ds-space-2);
   border-radius: var(--ds-radius-sm);
   background: var(--ds-surface-sunken);

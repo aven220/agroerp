@@ -108,7 +108,7 @@
 }
 
 .ure-badge {
-  padding: 2px var(--ds-space-2);
+  padding: var(--ds-space-1) var(--ds-space-2);
   border-radius: var(--ds-radius-full);
   background: var(--ds-surface-sunken);
   font-size: var(--ds-text-xs);
@@ -170,14 +170,14 @@
 
 .ure-timeline-item {
   display: grid;
-  grid-template-columns: 12px 1fr;
+  grid-template-columns: var(--ds-space-3) 1fr;
   gap: var(--ds-space-3);
 }
 
 .ure-timeline-dot {
   width: 10px;
   height: 10px;
-  margin-top: 6px;
+  margin-top: var(--ds-space-2);
   border-radius: 50%;
   background: var(--ds-primary);
 }
