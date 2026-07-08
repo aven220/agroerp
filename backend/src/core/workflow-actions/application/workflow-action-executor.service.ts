@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import type { DomainEventPayload } from '@agroerp/shared';
 import { EventService } from '@/core/events/application/event.service';
 import { SubmissionProcessorService } from '@/core/capture-processing/application/submission-processor.service';
@@ -27,6 +27,7 @@ export class WorkflowActionExecutorService {
     private readonly submissionProcessor: SubmissionProcessorService,
     @Inject(FORM_SUBMISSION_REPOSITORY)
     private readonly submissionRepository: FormSubmissionRepository,
+    @Inject(forwardRef(() => FormsService))
     private readonly forms: FormsService,
   ) {}
 

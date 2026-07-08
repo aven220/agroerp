@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import {
   FORM_SUBMISSION_RESOURCE_TYPE,
@@ -34,6 +35,7 @@ export class FormSubmissionsService {
     private readonly core: CoreEngineService,
     private readonly submissionProcessor: SubmissionProcessorService,
     private readonly submissionFlow: SubmissionFlowService,
+    @Inject(forwardRef(() => WorkflowEngineService))
     private readonly workflowEngine: WorkflowEngineService,
   ) {}
 
