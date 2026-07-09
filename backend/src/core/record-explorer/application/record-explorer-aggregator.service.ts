@@ -61,7 +61,7 @@ export class RecordExplorerAggregatorService {
         this.producers.get360(organizationId, id),
         this.producers.getTimeline(organizationId, id),
         this.producers.getIndicators(organizationId, id),
-        this.events.getByAggregate(aggregateType, id),
+        this.events.getByAggregate(aggregateType, id, organizationId),
         this.loadRelatedForms(organizationId, id),
       ]);
 
@@ -147,7 +147,7 @@ export class RecordExplorerAggregatorService {
       this.farms.findOne(organizationId, id),
       this.farms.getTimeline(organizationId, id),
       this.farmTwin.getTwin(organizationId, id).catch(() => null),
-      this.events.getByAggregate(aggregateType, id),
+      this.events.getByAggregate(aggregateType, id, organizationId),
       this.loadRelatedForms(organizationId, id),
     ]);
 
@@ -218,7 +218,7 @@ export class RecordExplorerAggregatorService {
       this.lots.findOne(organizationId, id),
       this.lots.getTimeline(organizationId, id),
       this.lotTwin.getTwin(organizationId, id).catch(() => null),
-      this.events.getByAggregate(aggregateType, id),
+      this.events.getByAggregate(aggregateType, id, organizationId),
       this.loadRelatedForms(organizationId, id),
     ]);
 

@@ -15,7 +15,7 @@ export const FORM_LIFECYCLE_STEPS = [
   { id: 'draft', label: 'Borrador', hint: 'Edite y guarde sin publicar' },
   { id: 'preview', label: 'Vista previa', hint: 'Valide reglas y experiencia' },
   { id: 'published', label: 'Publicado', hint: 'Listo para uso operativo' },
-  { id: 'sync', label: 'Sync móvil', hint: 'Disponible en dispositivos Android' },
+  { id: 'sync', label: 'Sincronización móvil', hint: 'Disponible en dispositivos de campo tras la próxima descarga' },
   { id: 'archived', label: 'Archivado', hint: 'Retirado del catálogo activo' },
 ] as const;
 

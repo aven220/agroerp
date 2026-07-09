@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { LoadingState } from '../../components/ux/LoadingState';
 import { useRecordExplorer } from '../hooks/useRecordExplorer';
 import { DEFAULT_URE_WIDGETS } from './widget-registry';
@@ -27,10 +27,11 @@ export function UniversalRecordExplorer({
   const { data, loading, error } = useRecordExplorer(entityType, recordId);
   const [activeSection, setActiveSection] = useState(URE_NAV_SECTIONS[0].id);
 
-  const layoutWidgetIds = useMemo(() => {
+  useEffect(() => {
     registerLegacyWidgets<UreRecordExplorerResponse>(widgets);
-    return widgets.map((w) => w.id);
   }, [widgets]);
+
+  const layoutWidgetIds = useMemo(() => widgets.map((w) => w.id), [widgets]);
 
   const widgetData = (data ?? {}) as UreRecordExplorerResponse;
 
@@ -40,13 +41,23 @@ export function UniversalRecordExplorer({
     layoutWidgetIds,
   });
 
-  function scrollToSection(anchor: string, sectionId: typeof activeSection) {
+  const widgetContextValue = useMemo(
+    () => ({
+      data: data!,
+      entityType,
+      recordId,
+      layoutId: URE_DEFAULT_LAYOUT_ID,
+    }),
+    [data, entityType, recordId],
+  );
+
+  const scrollToSection = useCallback((anchor: string, sectionId: typeof activeSection) => {
     setActiveSection(sectionId);
     document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  }, []);
 
   if (loading) {
-    return <LoadingState variant="page" message="Cargando expediente universal..." />;
+    return <LoadingState variant="page" message="Cargando expediente..." />;
   }
 
   if (error || !data) {
@@ -54,14 +65,7 @@ export function UniversalRecordExplorer({
   }
 
   return (
-    <WidgetContextProvider
-      value={{
-        data,
-        entityType,
-        recordId,
-        layoutId: URE_DEFAULT_LAYOUT_ID,
-      }}
-    >
+    <WidgetContextProvider value={widgetContextValue}>
       <div className="ure-layout">
         <aside className="ure-sidebar" aria-label="Secciones del expediente">
           <nav>
@@ -87,6 +91,7 @@ export function UniversalRecordExplorer({
               widgets={resolvedWidgets}
               data={data}
               slotClassName="ure-widget-slot"
+              deferUntilVisible
             />
           </div>
         </div>

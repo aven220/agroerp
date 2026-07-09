@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { InspectorGroupDefinition } from './types';
 
 export interface InspectorSectionProps {
@@ -12,11 +12,17 @@ export function InspectorSection({
   defaultCollapsed = false,
   children,
 }: InspectorSectionProps) {
+  const [open, setOpen] = useState(!defaultCollapsed && !group.collapsed);
+
   return (
     <section className="inspector-section">
-      <details className="inspector-section-details" open={!defaultCollapsed && !group.collapsed}>
+      <details
+        className="inspector-section-details"
+        open={open}
+        onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}
+      >
         <summary className="inspector-section-summary">{group.title}</summary>
-        <div className="inspector-section-body">{children}</div>
+        {open ? <div className="inspector-section-body">{children}</div> : null}
       </details>
     </section>
   );

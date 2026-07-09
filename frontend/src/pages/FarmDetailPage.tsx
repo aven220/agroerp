@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { LoadingState } from '../components/ux/LoadingState';
+import { useAuth } from '../context/AuthContext';
+import { buildRecordExplorerPath } from '../record-explorer/types';
 import {
   addFarmDocument,
   addFarmLot,
@@ -27,6 +31,7 @@ type Tab = 'perfil' | 'twin' | 'lotes' | 'geometria' | 'documentos' | 'galeria' 
 export function FarmDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
   const [farm, setFarm] = useState<FarmUnit | null>(null);
   const [twin, setTwin] = useState<FarmDigitalTwin | null>(null);
   const [timeline, setTimeline] = useState<Array<{
@@ -115,15 +120,60 @@ export function FarmDetailPage() {
             <button type="button" className="btn" onClick={() => navigate('/fincas')}>
               Volver
             </button>
+            {hasPermission('farm:read') && id ? (
+              <Link to={buildRecordExplorerPath('farm', id)} className="btn">
+                Expediente 360°
+              </Link>
+            ) : null}
             <button type="button" className="btn" onClick={() => setLifecycleOpen(true)}>
               Cambiar estado
             </button>
-            <Link to={`/fincas/${id}/editar`} className="btn btn-primary">
-              Editar
-            </Link>
+            {hasPermission('farm:update') ? (
+              <Link to={`/fincas/${id}/editar`} className="btn btn-primary">
+                Editar
+              </Link>
+            ) : null}
           </div>
         }
       />
+
+      <FlowProgress flowId="agricultural" currentStepId="farm" />
+
+      {id ? (
+        <FlowNextActions
+          title="Continuar con…"
+          subtitle="Registre lotes y consulte el expediente territorial."
+          actions={[
+            ...(hasPermission('lot:create')
+              ? [
+                  {
+                    label: 'Registrar lote',
+                    description: 'Defina la unidad productiva en esta finca',
+                    to: `/lotes/nuevo?finca=${id}`,
+                    primary: true,
+                    icon: '🌱',
+                  },
+                ]
+              : []),
+            ...(hasPermission('farm:read')
+              ? [
+                  {
+                    label: 'Expediente 360°',
+                    description: 'Vista unificada de la finca',
+                    to: buildRecordExplorerPath('farm', id),
+                    icon: '📂',
+                  },
+                ]
+              : []),
+            {
+              label: 'Indicadores de fincas',
+              description: 'Dashboard territorial FTIP',
+              to: '/fincas/dashboard',
+              icon: '📊',
+            },
+          ]}
+        />
+      ) : null}
 
       {twin && (
         <div className="detail-scores">
@@ -144,7 +194,7 @@ export function FarmDetailPage() {
             className={`tab-btn ${tab === t ? 'active' : ''}`}
             onClick={() => setTab(t)}
           >
-            {t === 'twin' ? 'Digital Twin' : t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === 'twin' ? 'Indicadores' : t === 'timeline' ? 'Historial' : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </nav>

@@ -23,6 +23,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
+    const tokenPurpose = (payload as JwtPayload & { purpose?: string }).purpose;
+    if (tokenPurpose === 'mfa_pending') {
+      throw new UnauthorizedException('Invalid token type');
+    }
+    if (!payload.sessionId) {
+      throw new UnauthorizedException('Invalid session');
+    }
+
     const user = await this.prisma.user.findFirst({
       where: {
         id: payload.sub,

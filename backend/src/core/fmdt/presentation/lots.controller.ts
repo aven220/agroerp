@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Header,
   Param,
@@ -135,10 +136,16 @@ export class LotsController {
   @Post('lots/sync')
   @RequirePermissions('field_operation:create')
   syncBatch(
-    @CurrentUser() user: { id: string; organizationId: string },
+    @CurrentUser() user: { id: string; organizationId: string; permissions?: string[] },
     @Body() dto: SyncLotsDto,
     @Req() req: AgroRequest,
   ) {
+    if ((dto.lots?.length ?? 0) > 0) {
+      const perms = user.permissions ?? [];
+      if (!perms.includes('*:*') && !perms.includes('lot:create')) {
+        throw new ForbiddenException('Missing permissions: lot:create');
+      }
+    }
     return this.sync.syncBatch(user.organizationId, user.id, dto, req.agroContext);
   }
 

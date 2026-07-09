@@ -104,5 +104,15 @@ export const URE_NAV_SECTIONS: UreNavSection[] = [
   { id: 'relationships', label: 'Relaciones', anchor: 'ure-relationships' },
   { id: 'documents', label: 'Documentos', anchor: 'ure-documents' },
   { id: 'photos', label: 'Fotos', anchor: 'ure-photos' },
-  { id: 'analytics', label: 'Analytics', anchor: 'ure-analytics' },
+  { id: 'analytics', label: 'Análisis', anchor: 'ure-analytics' },
 ];
+
+/** Canonical URE route segment (lowercase, matches backend registry). */
+export type UreRouteEntityType = 'producer' | 'farm' | 'lot';
+
+export function buildRecordExplorerPath(
+  entityType: UreRouteEntityType,
+  recordId: string,
+): string {
+  return `/record-explorer/${entityType}/${recordId}`;
+}

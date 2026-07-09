@@ -122,6 +122,7 @@ export class WorkflowEngineService {
     const domainEvents = await this.events.getByAggregate(
       FORM_WORKFLOW_AGGREGATE_TYPE,
       submissionId,
+      organizationId,
     );
 
     const relevant = domainEvents

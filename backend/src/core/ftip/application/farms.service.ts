@@ -153,60 +153,64 @@ export class FarmsService {
       }
     }
 
-    const farm = await this.prisma.farmUnit.create({
-      data: {
-        organizationId,
-        farmCode,
-        farmName: dto.farmName,
-        farmTypeCode: dto.farmTypeCode,
-        productionSystemCode: dto.productionSystemCode,
-        departmentCode: dto.departmentCode,
-        municipalityCode: dto.municipalityCode,
-        veredaCode: dto.veredaCode,
-        streetAddress: dto.streetAddress,
-        centroidLatitude: centroidLat,
-        centroidLongitude: centroidLng,
-        boundaryGeo: dto.boundaryGeo as Prisma.InputJsonValue,
-        totalAreaHa,
-        agriculturalAreaHa: dto.agriculturalAreaHa ?? totalAreaHa,
-        tenureTypeCode: dto.tenureTypeCode,
-        observations: dto.observations,
-        tags: dto.tags ?? [],
-        externalId: dto.externalId,
-        status: 'draft',
-        createdBy: userId,
-        updatedBy: userId,
-        aiReadiness: {
-          productionForecast: 'ready',
-          riskDetection: 'ready',
-          agronomicRecommendations: 'ready',
-          alerts: 'ready',
-        },
-      },
-    });
-
-    if (dto.producerId) {
-      await this.prisma.producerTerritoryLink.create({
+    const farm = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.farmUnit.create({
         data: {
           organizationId,
-          farmUnitId: farm.id,
-          producerId: dto.producerId,
-          relationshipType: 'owner',
-          isPrimary: true,
+          farmCode,
+          farmName: dto.farmName,
+          farmTypeCode: dto.farmTypeCode,
+          productionSystemCode: dto.productionSystemCode,
+          departmentCode: dto.departmentCode,
+          municipalityCode: dto.municipalityCode,
+          veredaCode: dto.veredaCode,
+          streetAddress: dto.streetAddress,
+          centroidLatitude: centroidLat,
+          centroidLongitude: centroidLng,
+          boundaryGeo: dto.boundaryGeo as Prisma.InputJsonValue,
+          totalAreaHa,
+          agriculturalAreaHa: dto.agriculturalAreaHa ?? totalAreaHa,
+          tenureTypeCode: dto.tenureTypeCode,
+          observations: dto.observations,
+          tags: dto.tags ?? [],
+          externalId: dto.externalId,
+          status: 'draft',
           createdBy: userId,
+          updatedBy: userId,
+          aiReadiness: {
+            productionForecast: 'ready',
+            riskDetection: 'ready',
+            agronomicRecommendations: 'ready',
+            alerts: 'ready',
+          },
         },
       });
-    }
 
-    await this.prisma.farmLifecycleEvent.create({
-      data: {
-        organizationId,
-        farmUnitId: farm.id,
-        fromStatus: null,
-        toStatus: 'draft',
-        actorId: userId,
-        reasonNotes: 'Alta inicial',
-      },
+      if (dto.producerId) {
+        await tx.producerTerritoryLink.create({
+          data: {
+            organizationId,
+            farmUnitId: created.id,
+            producerId: dto.producerId,
+            relationshipType: 'owner',
+            isPrimary: true,
+            createdBy: userId,
+          },
+        });
+      }
+
+      await tx.farmLifecycleEvent.create({
+        data: {
+          organizationId,
+          farmUnitId: created.id,
+          fromStatus: null,
+          toStatus: 'draft',
+          actorId: userId,
+          reasonNotes: 'Alta inicial',
+        },
+      });
+
+      return created;
     });
 
     await this.twin.refresh(organizationId, farm.id);

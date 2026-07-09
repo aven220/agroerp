@@ -21,7 +21,6 @@ export function useInView(rootMargin = '100px') {
 export function useAutoRefresh(callback: () => void, ms?: number, enabled = true) {
   useEffect(() => {
     if (!enabled || !ms) return;
-    callback();
     const id = setInterval(callback, ms);
     return () => clearInterval(id);
   }, [callback, ms, enabled]);

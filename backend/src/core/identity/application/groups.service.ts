@@ -60,6 +60,10 @@ export class GroupsService {
 
   async addMember(organizationId: string, groupId: string, userId: string) {
     await this.findOne(organizationId, groupId);
+    const member = await this.prisma.user.findFirst({
+      where: { id: userId, organizationId, deletedAt: null },
+    });
+    if (!member) throw new NotFoundException('User not found');
     await this.prisma.userGroup.upsert({
       where: { userId_groupId: { userId, groupId } },
       update: {},
@@ -69,6 +73,7 @@ export class GroupsService {
   }
 
   async removeMember(organizationId: string, groupId: string, userId: string) {
+    await this.findOne(organizationId, groupId);
     await this.prisma.userGroup.deleteMany({ where: { userId, groupId } });
     return { success: true };
   }

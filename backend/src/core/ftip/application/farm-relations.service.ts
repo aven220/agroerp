@@ -37,38 +37,40 @@ export class FarmRelationsService {
     ctx?: RequestContext,
   ) {
     await this.farms.findOne(organizationId, farmUnitId);
-    if (dto.isPrimary) {
-      await this.prisma.producerTerritoryLink.updateMany({
-        where: { farmUnitId, organizationId, isPrimary: true },
-        data: { isPrimary: false },
-      });
-    }
-    const existing = await this.prisma.producerTerritoryLink.findUnique({
-      where: { farmUnitId_producerId: { farmUnitId, producerId: dto.producerId } },
-    });
-    if (existing && !existing.unlinkedAt) {
-      throw new ConflictException('Producer already linked');
-    }
-    const link = existing
-      ? await this.prisma.producerTerritoryLink.update({
-          where: { id: existing.id },
-          data: {
-            unlinkedAt: null,
-            relationshipType: dto.relationshipType ?? 'owner',
-            isPrimary: dto.isPrimary ?? false,
-            linkedAt: new Date(),
-          },
-        })
-      : await this.prisma.producerTerritoryLink.create({
-          data: {
-            organizationId,
-            farmUnitId,
-            producerId: dto.producerId,
-            relationshipType: dto.relationshipType ?? 'owner',
-            isPrimary: dto.isPrimary ?? false,
-            createdBy: userId,
-          },
+    const link = await this.prisma.$transaction(async (tx) => {
+      if (dto.isPrimary) {
+        await tx.producerTerritoryLink.updateMany({
+          where: { farmUnitId, organizationId, isPrimary: true },
+          data: { isPrimary: false },
         });
+      }
+      const existing = await tx.producerTerritoryLink.findUnique({
+        where: { farmUnitId_producerId: { farmUnitId, producerId: dto.producerId } },
+      });
+      if (existing && !existing.unlinkedAt) {
+        throw new ConflictException('Producer already linked');
+      }
+      return existing
+        ? tx.producerTerritoryLink.update({
+            where: { id: existing.id },
+            data: {
+              unlinkedAt: null,
+              relationshipType: dto.relationshipType ?? 'owner',
+              isPrimary: dto.isPrimary ?? false,
+              linkedAt: new Date(),
+            },
+          })
+        : tx.producerTerritoryLink.create({
+            data: {
+              organizationId,
+              farmUnitId,
+              producerId: dto.producerId,
+              relationshipType: dto.relationshipType ?? 'owner',
+              isPrimary: dto.isPrimary ?? false,
+              createdBy: userId,
+            },
+          });
+    });
     await this.twin.refresh(organizationId, farmUnitId, ctx);
     return link;
   }

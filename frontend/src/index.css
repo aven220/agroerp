@@ -2724,5 +2724,7 @@ a:hover {
 @import './design-system/enterprise-ui-polish.css';
 /* Enterprise UI Phase 4 — density, matrix, 320px, cascade hygiene */
 @import './design-system/enterprise-ui-phase4.css';
+@import './design-system/admin-experience.css';
+@import './design-system/flow-experience.css';
 
 

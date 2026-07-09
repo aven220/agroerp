@@ -42,6 +42,21 @@ export interface SubmissionResourceCreateData {
   updatedBy: string;
 }
 
+export interface FormSubmissionFinalizeData {
+  formId: string;
+  formVersion: number;
+  data: object;
+  gpsLocation?: object;
+  gpsTrack?: object;
+  deviceInfo?: object;
+  context: object;
+  updatedBy: string;
+  resourceData: object;
+  resourceMetadata: object;
+  resourceAttributes: object;
+  resourceSchemaVersion: number;
+}
+
 export interface FormSubmissionRepository {
   findMany(
     filters: FormSubmissionFindManyFilters,
@@ -60,6 +75,19 @@ export interface FormSubmissionRepository {
   create(data: FormSubmissionCreateData): Promise<FormSubmission>;
 
   createResource(data: SubmissionResourceCreateData): Promise<SubmissionResource>;
+
+  createWithResource(
+    resourceData: SubmissionResourceCreateData,
+    submissionData: Omit<FormSubmissionCreateData, 'resourceId'>,
+  ): Promise<{ resource: SubmissionResource; submission: FormSubmission }>;
+
+  finalizeDraft(
+    submissionId: string,
+    resourceId: string,
+    data: FormSubmissionFinalizeData,
+  ): Promise<{ submission: FormSubmission; resource: SubmissionResource }>;
+
+  markSynced(submissionId: string, resourceId: string): Promise<void>;
 
   findResourceById(id: string): Promise<SubmissionResource | null>;
 

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import { DomainEvent } from '@/shared/domain/events/domain-event';
 import { EventStorePort } from '@/shared/domain/events/event-store.port';
@@ -11,54 +12,76 @@ export class PostgresEventStore implements EventStorePort {
   constructor(private readonly prisma: PrismaService) {}
 
   async append(event: DomainEvent): Promise<DomainEvent> {
-    const lastEvent = await this.prisma.event.findFirst({
-      where: {
-        aggregateType: event.aggregateType,
-        aggregateId: event.aggregateId,
-      },
-      orderBy: { version: 'desc' },
-    });
+    const maxRetries = 5;
 
-    const nextVersion = lastEvent ? lastEvent.version + BigInt(1) : BigInt(1);
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const stored = await this.prisma.$transaction(async (tx) => {
+          const lastEvent = await tx.event.findFirst({
+            where: {
+              aggregateType: event.aggregateType,
+              aggregateId: event.aggregateId,
+            },
+            orderBy: { version: 'desc' },
+          });
 
-    const stored = await this.prisma.event.create({
-      data: {
-        id: event.id ?? uuidv4(),
-        organizationId: event.organizationId,
-        userId: event.metadata?.userId,
-        aggregateType: event.aggregateType,
-        aggregateId: event.aggregateId,
-        eventType: event.eventType,
-        payload: event.payload as object,
-        metadata: event.metadata as object,
-        version: nextVersion,
-        occurredAt: event.occurredAt ?? new Date(),
-      },
-    });
+          const nextVersion = lastEvent
+            ? lastEvent.version + BigInt(1)
+            : BigInt(1);
 
-    this.logger.debug(
-      `Event appended: ${stored.eventType} [${stored.aggregateType}:${stored.aggregateId}] v${stored.version}`,
-    );
+          return tx.event.create({
+            data: {
+              id: event.id ?? uuidv4(),
+              organizationId: event.organizationId,
+              userId: event.metadata?.userId,
+              aggregateType: event.aggregateType,
+              aggregateId: event.aggregateId,
+              eventType: event.eventType,
+              payload: event.payload as object,
+              metadata: event.metadata as object,
+              version: nextVersion,
+              occurredAt: event.occurredAt ?? new Date(),
+            },
+          });
+        });
 
-    return {
-      id: stored.id,
-      organizationId: stored.organizationId,
-      aggregateType: stored.aggregateType,
-      aggregateId: stored.aggregateId,
-      eventType: stored.eventType,
-      payload: stored.payload as Record<string, unknown>,
-      metadata: stored.metadata as unknown as DomainEvent['metadata'],
-      version: stored.version,
-      occurredAt: stored.occurredAt,
-    };
+        this.logger.debug(
+          `Event appended: ${stored.eventType} [${stored.aggregateType}:${stored.aggregateId}] v${stored.version}`,
+        );
+
+        return {
+          id: stored.id,
+          organizationId: stored.organizationId,
+          aggregateType: stored.aggregateType,
+          aggregateId: stored.aggregateId,
+          eventType: stored.eventType,
+          payload: stored.payload as Record<string, unknown>,
+          metadata: stored.metadata as unknown as DomainEvent['metadata'],
+          version: stored.version,
+          occurredAt: stored.occurredAt,
+        };
+      } catch (err) {
+        if (
+          attempt < maxRetries - 1 &&
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === 'P2002'
+        ) {
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    throw new Error('Failed to append event after retries');
   }
 
   async getByAggregate(
     aggregateType: string,
     aggregateId: string,
+    organizationId: string,
   ): Promise<DomainEvent[]> {
     const events = await this.prisma.event.findMany({
-      where: { aggregateType, aggregateId },
+      where: { aggregateType, aggregateId, organizationId },
       orderBy: { version: 'asc' },
     });
 

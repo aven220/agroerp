@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { DataTable } from '../components/ui/DataTable';
+import { EmptyState } from '../components/ui/EmptyState';
+import { useAuth } from '../context/AuthContext';
 import {
   deleteLot,
   exportLots,
@@ -23,6 +25,11 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function LotsPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission('lot:create');
+  const canUpdate = hasPermission('lot:update');
+  const canDelete = hasPermission('lot:delete');
+  const canImport = hasPermission('lot:import');
   const [filters, setFilters] = useState<LotFilters>({ page: 1, limit: 25 });
   const [items, setItems] = useState<FieldLotProfile[]>([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
@@ -39,15 +46,14 @@ export function LotsPage() {
     });
   }, []);
 
-  const load = useCallback(async () => {
+  const loadList = useCallback(async () => {
     if (!hasItemsRef.current) setLoading(true);
     setError(null);
     try {
-      const [list, dash] = await Promise.all([listLots(filters), getLotDashboard()]);
+      const list = await listLots(filters);
       setItems(list.items);
       hasItemsRef.current = list.items.length > 0;
       setPagination(list.pagination);
-      setDashboard(dash);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar');
     } finally {
@@ -55,9 +61,21 @@ export function LotsPage() {
     }
   }, [filters]);
 
+  const loadMeta = useCallback(async () => {
+    try {
+      setDashboard(await getLotDashboard());
+    } catch {
+      /* KPIs opcionales */
+    }
+  }, []);
+
   useEffect(() => {
-    load();
-  }, [load]);
+    loadList();
+  }, [loadList]);
+
+  useEffect(() => {
+    loadMeta();
+  }, [loadMeta]);
 
   async function handleExport() {
     const result = await exportLots(filters);
@@ -72,15 +90,20 @@ export function LotsPage() {
 
   async function handleDelete(row: FieldLotProfile) {
     if (!confirm(`¿Archivar lote "${row.lotName}"?`)) return;
-    await deleteLot(row.id);
-    load();
+    try {
+      await deleteLot(row.id);
+      loadList();
+      getLotDashboard().then(setDashboard).catch(() => {});
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo archivar');
+    }
   }
 
   return (
     <>
       <Header
         title="Lotes"
-        subtitle="FMDT — Field Management & Digital Twin"
+        subtitle="Gestione lotes productivos, cultivos y rendimiento por parcela"
         actions={
           <div className="row-actions">
             <Link to="/lotes/dashboard" className="btn">
@@ -89,16 +112,20 @@ export function LotsPage() {
             <Link to="/lotes/mapa" className="btn">
               Mapa
             </Link>
-            <Link to="/lotes/importar" className="btn">
-              Importar
-            </Link>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => navigate('/lotes/nuevo')}
-            >
-              + Nuevo lote
-            </button>
+            {canImport ? (
+              <Link to="/lotes/importar" className="btn">
+                Importar
+              </Link>
+            ) : null}
+            {canCreate ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => navigate('/lotes/nuevo')}
+              >
+                + Nuevo lote
+              </button>
+            ) : null}
           </div>
         }
       />
@@ -114,11 +141,11 @@ export function LotsPage() {
             <span className="kpi-value">{dashboard.kpis.active}</span>
           </div>
           <div className="kpi-card">
-            <span className="kpi-label">Prod. YTD (kg)</span>
+            <span className="kpi-label">Producción del año (kg)</span>
             <span className="kpi-value">{Number(dashboard.kpis.totalProductionYtdKg).toLocaleString('es-CO')}</span>
           </div>
           <div className="kpi-card">
-            <span className="kpi-label">Rend. prom. (kg/ha)</span>
+            <span className="kpi-label">Rendimiento promedio (kg/ha)</span>
             <span className="kpi-value">{dashboard.kpis.avgYieldKgHa}</span>
           </div>
           <div className="kpi-card">
@@ -134,6 +161,16 @@ export function LotsPage() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
+      {!loading && items.length === 0 && !error ? (
+        <EmptyState
+          illustration="data"
+          title="Aún no hay lotes registrados"
+          description="Los lotes son las unidades productivas dentro de cada finca. Registre el primero para llevar seguimiento agronómico y de cosecha."
+          hint="Si ya tiene fincas, puede crear lotes vinculados desde el detalle de la finca."
+          action={canCreate ? { label: 'Registrar lote', to: '/lotes/nuevo' } : undefined}
+          secondaryAction={canImport ? { label: 'Importar lotes', to: '/lotes/importar' } : { label: 'Ver mapa', to: '/lotes/mapa' }}
+        />
+      ) : (
       <DataTable<FieldLotProfile>
         gridId="lots"
         data={items}
@@ -146,6 +183,7 @@ export function LotsPage() {
         onPageSizeChange={(limit) => setFilters((f) => ({ ...f, limit, page: 1 }))}
         onQuickSearchChange={handleQuickSearchChange}
         onExport={handleExport}
+        emptyMessage="No se encontraron lotes con los filtros aplicados."
         onRowClick={(r) => navigate(`/lotes/${r.id}`)}
         toolbar={
           <select
@@ -220,31 +258,36 @@ export function LotsPage() {
                 >
                   Ver
                 </button>
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/lotes/${r.id}/editar`);
-                  }}
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-danger"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(r);
-                  }}
-                >
-                  Archivar
-                </button>
+                {canUpdate ? (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/lotes/${r.id}/editar`);
+                    }}
+                  >
+                    Editar
+                  </button>
+                ) : null}
+                {canDelete ? (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(r);
+                    }}
+                  >
+                    Archivar
+                  </button>
+                ) : null}
               </div>
             ),
           },
         ]}
       />
+      )}
     </>
   );
 }

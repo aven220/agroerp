@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { FormsPlatformNav } from '../components/forms/FormsPlatformNav';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ux/LoadingState';
 import { FormAvailabilityBadges } from '../components/forms/FormAvailabilityBadges';
@@ -45,8 +47,14 @@ const STATUS_FILTERS = [
 export function FormsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const toast = useToast();
-  const { user } = useAuth();
+  const { success, error: toastError, info, warning } = useToast();
+  const { user, hasPermission } = useAuth();
+  const canCreateForm = hasPermission('form:create');
+  const canUpdateForm = hasPermission('form:update');
+  const canPublishForm = hasPermission('form:publish');
+  const canDeleteForm = hasPermission('form:delete');
+  const canApproveForm = hasPermission('form:approve');
+  const canAdminForm = hasPermission('form:admin');
   const [items, setItems] = useState<FormDefinition[]>([]);
   const [dashboard, setDashboard] = useState<FormDashboard | null>(null);
   const [bootstrapIds, setBootstrapIds] = useState<Set<string>>(new Set());
@@ -59,23 +67,33 @@ export function FormsPage() {
 
   const highlightedId = searchParams.get('saved');
 
-  const load = useCallback(async () => {
+  const loadList = useCallback(async () => {
     setLoading(true);
     try {
-      const [list, dash, bootstrap] = await Promise.all([
-        listForms({ status: status || undefined, search: search.trim() || undefined }),
-        getFormDashboard(),
-        bootstrapForms().catch(() => ({ forms: [], syncedAt: '' })),
-      ]);
+      const list = await listForms({ status: status || undefined, search: search.trim() || undefined });
       setItems(list);
-      setDashboard(dash);
-      setBootstrapIds(new Set(bootstrap.forms.map((f) => f.id)));
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Error al cargar formularios');
     } finally {
       setLoading(false);
     }
-  }, [status, search]);
+  }, [status, search, toastError]);
 
-  useEffect(() => { load(); }, [load]);
+  const loadMeta = useCallback(async () => {
+    try {
+      const [dash, bootstrap] = await Promise.all([
+        getFormDashboard(),
+        bootstrapForms().catch(() => ({ forms: [], syncedAt: '' })),
+      ]);
+      setDashboard(dash);
+      setBootstrapIds(new Set(bootstrap.forms.map((f) => f.id)));
+    } catch {
+      /* KPIs opcionales */
+    }
+  }, []);
+
+  useEffect(() => { loadList(); }, [loadList]);
+  useEffect(() => { loadMeta(); }, [loadMeta]);
 
   useEffect(() => {
     if (!highlightedId) return;
@@ -91,20 +109,43 @@ export function FormsPage() {
     [items, viewMode],
   );
 
+  const versionsByKey = useMemo(() => {
+    const map = new Map<string, FormDefinition[]>();
+    for (const item of items) {
+      const group = map.get(item.formKey);
+      if (group) group.push(item);
+      else map.set(item.formKey, [item]);
+    }
+    return map;
+  }, [items]);
+
+  const refreshAfterMutation = useCallback(() => {
+    loadList();
+    loadMeta();
+  }, [loadList, loadMeta]);
+
   const modifierName = user ? `${user.firstName} ${user.lastName}`.trim() : undefined;
 
   async function handlePublish(row: FormDefinition) {
-    if (!confirm(`¿Publicar "${row.name}" v${row.version}?\n\nTras publicar estará disponible en Web y en el próximo sync de Android.`)) return;
-    await publishForm(row.id);
-    toast.success('Publicado. Los dispositivos lo recibirán al sincronizar.', row.name);
-    load();
+    if (!confirm(`¿Publicar "${row.name}" v${row.version}?\n\nTras publicar estará disponible en la web y se incluirá en la próxima descarga de formularios en dispositivos móviles.`)) return;
+    try {
+      await publishForm(row.id);
+      success('Publicado. Los dispositivos lo recibirán al sincronizar.', row.name);
+      refreshAfterMutation();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'No se pudo publicar');
+    }
   }
 
   async function handleArchive(row: FormDefinition) {
     if (!confirm(`¿Archivar "${row.name}"? Dejará de estar disponible en la app.`)) return;
-    await archiveForm(row.id);
-    toast.info('Formulario archivado.');
-    load();
+    try {
+      await archiveForm(row.id);
+      info('Formulario archivado.');
+      refreshAfterMutation();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'No se pudo archivar');
+    }
   }
 
   async function handleDelete(row: FormDefinition) {
@@ -114,10 +155,10 @@ export function FormsPage() {
     if (!confirm(msg)) return;
     try {
       await deleteForm(row.id);
-      toast.success('Formulario eliminado.');
-      load();
+      success('Formulario eliminado.');
+      refreshAfterMutation();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar');
+      toastError(err instanceof Error ? err.message : 'No se pudo eliminar');
     }
   }
 
@@ -126,7 +167,7 @@ export function FormsPage() {
     try {
       await saveFormsReport(type);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo generar el reporte');
+      toastError(err instanceof Error ? err.message : 'No se pudo generar el reporte');
     } finally {
       setExporting(false);
     }
@@ -135,39 +176,59 @@ export function FormsPage() {
   async function handleDuplicate(row: FormDefinition) {
     const newKey = prompt('Nueva clave de formulario:', `${row.formKey}-copia`);
     if (!newKey) return;
-    const created = await duplicateForm(row.id, newKey);
-    navigate(`/formularios/${created.id}/disenar`);
+    try {
+      const created = await duplicateForm(row.id, newKey);
+      navigate(`/formularios/${created.id}/disenar`);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'No se pudo duplicar');
+    }
   }
 
   async function handleNewVersion(row: FormDefinition) {
-    const created = await newFormVersion(row.formKey);
-    navigate(`/formularios/${created.id}/disenar`);
+    try {
+      const created = await newFormVersion(row.formKey);
+      navigate(`/formularios/${created.id}/disenar`);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'No se pudo crear versión');
+    }
   }
 
   async function handleSubmitReview(row: FormDefinition) {
-    await submitFormForReview(row.id);
-    toast.info('Enviado a revisión.');
-    load();
+    try {
+      await submitFormForReview(row.id);
+      info('Enviado a revisión.');
+      refreshAfterMutation();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'No se pudo enviar a revisión');
+    }
   }
 
   async function handleRestore(row: FormDefinition) {
-    await restoreForm(row.id);
-    toast.success('Restaurado como borrador.');
-    load();
+    try {
+      await restoreForm(row.id);
+      success('Restaurado como borrador.');
+      refreshAfterMutation();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'No se pudo restaurar');
+    }
   }
 
   async function handleUnpublish(row: FormDefinition) {
     if (!confirm(`¿Despublicar "${row.name}"?`)) return;
-    await unpublishForm(row.id);
-    toast.warning('Despublicado. Vuelve a borrador.');
-    load();
+    try {
+      await unpublishForm(row.id);
+      warning('Despublicado. Vuelve a borrador.');
+      refreshAfterMutation();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'No se pudo despublicar');
+    }
   }
 
   async function handleExportSchema(row: FormDefinition) {
     try {
       await saveFormSchemaExport(row.id, row.formKey, 'csv');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo exportar');
+      toastError(err instanceof Error ? err.message : 'No se pudo exportar');
     }
   }
 
@@ -176,14 +237,14 @@ export function FormsPage() {
       const payload = await bootstrapForms();
       const found = payload.forms.some((f) => f.id === row.id);
       setBootstrapIds(new Set(payload.forms.map((f) => f.id)));
-      toast.info(
+      info(
         found
-          ? 'Incluido en el paquete móvil. Los dispositivos lo descargarán en el próximo sync.'
-          : 'No está en bootstrap. Publique y verifique soporte offline.',
-        found ? 'Sync Android OK' : 'Pendiente',
+          ? 'Incluido en el paquete móvil. Los dispositivos lo descargarán en la próxima sincronización.'
+          : 'Aún no está en el paquete móvil. Publique el formulario y verifique que permita uso sin conexión.',
+        found ? 'Disponible en móvil' : 'Pendiente',
       );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al verificar');
+      toastError(err instanceof Error ? err.message : 'Error al verificar');
     }
   }
 
@@ -191,7 +252,7 @@ export function FormsPage() {
     <>
       <Header
         title="Mis Formularios"
-        subtitle="Ciclo de vida: plantilla → borrador → publicar → sync Android"
+        subtitle="Cree, publique y distribuya formularios para uso en web y dispositivos de campo"
         actions={
           <div className="row-actions">
             <Link to="/formularios/dashboard" className="btn">Dashboard</Link>
@@ -202,10 +263,10 @@ export function FormsPage() {
             <button type="button" className="btn btn-primary" disabled={exporting} onClick={() => handleDownloadReport('full')}>
               {exporting ? 'Generando…' : 'Reporte Excel'}
             </button>
-            <button type="button" className="btn" onClick={() => navigate('/formularios/nuevo')}>
+            <button type="button" className="btn" onClick={() => navigate('/formularios/nuevo')} disabled={!canCreateForm}>
               + Nuevo
             </button>
-            <button type="button" className="btn btn-primary" onClick={() => navigate('/formularios/nuevo?plantilla=1')}>
+            <button type="button" className="btn btn-primary" onClick={() => navigate('/formularios/nuevo?plantilla=1')} disabled={!canCreateForm}>
               Desde plantilla
             </button>
           </div>
@@ -214,12 +275,40 @@ export function FormsPage() {
 
       <FormsPlatformNav />
 
+      <FlowProgress flowId="forms" currentStepId="create" />
+
+      <FlowNextActions
+        title="Iniciar un formulario nuevo"
+        subtitle="Siga el ciclo completo: diseñar → probar → publicar → capturar."
+        actions={[
+          {
+            label: 'Crear formulario',
+            description: 'Comience desde cero o una plantilla',
+            to: '/formularios/nuevo',
+            primary: true,
+            icon: '➕',
+          },
+          {
+            label: 'Ver plantillas',
+            description: 'Acelere con modelos predefinidos',
+            to: '/formularios/plantillas',
+            icon: '📚',
+          },
+          {
+            label: 'Ir a recolección',
+            description: 'Capture datos ya publicados',
+            to: '/formularios/recoleccion',
+            icon: '📥',
+          },
+        ]}
+      />
+
       <section className="panel form-lifecycle-intro">
         <h2 className="ds-h4">Cómo funciona</h2>
         <FormLifecycleStepper status="draft" compact highlightFrom="template" />
         <p className="muted form-lifecycle-intro-text">
           Las <strong>plantillas</strong> solo cargan el diseño en el editor. Al <strong>guardar borrador</strong> el formulario
-          aparece aquí. Debe <strong>publicarse</strong> para ejecutarse en Web y sincronizarse con Android.
+          aparece aquí. Debe <strong>publicarse</strong> para usarse en la web y descargarse en dispositivos de campo.
         </p>
       </section>
 
@@ -228,7 +317,7 @@ export function FormsPage() {
           <div className="kpi-card"><span className="kpi-label">Total</span><span className="kpi-value">{dashboard.kpis.totalForms}</span></div>
           <div className="kpi-card kpi-green"><span className="kpi-label">Publicados</span><span className="kpi-value">{dashboard.kpis.publishedForms}</span></div>
           <div className="kpi-card"><span className="kpi-label">Borradores</span><span className="kpi-value">{dashboard.kpis.draftForms}</span></div>
-          <div className="kpi-card"><span className="kpi-label">En bootstrap móvil</span><span className="kpi-value">{bootstrapIds.size}</span></div>
+          <div className="kpi-card"><span className="kpi-label">En paquete móvil</span><span className="kpi-value">{bootstrapIds.size}</span></div>
         </div>
       )}
 
@@ -237,9 +326,9 @@ export function FormsPage() {
           placeholder="Buscar por nombre o clave…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') load(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter') loadList(); }}
         />
-        <button type="button" className="btn btn-sm" onClick={() => load()}>Buscar</button>
+        <button type="button" className="btn btn-sm" onClick={() => loadList()}>Buscar</button>
         <div className="form-status-chips" role="tablist" aria-label="Filtrar por estado">
           {STATUS_FILTERS.map((f) => (
             <button
@@ -265,7 +354,7 @@ export function FormsPage() {
           illustration="data"
           title="Aún no hay formularios guardados"
           description="Elija una plantilla, edite el diseño y presione «Guardar borrador». El formulario aparecerá aquí como borrador hasta que lo publique."
-          hint="Los borradores no se sincronizan con Android."
+          hint="Los borradores no se descargan en dispositivos móviles."
           action={{ label: 'Crear desde plantilla', to: '/formularios/nuevo?plantilla=1' }}
           secondaryAction={{ label: 'Formulario en blanco', to: '/formularios/nuevo' }}
         />
@@ -274,7 +363,7 @@ export function FormsPage() {
           {displayed.map((row) => {
             const isHighlighted = highlightedId === row.id;
             const inBootstrap = bootstrapIds.has(row.id);
-            const versionsForKey = viewMode === 'all' ? [] : items.filter((i) => i.formKey === row.formKey);
+            const versionsForKey = viewMode === 'all' ? [] : (versionsByKey.get(row.formKey) ?? []);
             const showVersions = expandedKey === row.formKey && versionsForKey.length > 1;
 
             return (
@@ -307,32 +396,40 @@ export function FormsPage() {
 
                 <div className="form-mis-actions row-actions">
                   <button type="button" className="btn btn-sm" onClick={() => navigate(`/formularios/${row.id}`)}>Ver detalle</button>
-                  <button type="button" className="btn btn-sm" onClick={() => navigate(`/formularios/${row.id}/disenar`)}>Editar</button>
-                  {row.status === 'published' && (
+                  {canUpdateForm ? (
+                    <button type="button" className="btn btn-sm" onClick={() => navigate(`/formularios/${row.id}/disenar`)}>Editar</button>
+                  ) : null}
+                  {row.status === 'published' && canUpdateForm ? (
                     <>
-                      <button type="button" className="btn btn-sm" onClick={() => navigate(`/formularios/${row.id}/ejecutar`)}>Ejecutar Web</button>
-                      <button type="button" className="btn btn-sm" onClick={() => handleVerifySync(row)}>Verificar sync</button>
-                      <button type="button" className="btn btn-sm" onClick={() => handleUnpublish(row)}>Despublicar</button>
+                      <button type="button" className="btn btn-sm" onClick={() => navigate(`/formularios/${row.id}/ejecutar`)}>Usar en web</button>
+                      <button type="button" className="btn btn-sm" onClick={() => handleVerifySync(row)} title="Comprueba si el formulario está incluido en el paquete para dispositivos">Verificar en móvil</button>
                     </>
-                  )}
-                  {(row.status === 'draft' || row.status === 'approved') && (
-                    <>
-                      <button type="button" className="btn btn-sm btn-primary" onClick={() => handlePublish(row)}>Publicar</button>
-                      {row.status === 'draft' && (
-                        <button type="button" className="btn btn-sm" onClick={() => handleSubmitReview(row)}>A revisión</button>
-                      )}
-                    </>
-                  )}
-                  {row.status === 'archived' && (
+                  ) : null}
+                  {row.status === 'published' && canPublishForm ? (
+                    <button type="button" className="btn btn-sm" onClick={() => handleUnpublish(row)}>Despublicar</button>
+                  ) : null}
+                  {(row.status === 'draft' || row.status === 'approved') && canPublishForm ? (
+                    <button type="button" className="btn btn-sm btn-primary" onClick={() => handlePublish(row)}>Publicar</button>
+                  ) : null}
+                  {row.status === 'draft' && canApproveForm ? (
+                    <button type="button" className="btn btn-sm" onClick={() => handleSubmitReview(row)}>A revisión</button>
+                  ) : null}
+                  {row.status === 'archived' && canAdminForm ? (
                     <button type="button" className="btn btn-sm" onClick={() => handleRestore(row)}>Restaurar</button>
-                  )}
-                  <button type="button" className="btn btn-sm" onClick={() => handleNewVersion(row)}>Nueva versión</button>
-                  <button type="button" className="btn btn-sm" onClick={() => handleDuplicate(row)}>Clonar</button>
-                  {row.status !== 'archived' && (
+                  ) : null}
+                  {canCreateForm ? (
+                    <>
+                      <button type="button" className="btn btn-sm" onClick={() => handleNewVersion(row)}>Nueva versión</button>
+                      <button type="button" className="btn btn-sm" onClick={() => handleDuplicate(row)}>Clonar</button>
+                    </>
+                  ) : null}
+                  {row.status !== 'archived' && canAdminForm ? (
                     <button type="button" className="btn btn-sm" onClick={() => handleArchive(row)}>Archivar</button>
-                  )}
+                  ) : null}
                   <button type="button" className="btn btn-sm" onClick={() => handleExportSchema(row)}>CSV</button>
-                  <button type="button" className="btn btn-sm btn-danger" onClick={() => handleDelete(row)}>Eliminar</button>
+                  {canDeleteForm ? (
+                    <button type="button" className="btn btn-sm btn-danger" onClick={() => handleDelete(row)}>Eliminar</button>
+                  ) : null}
                 </div>
 
                 {viewMode === 'latest' && versionsForKey.length > 1 && (

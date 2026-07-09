@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PermissionMatrix } from '../components/admin/PermissionMatrix';
+import { PermissionSummary } from '../components/admin/PermissionSummary';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { Header } from '../components/layout/Header';
 import { getEffectivePermissions, listIamPermissions } from '../api/iam';
 import type { Permission } from '../types';
@@ -39,38 +42,56 @@ export function IamPermissionsPage() {
   return (
     <>
       <Header
-        title="Administrador de Permisos"
-        subtitle="Catálogo IAM agrupado por módulo y recurso"
+        title="Catálogo de permisos"
+        subtitle="Todos los permisos del sistema, agrupados por área de negocio"
         actions={
           <Link to="/iam" className="btn">
-            Centro Seguridad
+            Centro de seguridad
           </Link>
         }
       />
+
+      <FlowProgress flowId="administration" currentStepId="permissions" />
+
+      <FlowNextActions
+        title="¿Necesita asignar permisos?"
+        subtitle="Los permisos se asignan a través de roles en Administración."
+        actions={[
+          {
+            label: 'Configurar rol',
+            description: 'Defina qué puede hacer cada perfil',
+            to: '/administracion',
+            primary: true,
+            icon: '🔐',
+          },
+          {
+            label: 'Ver auditoría',
+            description: 'Revise accesos y sesiones activas',
+            to: '/iam/auditoria',
+            icon: '📋',
+          },
+        ]}
+      />
+
+      <p className="muted page-help">
+        Esta vista es de consulta. Para asignar permisos a un rol, use{' '}
+        <Link to="/administracion">Administración → Crear rol</Link>.
+      </p>
 
       {effective ? (
         <section className="panel card" style={{ marginBottom: 'var(--ds-space-4)' }}>
           <div className="card-header">
             <div>
               <h3 className="page-section-title" style={{ margin: 0 }}>
-                Permisos efectivos (su sesión)
+                Sus permisos en esta sesión
               </h3>
               <p className="text-muted" style={{ margin: '0.25rem 0 0' }}>
-                {selected.length} permisos activos en esta sesión
+                Resumen de lo que su cuenta puede hacer actualmente
               </p>
             </div>
             <span className="ds-badge ds-badge-info">{selected.length}</span>
           </div>
-          <div className="ds-cluster" style={{ paddingTop: 0 }}>
-            {selected.slice(0, 24).map((p) => (
-              <span key={p} className="ds-badge">
-                {p}
-              </span>
-            ))}
-            {selected.length > 24 ? (
-              <span className="ds-badge">+{selected.length - 24} más</span>
-            ) : null}
-          </div>
+          <PermissionSummary permissions={perms} selected={selected} compact />
         </section>
       ) : null}
 

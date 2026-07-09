@@ -171,77 +171,81 @@ export class LotsService {
     const totalAreaHa = dto.totalAreaHa ?? Number(ftipLot.areaHa ?? ftipLot.farmUnit.totalAreaHa ?? 0);
     const plantedAreaHa = dto.plantedAreaHa ?? totalAreaHa;
 
-    const lot = await this.prisma.fieldLotProfile.create({
-      data: {
-        organizationId,
-        ftipLotUnitId: dto.ftipLotUnitId,
-        farmUnitId: ftipLot.farmUnitId,
-        parcelId: ftipLot.parcelId,
-        lotCode,
-        lotName: dto.lotName ?? ftipLot.lotName ?? `Lote ${lotCode}`,
-        lotTypeCode: dto.lotTypeCode ?? 'productive',
-        totalAreaHa,
-        cultivableAreaHa: dto.cultivableAreaHa ?? totalAreaHa,
-        plantedAreaHa,
-        unproductiveAreaHa: dto.unproductiveAreaHa,
-        centroidLatitude: ftipLot.farmUnit.centroidLatitude,
-        centroidLongitude: ftipLot.farmUnit.centroidLongitude,
-        boundaryGeoRef: ftipLot.boundaryGeo as Prisma.InputJsonValue,
-        altitudeM: dto.altitudeM,
-        slopePct: dto.slopePct,
-        soilTypeCode: dto.soilTypeCode,
-        landUseCode: dto.landUseCode,
-        assignedTechnicianId: dto.assignedTechnicianId,
-        responsibleProducerId: dto.responsibleProducerId,
-        observations: dto.observations,
-        tags: dto.tags ?? [],
-        externalId: dto.externalId,
-        status: 'draft',
-        createdBy: userId,
-        updatedBy: userId,
-        aiReadiness: {
-          harvestForecast: 'ready',
-          anomalyDetection: 'ready',
-          agronomicRecommendations: 'ready',
-          phytosanitaryRisk: 'ready',
-          climateModels: 'ready',
-          satelliteImagery: 'ready',
-          droneImagery: 'ready',
-          iotSensors: 'ready',
-        },
-      },
-    });
-
-    const cropStand = ftipLot.cropStands[0];
-    if (cropStand || dto.primaryCropCode) {
-      await this.prisma.lotAgronomicState.create({
+    const lot = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.fieldLotProfile.create({
         data: {
           organizationId,
-          fieldLotId: lot.id,
-          ftipCropStandId: cropStand?.id,
-          primaryCropCode: dto.primaryCropCode ?? cropStand?.speciesCode ?? 'coffee',
-          varietyCodes: dto.varietyCodes ?? cropStand?.varietyCodes ?? [],
-          plantingDate: cropStand?.plantingDate,
-          densityPlantsHa: cropStand?.densityPlantsHa,
-          expectedYieldKgHa: cropStand?.estimatedYieldKgHa
-            ? Number(cropStand.estimatedYieldKgHa)
-            : dto.expectedYieldKgHa,
-          phenologicalStageCode: cropStand?.phenologicalStageCode,
-          productionSystemCode: dto.productionSystemCode,
+          ftipLotUnitId: dto.ftipLotUnitId,
+          farmUnitId: ftipLot.farmUnitId,
+          parcelId: ftipLot.parcelId,
+          lotCode,
+          lotName: dto.lotName ?? ftipLot.lotName ?? `Lote ${lotCode}`,
+          lotTypeCode: dto.lotTypeCode ?? 'productive',
+          totalAreaHa,
+          cultivableAreaHa: dto.cultivableAreaHa ?? totalAreaHa,
+          plantedAreaHa,
+          unproductiveAreaHa: dto.unproductiveAreaHa,
+          centroidLatitude: ftipLot.farmUnit.centroidLatitude,
+          centroidLongitude: ftipLot.farmUnit.centroidLongitude,
+          boundaryGeoRef: ftipLot.boundaryGeo as Prisma.InputJsonValue,
+          altitudeM: dto.altitudeM,
+          slopePct: dto.slopePct,
+          soilTypeCode: dto.soilTypeCode,
+          landUseCode: dto.landUseCode,
+          assignedTechnicianId: dto.assignedTechnicianId,
+          responsibleProducerId: dto.responsibleProducerId,
+          observations: dto.observations,
+          tags: dto.tags ?? [],
+          externalId: dto.externalId,
+          status: 'draft',
           createdBy: userId,
+          updatedBy: userId,
+          aiReadiness: {
+            harvestForecast: 'ready',
+            anomalyDetection: 'ready',
+            agronomicRecommendations: 'ready',
+            phytosanitaryRisk: 'ready',
+            climateModels: 'ready',
+            satelliteImagery: 'ready',
+            droneImagery: 'ready',
+            iotSensors: 'ready',
+          },
         },
       });
-    }
 
-    await this.prisma.fieldLotLifecycleEvent.create({
-      data: {
-        organizationId,
-        fieldLotId: lot.id,
-        fromStatus: null,
-        toStatus: 'draft',
-        actorId: userId,
-        reasonNotes: 'Alta inicial FMDT',
-      },
+      const cropStand = ftipLot.cropStands[0];
+      if (cropStand || dto.primaryCropCode) {
+        await tx.lotAgronomicState.create({
+          data: {
+            organizationId,
+            fieldLotId: created.id,
+            ftipCropStandId: cropStand?.id,
+            primaryCropCode: dto.primaryCropCode ?? cropStand?.speciesCode ?? 'coffee',
+            varietyCodes: dto.varietyCodes ?? cropStand?.varietyCodes ?? [],
+            plantingDate: cropStand?.plantingDate,
+            densityPlantsHa: cropStand?.densityPlantsHa,
+            expectedYieldKgHa: cropStand?.estimatedYieldKgHa
+              ? Number(cropStand.estimatedYieldKgHa)
+              : dto.expectedYieldKgHa,
+            phenologicalStageCode: cropStand?.phenologicalStageCode,
+            productionSystemCode: dto.productionSystemCode,
+            createdBy: userId,
+          },
+        });
+      }
+
+      await tx.fieldLotLifecycleEvent.create({
+        data: {
+          organizationId,
+          fieldLotId: created.id,
+          fromStatus: null,
+          toStatus: 'draft',
+          actorId: userId,
+          reasonNotes: 'Alta inicial FMDT',
+        },
+      });
+
+      return created;
     });
 
     await this.twin.refresh(organizationId, lot.id, ctx);

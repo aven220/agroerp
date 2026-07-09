@@ -114,48 +114,57 @@ export class WorkflowInstancesService {
       });
     }
 
-    const instance = await this.prisma.workflowInstance.create({
-      data: {
+    const instance = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.workflowInstance.create({
+        data: {
+          organizationId,
+          definitionId: definition.id,
+          versionId: version.id,
+          versionNumber: version.version,
+          resourceId: dto.resourceId,
+          resourceType: dto.resourceType ?? definition.resourceType,
+          currentState: initialState.key,
+          status: 'active',
+          context: (dto.context ?? {}) as object,
+          priority: dto.priority ?? 'normal',
+          startedBy: userId,
+          externalId: dto.externalId,
+          syncStatus: dto.externalId ? 'pending' : 'synced',
+        },
+      });
+
+      await tx.workflowHistory.create({
+        data: {
+          instanceId: created.id,
+          organizationId,
+          fromState: null,
+          toState: initialState.key,
+          transitionKey: '__start__',
+          actorId: userId,
+          payload: { context: dto.context } as object,
+          ipAddress: ctx?.ipAddress,
+          userAgent: ctx?.userAgent,
+          deviceId: ctx?.deviceId,
+        },
+      });
+
+      await this.createAssignmentsForStateTx(
+        tx,
+        created.id,
         organizationId,
-        definitionId: definition.id,
-        versionId: version.id,
-        versionNumber: version.version,
-        resourceId: dto.resourceId,
-        resourceType: dto.resourceType ?? definition.resourceType,
-        currentState: initialState.key,
-        status: 'active',
-        context: (dto.context ?? {}) as object,
-        priority: dto.priority ?? 'normal',
-        startedBy: userId,
-        externalId: dto.externalId,
-        syncStatus: dto.externalId ? 'pending' : 'synced',
-      },
-    });
+        schema,
+        initialState.key,
+        {
+          resource: resource
+            ? { ownerId: resource.ownerId, data: resource.data as Record<string, unknown> }
+            : null,
+          variables: dto.context,
+          startedBy: userId,
+        },
+      );
 
-    await this.createHistory({
-      instanceId: instance.id,
-      organizationId,
-      fromState: null,
-      toState: initialState.key,
-      transitionKey: '__start__',
-      actorId: userId,
-      payload: { context: dto.context },
-      ctx,
+      return created;
     });
-
-    await this.createAssignmentsForState(
-      instance.id,
-      organizationId,
-      schema,
-      initialState.key,
-      {
-        resource: resource
-          ? { ownerId: resource.ownerId, data: resource.data as Record<string, unknown> }
-          : null,
-        variables: dto.context,
-        startedBy: userId,
-      },
-    );
 
     await this.core.emitWorkflowStarted(
       organizationId,
@@ -262,49 +271,101 @@ export class WorkflowInstancesService {
     const isFinal = toState?.type === 'final';
     const isCancelled = toState?.type === 'cancelled';
 
-    const updateResult = await this.prisma.workflowInstance.updateMany({
-      where: { id: instanceId, version: instance.version },
-      data: {
-        currentState: transition.to,
-        context: {
-          ...(instance.context as object),
-          ...(dto.variables ?? {}),
-        } as object,
-        priority: transition.priority ?? instance.priority,
-        dueAt: transition.dueInHours
-          ? new Date(Date.now() + transition.dueInHours * 3600000)
-          : instance.dueAt,
-        version: { increment: 1 },
-        status: isFinal ? 'completed' : isCancelled ? 'cancelled' : 'active',
-        completedAt: isFinal || isCancelled ? new Date() : undefined,
-        syncStatus: dto.externalId ? 'pending' : 'synced',
-      },
+    const pendingAssignees = !isFinal && !isCancelled
+      ? await this.resolveAssigneesForState(
+          organizationId,
+          schema,
+          transition.to,
+          {
+            resource: resource
+              ? { ownerId: resource.ownerId, data: resource.data as Record<string, unknown> }
+              : null,
+            variables: evalCtx.variables as Record<string, unknown>,
+            startedBy: userId,
+          },
+        )
+      : [];
+
+    const { history, newAssignments } = await this.prisma.$transaction(async (tx) => {
+      const updateResult = await tx.workflowInstance.updateMany({
+        where: { id: instanceId, version: instance.version },
+        data: {
+          currentState: transition.to,
+          context: {
+            ...(instance.context as object),
+            ...(dto.variables ?? {}),
+          } as object,
+          priority: transition.priority ?? instance.priority,
+          dueAt: transition.dueInHours
+            ? new Date(Date.now() + transition.dueInHours * 3600000)
+            : instance.dueAt,
+          version: { increment: 1 },
+          status: isFinal ? 'completed' : isCancelled ? 'cancelled' : 'active',
+          completedAt: isFinal || isCancelled ? new Date() : undefined,
+          syncStatus: dto.externalId ? 'pending' : 'synced',
+        },
+      });
+
+      if (updateResult.count === 0) {
+        throw new ConflictException('Concurrent modification detected');
+      }
+
+      await tx.workflowAssignment.updateMany({
+        where: { instanceId, status: 'pending' },
+        data: { status: 'completed', completedAt: new Date() },
+      });
+
+      const historyRecord = await tx.workflowHistory.create({
+        data: {
+          instanceId,
+          organizationId,
+          fromState: instance.currentState,
+          toState: transition.to,
+          transitionKey: transition.key,
+          actorId: userId,
+          comment: dto.comment,
+          payload: {
+            variables: dto.variables,
+            gpsLocation: dto.gpsLocation,
+            signatureFileId: dto.signatureFileId,
+          } as object,
+          ipAddress: ctx?.ipAddress,
+          userAgent: ctx?.userAgent,
+          deviceId: ctx?.deviceId,
+        },
+      });
+
+      const createdAssignments: Array<{ id: string; userId: string }> = [];
+      if (pendingAssignees.length > 0) {
+        const state = schema.states.find((s) => s.key === transition.to);
+        for (const assigneeId of pendingAssignees) {
+          const assignment = await tx.workflowAssignment.create({
+            data: {
+              instanceId,
+              organizationId,
+              userId: assigneeId,
+              stateKey: transition.to,
+              transitionKey: transition.key,
+              dueAt: state?.slaHours
+                ? new Date(Date.now() + state.slaHours * 3600000)
+                : undefined,
+            },
+          });
+          createdAssignments.push({ id: assignment.id, userId: assignment.userId });
+        }
+      }
+
+      return { history: historyRecord, newAssignments: createdAssignments };
     });
 
-    if (updateResult.count === 0) {
-      throw new ConflictException('Concurrent modification detected');
+    for (const assignment of newAssignments) {
+      await this.core.emitWorkflowAssignmentCreated(
+        organizationId,
+        instanceId,
+        { assignmentId: assignment.id, userId: assignment.userId, stateKey: transition.to },
+        {},
+      );
     }
-
-    await this.prisma.workflowAssignment.updateMany({
-      where: { instanceId, status: 'pending' },
-      data: { status: 'completed', completedAt: new Date() },
-    });
-
-    const history = await this.createHistory({
-      instanceId,
-      organizationId,
-      fromState: instance.currentState,
-      toState: transition.to,
-      transitionKey: transition.key,
-      actorId: userId,
-      comment: dto.comment,
-      payload: {
-        variables: dto.variables,
-        gpsLocation: dto.gpsLocation,
-        signatureFileId: dto.signatureFileId,
-      },
-      ctx,
-    });
 
     const execCtx = {
       organizationId,
@@ -320,17 +381,6 @@ export class WorkflowInstancesService {
 
     await this.actions.executeActions(transition.actions, execCtx);
     await this.actions.queueNotifications(transition.notifications, execCtx, resource);
-
-    if (!isFinal && !isCancelled) {
-      await this.createAssignmentsForState(
-        instanceId,
-        organizationId,
-        schema,
-        transition.to,
-        { resource: resource ? { ownerId: resource.ownerId, data: resource.data as Record<string, unknown> } : null, variables: evalCtx.variables as Record<string, unknown>, startedBy: userId },
-        transition.key,
-      );
-    }
 
     await this.core.emitWorkflowStateChanged(
       organizationId,
@@ -570,21 +620,27 @@ export class WorkflowInstancesService {
       throw new BadRequestException('Solo tareas pendientes pueden reasignarse');
     }
 
-    await this.prisma.workflowAssignment.update({
-      where: { id: assignmentId },
-      data: { status: 'completed', completedAt: new Date(), metadata: { reassigned: true, reassignedBy: actorId } },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      await tx.workflowAssignment.update({
+        where: { id: assignmentId },
+        data: {
+          status: 'completed',
+          completedAt: new Date(),
+          metadata: { reassigned: true, reassignedBy: actorId },
+        },
+      });
 
-    return this.prisma.workflowAssignment.create({
-      data: {
-        instanceId: assignment.instanceId,
-        organizationId,
-        userId: newUserId,
-        stateKey: assignment.stateKey,
-        transitionKey: assignment.transitionKey,
-        dueAt: assignment.dueAt,
-        metadata: { reassignedFrom: assignment.userId, reassignedBy: actorId },
-      },
+      return tx.workflowAssignment.create({
+        data: {
+          instanceId: assignment.instanceId,
+          organizationId,
+          userId: newUserId,
+          stateKey: assignment.stateKey,
+          transitionKey: assignment.transitionKey,
+          dueAt: assignment.dueAt,
+          metadata: { reassignedFrom: assignment.userId, reassignedBy: actorId },
+        },
+      });
     });
   }
 
@@ -690,6 +746,71 @@ export class WorkflowInstancesService {
 
     if (assignees.length > 0 && !assignees.includes(userId) && !access.roles.includes('admin')) {
       throw new ForbiddenException('User is not assigned to this transition');
+    }
+  }
+
+  private async resolveAssigneesForState(
+    organizationId: string,
+    schema: WorkflowDefinitionSchema,
+    stateKey: string,
+    ctx: {
+      resource?: { ownerId?: string | null; data?: Record<string, unknown> } | null;
+      variables?: Record<string, unknown>;
+      startedBy?: string;
+    },
+  ): Promise<string[]> {
+    const outgoing = schema.transitions.filter(
+      (t) => t.from === stateKey || t.from === '*',
+    );
+
+    const userIds = new Set<string>();
+    for (const t of outgoing) {
+      const resolved = await this.assignments.resolve(t.participants, {
+        organizationId,
+        resource: ctx.resource ?? undefined,
+        variables: ctx.variables,
+        startedBy: ctx.startedBy,
+      });
+      resolved.forEach((id) => userIds.add(id));
+    }
+
+    return [...userIds];
+  }
+
+  private async createAssignmentsForStateTx(
+    tx: Parameters<Parameters<PrismaService['$transaction']>[0]>[0],
+    instanceId: string,
+    organizationId: string,
+    schema: WorkflowDefinitionSchema,
+    stateKey: string,
+    ctx: {
+      resource?: { ownerId?: string | null; data?: Record<string, unknown> } | null;
+      variables?: Record<string, unknown>;
+      startedBy?: string;
+    },
+    transitionKey?: string,
+  ) {
+    const state = schema.states.find((s) => s.key === stateKey);
+    const userIds = await this.resolveAssigneesForState(
+      organizationId,
+      schema,
+      stateKey,
+      ctx,
+    );
+
+    for (const userId of userIds) {
+      await tx.workflowAssignment.create({
+        data: {
+          instanceId,
+          organizationId,
+          userId,
+          stateKey,
+          transitionKey,
+          dueAt: state?.slaHours
+            ? new Date(Date.now() + state.slaHours * 3600000)
+            : undefined,
+        },
+      });
     }
   }
 

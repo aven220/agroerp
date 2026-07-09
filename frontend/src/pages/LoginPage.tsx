@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext';
 export function LoginPage() {
   const { user, login, loading } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('admin@demo.agroerp.com');
-  const [password, setPassword] = useState('Admin123!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -73,9 +73,6 @@ export function LoginPage() {
           <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
             {submitting ? 'Entrando...' : 'Entrar al sistema'}
           </button>
-          <p className="login-hint">
-            Demo: <code>admin@demo.agroerp.com</code> / <code>Admin123!</code>
-          </p>
         </form>
       </div>
     </div>

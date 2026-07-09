@@ -1,167 +1,19 @@
 import { useMemo, useState } from 'react';
 import type { Permission } from '../../types';
-
-const ACTION_LABELS: Record<string, string> = {
-  read: 'Leer',
-  create: 'Crear',
-  update: 'Editar',
-  delete: 'Eliminar',
-  submit: 'Enviar',
-  publish: 'Publicar',
-  approve: 'Aprobar',
-  execute: 'Ejecutar',
-  assign: 'Asignar',
-  import: 'Importar',
-  export: 'Exportar',
-  admin: 'Administrar',
-  design: 'Diseñar',
-  cancel: 'Cancelar',
-};
-
-const RESOURCE_LABELS: Record<string, string> = {
-  producer: 'Productores',
-  farm: 'Fincas',
-  field_lot: 'Lotes',
-  lot: 'Lotes',
-  form: 'Formularios',
-  user: 'Usuarios',
-  role: 'Roles',
-  permission: 'Permisos',
-  workflow: 'Workflows',
-  bpms: 'BPMS',
-  resource: 'Recursos',
-  event: 'Eventos',
-  sync: 'Sincronización',
-  audit: 'Auditoría',
-  notification: 'Notificaciones',
-  alert: 'Alertas',
-  analytics: 'Analítica',
-  dashboard: 'Dashboards',
-  kpi: 'KPIs',
-  query: 'Consultas',
-  ai: 'IA / Copiloto',
-  gis: 'GIS',
-  eims: 'Inventario EIMS',
-  escm: 'Comercial ESCM',
-  emfg: 'Manufactura EMFG',
-  epscm: 'Cadena EPSCM',
-  eam: 'Activos EAM',
-  hcm: 'RRHH HCM',
-  efm: 'Finanzas EFM',
-  scheduler: 'Scheduler',
-  organization: 'Organización',
-};
-
-type ModuleDef = {
-  id: string;
-  label: string;
-  match: (resource: string) => boolean;
-};
-
-const MODULES: ModuleDef[] = [
-  {
-    id: 'prm',
-    label: 'PRM — Productores',
-    match: (r) => r === 'producer' || r.startsWith('producer') || r.startsWith('prm'),
-  },
-  {
-    id: 'ftip',
-    label: 'FTIP — Fincas',
-    match: (r) => r === 'farm' || r.startsWith('farm') || r.startsWith('ftip'),
-  },
-  {
-    id: 'fmdt',
-    label: 'FMDT — Lotes',
-    match: (r) =>
-      r === 'lot' || r === 'field_lot' || r.startsWith('lot') || r.startsWith('field_lot') || r.startsWith('fmdt'),
-  },
-  {
-    id: 'forms',
-    label: 'Formularios UDFE',
-    match: (r) => r === 'form' || r.startsWith('form'),
-  },
-  {
-    id: 'iam',
-    label: 'Identity & Access',
-    match: (r) =>
-      ['user', 'role', 'permission', 'organization', 'session'].includes(r) ||
-      r.startsWith('iam') ||
-      r.startsWith('eiamp'),
-  },
-  {
-    id: 'workflow',
-    label: 'Procesos & Workflow',
-    match: (r) => r === 'workflow' || r === 'bpms' || r.startsWith('workflow') || r.startsWith('bpms'),
-  },
-  {
-    id: 'ops',
-    label: 'Operaciones',
-    match: (r) =>
-      ['resource', 'event', 'sync', 'audit', 'notification', 'alert', 'scheduler'].includes(r),
-  },
-  {
-    id: 'intel',
-    label: 'Inteligencia & BI',
-    match: (r) =>
-      ['analytics', 'dashboard', 'kpi', 'query', 'ai', 'report'].includes(r) ||
-      r.startsWith('bi') ||
-      r.startsWith('ebiap'),
-  },
-  {
-    id: 'agritech',
-    label: 'AgriTech',
-    match: (r) =>
-      ['gis', 'eatp', 'eapp', 'eiwp', 'ephp', 'eatr', 'eacc', 'effm', 'eaip'].includes(r) ||
-      r.startsWith('gis') ||
-      r.startsWith('eatp') ||
-      r.startsWith('eapp'),
-  },
-  {
-    id: 'supply',
-    label: 'Cadena & Inventario',
-    match: (r) =>
-      ['eims', 'epscm', 'escm'].includes(r) ||
-      r.startsWith('eims') ||
-      r.startsWith('epscm') ||
-      r.startsWith('escm'),
-  },
-  {
-    id: 'mfg',
-    label: 'Manufactura & Activos',
-    match: (r) =>
-      ['emfg', 'eam', 'hcm', 'efm'].includes(r) ||
-      r.startsWith('emfg') ||
-      r.startsWith('eam') ||
-      r.startsWith('hcm') ||
-      r.startsWith('efm'),
-  },
-];
-
-function resolveModule(resource: string): ModuleDef {
-  return MODULES.find((m) => m.match(resource)) ?? {
-    id: 'other',
-    label: 'Otros módulos',
-    match: () => true,
-  };
-}
-
-function resourceLabel(resource: string): string {
-  return RESOURCE_LABELS[resource] ?? resource.replace(/_/g, ' ');
-}
-
-function actionLabel(action: string): string {
-  return ACTION_LABELS[action] ?? action.replace(/_/g, ' ').replace(/:/g, ' · ');
-}
-
-function permKey(p: Permission): string {
-  return `${p.resource}:${p.action}`;
-}
+import {
+  actionLabel,
+  ADMIN_MODULES,
+  permKey,
+  resolveAdminModule,
+  resourceLabel,
+} from '../../lib/adminPermissions';
 
 export interface PermissionMatrixProps {
   permissions: Permission[];
   selected: string[];
   onChange: (next: string[]) => void;
   readOnly?: boolean;
+  showTechnicalKeys?: boolean;
 }
 
 export function PermissionMatrix({
@@ -169,6 +21,7 @@ export function PermissionMatrix({
   selected,
   onChange,
   readOnly = false,
+  showTechnicalKeys = false,
 }: PermissionMatrixProps) {
   const [search, setSearch] = useState('');
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
@@ -181,10 +34,16 @@ export function PermissionMatrix({
     if (!q) return permissions;
     return permissions.filter((p) => {
       const key = permKey(p).toLowerCase();
-      const mod = resolveModule(p.resource).label.toLowerCase();
+      const mod = resolveAdminModule(p.resource);
       const res = resourceLabel(p.resource).toLowerCase();
       const act = actionLabel(p.action).toLowerCase();
-      return key.includes(q) || mod.includes(q) || res.includes(q) || act.includes(q);
+      return (
+        key.includes(q) ||
+        mod.label.toLowerCase().includes(q) ||
+        mod.description.toLowerCase().includes(q) ||
+        res.includes(q) ||
+        act.includes(q)
+      );
     });
   }, [permissions, search]);
 
@@ -192,13 +51,13 @@ export function PermissionMatrix({
     const byModule = new Map<
       string,
       {
-        module: ModuleDef;
+        module: ReturnType<typeof resolveAdminModule>;
         resources: Map<string, Permission[]>;
       }
     >();
 
     for (const p of filtered) {
-      const mod = resolveModule(p.resource);
+      const mod = resolveAdminModule(p.resource);
       if (!byModule.has(mod.id)) {
         byModule.set(mod.id, { module: mod, resources: new Map() });
       }
@@ -259,7 +118,7 @@ export function PermissionMatrix({
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar módulo, recurso o permiso…"
+            placeholder="Buscar por área, recurso o acción…"
             aria-label="Buscar permisos"
           />
         </div>
@@ -290,7 +149,7 @@ export function PermissionMatrix({
         {tree.length === 0 ? (
           <div className="ds-empty-state" style={{ padding: 'var(--ds-space-8)' }}>
             <div className="ds-empty-state-title">Sin resultados</div>
-            <div className="ds-empty-state-desc">Prueba otro término de búsqueda.</div>
+            <div className="ds-empty-state-desc">Pruebe otro término de búsqueda.</div>
           </div>
         ) : (
           tree.map(({ module, resources }) => {
@@ -310,7 +169,10 @@ export function PermissionMatrix({
                     aria-expanded={!moduleCollapsed}
                   >
                     <span aria-hidden>{moduleCollapsed ? '▸' : '▾'}</span>
-                    <strong>{module.label}</strong>
+                    <div className="perm-module-titles">
+                      <strong>{module.label}</strong>
+                      <span className="muted perm-module-desc">{module.description}</span>
+                    </div>
                   </button>
                   <span className="ds-badge">
                     {moduleSelected}/{moduleKeys.length}
@@ -325,7 +187,7 @@ export function PermissionMatrix({
                         }}
                         onChange={(e) => setKeys(moduleKeys, e.target.checked)}
                       />
-                      <span>Módulo</span>
+                      <span>Todo el área</span>
                     </label>
                   ) : null}
                 </header>
@@ -353,7 +215,9 @@ export function PermissionMatrix({
                               >
                                 <span aria-hidden>{collapsed ? '▸' : '▾'}</span>
                                 <span className="perm-resource-title">{resourceLabel(resource)}</span>
-                                <code className="perm-resource-code">{resource}</code>
+                                {showTechnicalKeys ? (
+                                  <code className="perm-resource-code">{resource}</code>
+                                ) : null}
                               </button>
                               <span className="ds-badge ds-badge-info">
                                 {selectedCount}/{keys.length}
@@ -368,7 +232,7 @@ export function PermissionMatrix({
                                     }}
                                     onChange={(e) => setKeys(keys, e.target.checked)}
                                   />
-                                  <span>Grupo</span>
+                                  <span>Todo</span>
                                 </label>
                               ) : null}
                             </header>
@@ -388,8 +252,12 @@ export function PermissionMatrix({
                                           disabled={readOnly}
                                           onChange={() => toggleKey(key)}
                                         />
-                                        <span className="perm-action-label">{actionLabel(p.action)}</span>
-                                        <span className="perm-action-key">{p.action}</span>
+                                        <span className="perm-action-label">
+                                          {actionLabel(p.action).replace(/^\w/, (c) => c.toUpperCase())}
+                                        </span>
+                                        {showTechnicalKeys ? (
+                                          <span className="perm-action-key">{p.action}</span>
+                                        ) : null}
                                       </label>
                                     );
                                   })}
@@ -408,3 +276,5 @@ export function PermissionMatrix({
     </div>
   );
 }
+
+export { ADMIN_MODULES };

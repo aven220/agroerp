@@ -1424,6 +1424,7 @@ model Event {
   syncQueue    SyncQueue[]
 
   @@index([aggregateType, aggregateId, version])
+  @@unique([aggregateType, aggregateId, version])
   @@index([organizationId, globalSequence])
   @@index([organizationId, eventType])
   @@index([userId, occurredAt])
@@ -6197,6 +6198,7 @@ model FormSubmission {
   @@index([organizationId, formId])
   @@index([organizationId, syncStatus])
   @@index([organizationId, externalId])
+  @@unique([organizationId, externalId])
   @@index([resourceId])
   @@index([organizationId, workflowState])
   @@map("form_submissions")

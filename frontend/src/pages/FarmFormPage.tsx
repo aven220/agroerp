@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { createFarm, getFarm, setFarmGeometry, updateFarm } from '../api/ftip';
 import { listProducers } from '../api/prm';
 
@@ -35,6 +36,8 @@ const emptyForm: FarmFormState = {
 export function FarmFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const presetProducerId = searchParams.get('productor') ?? '';
   const isEdit = Boolean(id);
   const [form, setForm] = useState<FarmFormState>(emptyForm);
   const [version, setVersion] = useState(1);
@@ -47,6 +50,12 @@ export function FarmFormPage() {
       setProducers(r.items.map((p) => ({ id: p.id, legalName: p.legalName }))),
     );
   }, []);
+
+  useEffect(() => {
+    if (!isEdit && presetProducerId) {
+      setForm((f) => ({ ...f, producerId: presetProducerId }));
+    }
+  }, [isEdit, presetProducerId]);
 
   useEffect(() => {
     if (!id) return;
@@ -140,6 +149,8 @@ export function FarmFormPage() {
           </button>
         }
       />
+
+      {!isEdit ? <FlowProgress flowId="agricultural" currentStepId="farm" /> : null}
 
       <form onSubmit={handleSubmit} className="form-page form-grid">
         {!isEdit && (

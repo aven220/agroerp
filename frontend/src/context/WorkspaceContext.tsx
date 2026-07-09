@@ -113,7 +113,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [userId, dashboardRole]);
 
   useEffect(() => {
-    localStorage.setItem(storageKey(userId, dashboardRole), JSON.stringify(state));
+    const timer = window.setTimeout(() => {
+      localStorage.setItem(storageKey(userId, dashboardRole), JSON.stringify(state));
+    }, 400);
+    return () => window.clearTimeout(timer);
   }, [state, userId, dashboardRole]);
 
   const activeView = useMemo(() => {

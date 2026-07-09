@@ -20,9 +20,9 @@ export function UcemPreviewBanner({ fieldOrigins, targetEntity }: Props) {
 
   return (
     <div className="panel ucem-preview-banner">
-      <h3>Origen de datos (UCEM)</h3>
+      <h3>Origen de los datos</h3>
       {targetEntity && (
-        <p className="muted">Entidad destino: <strong>{targetEntity}</strong> · complementa processingType</p>
+        <p className="muted">Se guardará en: <strong>{targetEntity}</strong></p>
       )}
       <div className="ucem-preview-grid">
         {fieldOrigins.map((f) => (

@@ -6,6 +6,7 @@ import {
   NotFoundException,
   forwardRef,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import {
   FORM_SUBMISSION_RESOURCE_TYPE,
   FormDefinitionSchema,
@@ -16,6 +17,7 @@ import {
   FORM_SUBMISSION_REPOSITORY,
   type FormSubmissionRepository,
 } from '../domain/interfaces';
+import type { FormSubmission, SubmissionResource } from '../domain/types/form.types';
 import { FormValidationEngine } from './form-validation.engine';
 import { FormsService } from './forms.service';
 import { SubmitFormDto, SyncSubmissionsDto } from '../presentation/forms.dto';
@@ -83,10 +85,16 @@ export class FormSubmissionsService {
         dto.externalId,
       );
       if (existing) {
-        const resource = existing.resourceId
-          ? await this.submissionRepository.findResourceById(existing.resourceId)
-          : null;
-        return { submission: existing, resource, duplicate: true };
+        return this.handleExistingSubmission(
+          organizationId,
+          userId,
+          form,
+          existing as FormSubmission & {
+            form: Awaited<ReturnType<FormsService['findOne']>>;
+          },
+          dto,
+          ctx,
+        );
       }
     }
 
@@ -111,49 +119,82 @@ export class FormSubmissionsService {
       }
     }
 
-    const attachedFiles = this.extractFileRefs(validation.data);
+    const attachedFiles = this.collectAttachedFiles(validation.data, dto.deviceInfo);
+    const isDraft = dto.draft ?? false;
+    const syncStatus = isDraft ? 'pending' : 'synced';
 
-    const resource = await this.submissionRepository.createResource({
-      organizationId,
-      resourceType: FORM_SUBMISSION_RESOURCE_TYPE,
-      schemaVersion: form.version,
-      data: {
-        formId: form.id,
-        formKey: form.formKey,
-        formVersion: form.version,
-        formName: form.name,
-        ...validation.data,
-      } as object,
-      attributes: validation.data as object,
-      metadata: {
-        gpsLocation: dto.gpsLocation,
-        gpsTrack: dto.gpsTrack,
-        deviceInfo: dto.deviceInfo,
-        attachedFiles,
-        externalId: dto.externalId,
-      } as object,
-      status: dto.draft ? 'draft' : 'submitted',
-      syncStatus: 'pending',
-      externalId: dto.externalId,
-      createdBy: userId,
-      updatedBy: userId,
-    });
+    let resource: SubmissionResource;
+    let submission: FormSubmission;
 
-    const submission = await this.submissionRepository.create({
-      organizationId,
-      formId: form.id,
-      formVersion: form.version,
-      resourceId: resource.id,
-      data: validation.data as object,
-      gpsLocation: dto.gpsLocation as object | undefined,
-      gpsTrack: dto.gpsTrack as object | undefined,
-      deviceInfo: dto.deviceInfo as object | undefined,
-      context: (dto.context ?? {}) as object,
-      status: dto.draft ? 'draft' : 'submitted',
-      syncStatus: 'pending',
-      externalId: dto.externalId,
-      createdBy: userId,
-    });
+    try {
+      const created = await this.submissionRepository.createWithResource(
+        {
+          organizationId,
+          resourceType: FORM_SUBMISSION_RESOURCE_TYPE,
+          schemaVersion: form.version,
+          data: {
+            formId: form.id,
+            formKey: form.formKey,
+            formVersion: form.version,
+            formName: form.name,
+            ...validation.data,
+          } as object,
+          attributes: validation.data as object,
+          metadata: {
+            gpsLocation: dto.gpsLocation,
+            gpsTrack: dto.gpsTrack,
+            deviceInfo: dto.deviceInfo,
+            attachedFiles,
+            externalId: dto.externalId,
+          } as object,
+          status: isDraft ? 'draft' : 'submitted',
+          syncStatus,
+          externalId: dto.externalId,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+        {
+          organizationId,
+          formId: form.id,
+          formVersion: form.version,
+          data: validation.data as object,
+          gpsLocation: dto.gpsLocation as object | undefined,
+          gpsTrack: dto.gpsTrack as object | undefined,
+          deviceInfo: dto.deviceInfo as object | undefined,
+          context: (dto.context ?? {}) as object,
+          status: isDraft ? 'draft' : 'submitted',
+          syncStatus,
+          externalId: dto.externalId,
+          createdBy: userId,
+        },
+      );
+      resource = created.resource;
+      submission = created.submission;
+    } catch (err) {
+      if (
+        dto.externalId &&
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        const existing = await this.submissionRepository.findByExternalId(
+          organizationId,
+          dto.externalId,
+        );
+        if (existing) {
+          return this.handleExistingSubmission(
+            organizationId,
+            userId,
+            form,
+            existing as FormSubmission & {
+              form: Awaited<ReturnType<FormsService['findOne']>>;
+            },
+            dto,
+            ctx,
+          );
+        }
+      }
+      throw err;
+    }
 
     await this.core.emitResourceCreated(
       organizationId,
@@ -185,7 +226,7 @@ export class FormSubmissionsService {
         resourceId: resource.id,
         externalId: dto.externalId,
         fieldCount: Object.keys(validation.data).length,
-        draft: dto.draft ?? false,
+        draft: isDraft,
       },
       { ctx: { ...ctx, userId, organizationId } },
     );
@@ -195,10 +236,10 @@ export class FormSubmissionsService {
       userId,
       form,
       submission,
-      draft: dto.draft ?? false,
+      draft: isDraft,
     });
 
-    if (!dto.draft) {
+    if (!isDraft) {
       await this.runCaptureProcessing({
         organizationId,
         userId,
@@ -212,11 +253,108 @@ export class FormSubmissionsService {
     return { submission, resource, duplicate: false };
   }
 
+  private async handleExistingSubmission(
+    organizationId: string,
+    userId: string,
+    form: Awaited<ReturnType<FormsService['findOne']>>,
+    existing: FormSubmission & {
+      form: Awaited<ReturnType<FormsService['findOne']>>;
+    },
+    dto: SubmitFormDto,
+    ctx?: RequestContext,
+  ) {
+    const isDraft = dto.draft ?? false;
+    let resource = existing.resourceId
+      ? await this.submissionRepository.findResourceById(existing.resourceId)
+      : null;
+
+    if (!isDraft && existing.status === 'draft') {
+      const schema = form.schema as unknown as FormDefinitionSchema;
+      const validation = this.validator.validate(schema, dto.data, {
+        gpsLocation: dto.gpsLocation,
+        emitFieldResults: false,
+      });
+      const attachedFiles = this.collectAttachedFiles(validation.data, dto.deviceInfo);
+
+      if (!existing.resourceId) {
+        throw new ConflictException('Draft submission missing resource');
+      }
+
+      const finalized = await this.submissionRepository.finalizeDraft(
+        existing.id,
+        existing.resourceId,
+        {
+          formId: form.id,
+          formVersion: form.version,
+          data: validation.data as object,
+          gpsLocation: dto.gpsLocation as object | undefined,
+          gpsTrack: dto.gpsTrack as object | undefined,
+          deviceInfo: dto.deviceInfo as object | undefined,
+          context: (dto.context ?? existing.context ?? {}) as object,
+          updatedBy: userId,
+          resourceData: {
+            formId: form.id,
+            formKey: form.formKey,
+            formVersion: form.version,
+            formName: form.name,
+            ...validation.data,
+          } as object,
+          resourceAttributes: validation.data as object,
+          resourceMetadata: {
+            gpsLocation: dto.gpsLocation,
+            gpsTrack: dto.gpsTrack,
+            deviceInfo: dto.deviceInfo,
+            attachedFiles,
+            externalId: dto.externalId,
+          } as object,
+          resourceSchemaVersion: form.version,
+        },
+      );
+
+      existing = { ...finalized.submission, form: existing.form };
+      resource = finalized.resource;
+
+      await this.runFormWorkflow({
+        organizationId,
+        userId,
+        form,
+        submission: existing,
+        draft: false,
+      });
+
+      await this.runCaptureProcessing({
+        organizationId,
+        userId,
+        form,
+        submission: existing,
+        resource,
+        ctx,
+      });
+
+      return { submission: existing, resource, duplicate: true };
+    }
+
+    if (!isDraft && existing.status === 'submitted' && resource) {
+      await this.submissionRepository.markSynced(existing.id, resource.id);
+
+      await this.runCaptureProcessing({
+        organizationId,
+        userId,
+        form,
+        submission: existing,
+        resource,
+        ctx,
+      });
+    }
+
+    return { submission: existing, resource, duplicate: true };
+  }
+
   private async runFormWorkflow(input: {
     organizationId: string;
     userId: string;
     form: Awaited<ReturnType<FormsService['findOne']>>;
-    submission: Awaited<ReturnType<FormSubmissionRepository['create']>>;
+    submission: FormSubmission;
     draft: boolean;
   }) {
     try {
@@ -240,8 +378,8 @@ export class FormSubmissionsService {
     organizationId: string;
     userId: string;
     form: Awaited<ReturnType<FormsService['findOne']>>;
-    submission: Awaited<ReturnType<FormSubmissionRepository['create']>>;
-    resource: Awaited<ReturnType<FormSubmissionRepository['createResource']>>;
+    submission: FormSubmission;
+    resource: SubmissionResource;
     ctx?: RequestContext;
   }) {
     try {
@@ -325,6 +463,26 @@ export class FormSubmissionsService {
     );
 
     return { results };
+  }
+
+  private collectAttachedFiles(
+    data: Record<string, unknown>,
+    deviceInfo?: Record<string, unknown>,
+  ): string[] {
+    const refs = new Set(this.extractFileRefs(data));
+    const captureFiles = deviceInfo?.captureFiles;
+    if (Array.isArray(captureFiles)) {
+      for (const file of captureFiles) {
+        if (
+          file &&
+          typeof file === 'object' &&
+          typeof (file as { resourceId?: string }).resourceId === 'string'
+        ) {
+          refs.add((file as { resourceId: string }).resourceId);
+        }
+      }
+    }
+    return [...refs];
   }
 
   private extractFileRefs(data: Record<string, unknown>): string[] {

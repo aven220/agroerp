@@ -26,10 +26,9 @@ interface Props {
 }
 
 function KpiOverview({ kpiKey }: { kpiKey?: string }) {
-  const { stats, loading } = useDashboardStats();
   const { ref, visible } = useInView();
-  const reload = useCallback(() => {}, []);
-  useAutoRefresh(reload, 60000, visible);
+  const { stats, loading, reload } = useDashboardStats(visible);
+  useAutoRefresh(reload, 60000, visible && !!stats);
 
   if (!visible) return <div ref={ref} className="ws-lazy-placeholder" />;
   if (loading || !stats) return <WidgetLoading />;

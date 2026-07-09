@@ -37,7 +37,7 @@ export const MOBILE_TABS_BY_ROLE: Record<DashboardRole, MobileTab[]> = {
   finance: [TAB_HOME, { id: 'accounting', label: 'Contabilidad', icon: '📒', to: '/finanzas' }, { id: 'ar', label: 'Cartera', icon: '💳', to: '/comercial/cartera' }, TAB_SEARCH, TAB_MORE],
   production: [TAB_HOME, { id: 'mfg', label: 'Producción', icon: '🏭', to: '/manufactura' }, TAB_WORK, TAB_SEARCH, TAB_MORE],
   quality: [TAB_HOME, { id: 'qms', label: 'Calidad', icon: '✓', to: '/manufactura/calidad' }, TAB_FORMS, TAB_SEARCH, TAB_MORE],
-  agricultural: [TAB_HOME, { id: 'producers', label: 'Productores', icon: '👤', to: '/productores', permission: 'producer:read' }, { id: 'lots', label: 'Lotes', icon: '📍', to: '/lotes', permission: 'field_lot:read' }, TAB_FORMS, TAB_MORE],
+  agricultural: [TAB_HOME, { id: 'producers', label: 'Productores', icon: '👤', to: '/productores', permission: 'producer:read' }, { id: 'lots', label: 'Lotes', icon: '📍', to: '/lotes', permission: 'lot:read' }, TAB_FORMS, TAB_MORE],
   hr: [TAB_HOME, { id: 'portal', label: 'Portal', icon: '🏠', to: '/portal' }, { id: 'hr', label: 'RRHH', icon: '👥', to: '/rrhh' }, TAB_SEARCH, TAB_MORE],
   maintenance: [TAB_HOME, { id: 'assets', label: 'Activos', icon: '🏗', to: '/gestion-activos' }, { id: 'workorders', label: 'Órdenes', icon: '🔧', to: '/gestion-activos/ordenes' }, TAB_SEARCH, TAB_MORE],
   audit: [TAB_HOME, { id: 'audit', label: 'Auditoría', icon: '🔍', to: '/iam/auditoria' }, { id: 'reports', label: 'Reportes', icon: '📋', to: '/bi/reportes' }, TAB_SEARCH, TAB_MORE],

@@ -8,7 +8,7 @@ interface AnalyticsWidgetProps {
 
 export function AnalyticsWidget({ analytics }: AnalyticsWidgetProps) {
   return (
-    <WidgetShell title="Analytics" id="ure-analytics" empty={analytics.length === 0}>
+    <WidgetShell title="Análisis" id="ure-analytics" empty={analytics.length === 0} emptyMessage="Aún no hay métricas calculadas para este expediente.">
       <MetricsGrid metrics={analytics} />
     </WidgetShell>
   );

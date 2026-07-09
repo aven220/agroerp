@@ -28,9 +28,9 @@ export function DashboardGrid() {
     return (
       <EmptyState
         illustration="data"
-        title="Workspace vacío"
-        description="Personalice su dashboard agregando widgets relevantes para su rol."
-        hint="Active el modo personalizar desde la barra superior."
+        title="Panel de inicio vacío"
+        description="Personalice su panel agregando widgets relevantes para su rol."
+        hint="Active el modo «Personalizar» desde la barra superior para añadir indicadores y accesos rápidos."
       />
     );
   }

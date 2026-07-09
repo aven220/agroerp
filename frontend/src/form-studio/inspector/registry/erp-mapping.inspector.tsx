@@ -65,11 +65,11 @@ function findFieldIndex(fields: FormFieldDefinition[], key: string) {
 
 const ERP_MAPPING_INSPECTOR: InspectorTypeDefinition<ErpMappingInspectorContext> = {
   type: 'ERP_MAPPING',
-  title: (context) => (context.scope === 'field' ? 'Mapeo de campo' : 'Mapeo ERP (UCEM)'),
+  title: (context) => (context.scope === 'field' ? 'Destino del campo' : 'Destino de la información'),
   subtitle: (context) =>
     context.scope === 'field'
       ? `${context.field?.label ?? context.field?.key ?? 'Campo'}`
-      : 'metadata.entityMapping',
+      : 'Vinculación con expedientes del sistema',
   groups: [
     { id: 'general', title: 'General', priority: 1 },
     { id: 'erp', title: 'ERP', priority: 2 },
@@ -79,14 +79,14 @@ const ERP_MAPPING_INSPECTOR: InspectorTypeDefinition<ErpMappingInspectorContext>
   properties: [
     {
       id: 'erp.processingType',
-      label: 'processingType',
+      label: 'Acción al enviar',
       groupId: 'general',
       priority: 1,
       visible: (context) => context.scope === 'form',
       presentation: 'raw',
       render: (context) => (
         <p className="muted">
-          Acción post-envío relacionada:{' '}
+          Qué ocurre cuando el usuario envía el formulario:{' '}
           <code>{context.processingType ?? '—'}</code>
           <br />
           Complementa el mapeo — define cómo cada campo alimenta la entidad ERP destino.

@@ -19,8 +19,7 @@ export interface ToastItem {
   onUndo?: () => void;
 }
 
-interface ToastContextValue {
-  toasts: ToastItem[];
+interface ToastActions {
   toast: (opts: Omit<ToastItem, 'id'>) => void;
   success: (message: string, title?: string) => void;
   error: (message: string, title?: string) => void;
@@ -29,7 +28,7 @@ interface ToastContextValue {
   dismiss: (id: string) => void;
 }
 
-const ToastContext = createContext<ToastContextValue | null>(null);
+const ToastActionsContext = createContext<ToastActions | null>(null);
 
 const ICONS: Record<ToastVariant, string> = {
   success: '✓',
@@ -96,25 +95,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     toast({ variant: 'info', message, title });
   }, [toast]);
 
-  const value = useMemo(
-    () => ({ toasts, toast, success, error, warning, info, dismiss }),
-    [toasts, toast, success, error, warning, info, dismiss],
+  const actions = useMemo(
+    () => ({ toast, success, error, warning, info, dismiss }),
+    [toast, success, error, warning, info, dismiss],
   );
 
   return (
-    <ToastContext.Provider value={value}>
+    <ToastActionsContext.Provider value={actions}>
       {children}
       <div className="ds-toast-container" aria-label="Notificaciones">
         {toasts.map((t) => (
           <ToastView key={t.id} item={t} onDismiss={() => dismiss(t.id)} />
         ))}
       </div>
-    </ToastContext.Provider>
+    </ToastActionsContext.Provider>
   );
 }
 
 export function useToast() {
-  const ctx = useContext(ToastContext);
+  const ctx = useContext(ToastActionsContext);
   if (!ctx) throw new Error('useToast must be used within ToastProvider');
   return ctx;
 }

@@ -1,4 +1,5 @@
 import type { UreRecordSummary } from '../types';
+import { labelEntityType } from '../../lib/userLabels';
 
 interface SummaryWidgetProps {
   summary: UreRecordSummary;
@@ -9,7 +10,7 @@ export function SummaryWidget({ summary }: SummaryWidgetProps) {
     <div className="ure-summary">
       <div className="ure-summary-head">
         <div>
-          <span className="ure-entity-type">{summary.entityType}</span>
+          <span className="ure-entity-type">{labelEntityType(summary.entityType)}</span>
           <h2 className="ure-summary-title">{summary.title}</h2>
           {summary.subtitle ? <p className="ure-summary-sub">{summary.subtitle}</p> : null}
         </div>

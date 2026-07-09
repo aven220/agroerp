@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { FormLifecycleStepper } from '../components/forms/FormLifecycleStepper';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { useToast } from '../context/ToastContext';
 import { ComponentLibraryPanel } from '../form-studio/ComponentLibraryPanel';
 import { FormSimulator } from '../form-studio/FormSimulator';
@@ -63,6 +65,7 @@ export function FormDesignerPage() {
   const openTemplatesOnLoad = searchParams.get('plantilla') === '1';
   const presetTplKey = searchParams.get('tpl');
   const presetFormKey = searchParams.get('key');
+  const presetTab = searchParams.get('tab') as StudioTab | null;
   const [formKey, setFormKey] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -87,7 +90,13 @@ export function FormDesignerPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [formStatus, setFormStatus] = useState<string>('draft');
-  const [tab, setTab] = useState<StudioTab>('design');
+  const [tab, setTab] = useState<StudioTab>(presetTab ?? 'design');
+
+  useEffect(() => {
+    if (presetTab && ['design', 'layout', 'preview', 'simulator', 'components', 'rules', 'versions'].includes(presetTab)) {
+      setTab(presetTab);
+    }
+  }, [presetTab]);
   const [showTemplates, setShowTemplates] = useState(isNew || openTemplatesOnLoad);
   const [versions, setVersions] = useState<FormVersionHistoryItem[]>([]);
   const [templateLoaded, setTemplateLoaded] = useState(false);
@@ -448,15 +457,15 @@ export function FormDesignerPage() {
     { id: 'components', label: 'Componentes' },
     { id: 'preview', label: 'Vista previa' },
     { id: 'simulator', label: 'Probar formulario' },
-    { id: 'rules', label: 'JSON / Reglas' },
+    { id: 'rules', label: 'Reglas avanzadas' },
     ...(!isNew ? [{ id: 'versions' as const, label: 'Versiones' }] : []),
   ];
 
   return (
     <>
       <Header
-        title={isNew ? 'Smart Form Studio — Nuevo' : `Smart Form Studio — ${name}`}
-        subtitle="Plantillas · componentes · vista previa · simulador · versionado"
+        title={isNew ? 'Diseñador de formularios — Nuevo' : `Diseñador de formularios — ${name}`}
+        subtitle="Diseñe campos, configure el destino de los datos y publique para uso en web y dispositivos"
         actions={
           <div className="row-actions">
             <button type="button" className="btn" onClick={() => setShowTemplates(true)}>Plantillas</button>
@@ -476,6 +485,44 @@ export function FormDesignerPage() {
           </div>
         }
       />
+
+      <FlowProgress
+        flowId="forms"
+        currentStepId={
+          tab === 'simulator' || tab === 'preview'
+            ? 'test'
+            : isNew
+              ? 'create'
+              : 'design'
+        }
+      />
+
+      {!isNew && (id || savedFormId) ? (
+        <FlowNextActions
+          title="Continuar con…"
+          actions={[
+            {
+              label: tab === 'simulator' ? 'Publicar formulario' : 'Probar en simulador',
+              description:
+                tab === 'simulator'
+                  ? 'Haga el formulario disponible para captura'
+                  : 'Valide respuestas antes de publicar',
+              onClick: () =>
+                tab === 'simulator'
+                  ? handlePublishFromDesigner()
+                  : setTab('simulator'),
+              primary: true,
+              icon: tab === 'simulator' ? '🚀' : '🧪',
+            },
+            {
+              label: 'Ver ficha del formulario',
+              description: 'Estado, versiones y acciones de publicación',
+              to: `/formularios/${id ?? savedFormId}`,
+              icon: '📋',
+            },
+          ]}
+        />
+      ) : null}
 
       <TemplateLibraryModal
         open={showTemplates}
@@ -557,7 +604,7 @@ export function FormDesignerPage() {
           <section className="designer-canvas panel">
             {isNew && (
               <div className="form-row">
-                <input placeholder="form_key" value={formKey} onChange={(e) => { setFormKey(e.target.value); markDirty(); }} />
+                <input placeholder="Clave del formulario (ej. registro_productor)" value={formKey} onChange={(e) => { setFormKey(e.target.value); markDirty(); }} title="Identificador único del formulario. Use minúsculas y guiones bajos." />
                 <input placeholder="Nombre" value={name} onChange={(e) => { setName(e.target.value); markDirty(); }} />
               </div>
             )}
@@ -570,7 +617,7 @@ export function FormDesignerPage() {
               }}
             >
               <strong>{name || formKey || 'Formulario'}</strong>
-              <span className="muted">Capture · UCEM · Workflow · Offline · GPS · ERP</span>
+              <span className="muted">Captura · Destino de datos · Procesos · Sin conexión · Ubicación · Expedientes</span>
             </div>
             <h3>Campos ({fields.length})</h3>
             {fields.map((f, idx) => (
@@ -656,33 +703,33 @@ export function FormDesignerPage() {
             targetEntity={displayUcem.entityMapping?.targetEntity}
           />
           <div className="panel capture-preview-package">
-            <h3>Paquete Capture (vista previa)</h3>
-            <p className="muted">Misma estructura que consume Android: <code>render</code> + <code>settings</code> + <code>metadata</code>.</p>
+            <h3>Vista previa para dispositivos</h3>
+            <p className="muted">Así verá el formulario la app de campo: diseño, configuración y metadatos.</p>
             <div className="capture-preview-meta">
               <div>
-                <strong>processingType</strong>
+                <strong>Acción al enviar</strong>
                 <span>{String((displayMetadata as FormCaptureMetadata).processingType ?? '—')}</span>
               </div>
               <div>
-                <strong>requiredCatalogKeys</strong>
+                <strong>Catálogos requeridos</strong>
                 <span>{displayCatalogKeys.length ? displayCatalogKeys.join(', ') : '—'}</span>
               </div>
               <div>
-                <strong>Offline</strong>
+                <strong>Sin conexión</strong>
                 <span>
-                  {displaySettings?.allowOffline !== false ? 'allowOffline' : 'off'}
+                  {displaySettings?.allowOffline !== false ? 'Permitido' : 'No permitido'}
                   {' · '}
-                  {displaySettings?.allowDraft !== false ? 'allowDraft' : 'no draft'}
+                  {displaySettings?.allowDraft !== false ? 'Borradores permitidos' : 'Sin borradores'}
                   {' · '}
-                  {displaySettings?.requiresSync ? 'requiresSync' : 'sync opcional'}
+                  {displaySettings?.requiresSync ? 'Requiere sincronización' : 'Sincronización opcional'}
                 </span>
               </div>
               <div>
-                <strong>GPS</strong>
+                <strong>Ubicación GPS</strong>
                 <span>
                   {displaySettings?.location?.enabled
-                    ? `enabled${displaySettings.location.required ? ' (required)' : ''} · ${displaySettings.location.accuracy ?? 50}m`
-                    : 'disabled'}
+                    ? `Activo${displaySettings.location.required ? ' (obligatorio)' : ''} · precisión ${displaySettings.location.accuracy ?? 50} m`
+                    : 'Desactivado'}
                 </span>
               </div>
             </div>

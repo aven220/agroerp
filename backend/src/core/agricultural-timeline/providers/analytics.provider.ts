@@ -24,6 +24,7 @@ export class AnalyticsProvider implements TimelineProvider {
     const analyticsEvents = await this.events.getByAggregate(
       'CaptureAnalytics',
       context.entityId,
+      context.organizationId,
     );
 
     return analyticsEvents

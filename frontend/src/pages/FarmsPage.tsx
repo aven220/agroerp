@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { DataTable } from '../components/ui/DataTable';
+import { EmptyState } from '../components/ui/EmptyState';
+import { useAuth } from '../context/AuthContext';
 import {
   deleteFarm,
   exportFarms,
@@ -22,6 +24,10 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function FarmsPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission('farm:create');
+  const canUpdate = hasPermission('farm:update');
+  const canDelete = hasPermission('farm:delete');
   const [filters, setFilters] = useState<FarmFilters>({ page: 1, limit: 25 });
   const [items, setItems] = useState<FarmUnit[]>([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
@@ -38,15 +44,14 @@ export function FarmsPage() {
     });
   }, []);
 
-  const load = useCallback(async () => {
+  const loadList = useCallback(async () => {
     if (!hasItemsRef.current) setLoading(true);
     setError(null);
     try {
-      const [list, dash] = await Promise.all([listFarms(filters), getFarmDashboard()]);
+      const list = await listFarms(filters);
       setItems(list.items);
       hasItemsRef.current = list.items.length > 0;
       setPagination(list.pagination);
-      setDashboard(dash);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar');
     } finally {
@@ -54,9 +59,21 @@ export function FarmsPage() {
     }
   }, [filters]);
 
+  const loadMeta = useCallback(async () => {
+    try {
+      setDashboard(await getFarmDashboard());
+    } catch {
+      /* KPIs opcionales */
+    }
+  }, []);
+
   useEffect(() => {
-    load();
-  }, [load]);
+    loadList();
+  }, [loadList]);
+
+  useEffect(() => {
+    loadMeta();
+  }, [loadMeta]);
 
   async function handleExport() {
     const result = await exportFarms(filters);
@@ -71,15 +88,20 @@ export function FarmsPage() {
 
   async function handleDelete(row: FarmUnit) {
     if (!confirm(`¿Archivar finca "${row.farmName}"?`)) return;
-    await deleteFarm(row.id);
-    load();
+    try {
+      await deleteFarm(row.id);
+      loadList();
+      getFarmDashboard().then(setDashboard).catch(() => {});
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo archivar');
+    }
   }
 
   return (
     <>
       <Header
         title="Fincas"
-        subtitle="Gestión territorial FTIP — Digital Twin"
+        subtitle="Administre predios, ubicación y vínculos con productores"
         actions={
           <div className="row-actions">
             <Link to="/fincas/dashboard" className="btn">
@@ -88,13 +110,15 @@ export function FarmsPage() {
             <Link to="/fincas/mapa" className="btn">
               Mapa
             </Link>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => navigate('/fincas/nueva')}
-            >
-              + Nueva finca
-            </button>
+            {canCreate ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => navigate('/fincas/nueva')}
+              >
+                + Nueva finca
+              </button>
+            ) : null}
           </div>
         }
       />
@@ -114,7 +138,7 @@ export function FarmsPage() {
             <span className="kpi-value">{dashboard.kpis.georeferenced}</span>
           </div>
           <div className="kpi-card">
-            <span className="kpi-label">% Georef.</span>
+            <span className="kpi-label">% con ubicación</span>
             <span className="kpi-value">{dashboard.kpis.georefRatePct}%</span>
           </div>
         </div>
@@ -122,6 +146,16 @@ export function FarmsPage() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
+      {!loading && items.length === 0 && !error ? (
+        <EmptyState
+          illustration="data"
+          title="Aún no hay fincas registradas"
+          description="Las fincas representan los predios de su operación. Registre la primera para asociar lotes y productores."
+          hint="Puede georreferenciar la finca después desde el detalle o el mapa."
+          action={canCreate ? { label: 'Registrar finca', to: '/fincas/nueva' } : undefined}
+          secondaryAction={{ label: 'Ver mapa', to: '/fincas/mapa' }}
+        />
+      ) : (
       <DataTable<FarmUnit>
         gridId="farms"
         data={items}
@@ -135,6 +169,7 @@ export function FarmsPage() {
         onQuickSearchChange={handleQuickSearchChange}
         onExport={handleExport}
         onRowClick={(r) => navigate(`/fincas/${r.id}`)}
+        emptyMessage="No se encontraron fincas con los filtros aplicados."
         toolbar={
           <>
             <select
@@ -215,31 +250,36 @@ export function FarmsPage() {
                     >
                       Ver
                     </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/fincas/${r.id}/editar`);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-danger"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(r);
-                      }}
-                    >
-                      Archivar
-                    </button>
+                    {canUpdate ? (
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/fincas/${r.id}/editar`);
+                        }}
+                      >
+                        Editar
+                      </button>
+                    ) : null}
+                    {canDelete ? (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(r);
+                        }}
+                      >
+                        Archivar
+                      </button>
+                    ) : null}
                   </div>
                 ),
               },
             ]}
       />
+      )}
     </>
   );
 }

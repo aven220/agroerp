@@ -37,26 +37,28 @@ export class LotRelationsService {
     dto: UpdateAgronomicStateDto,
   ) {
     await this.lots.findOne(organizationId, fieldLotId);
-    await this.prisma.lotAgronomicState.updateMany({
-      where: { fieldLotId, effectiveUntil: null },
-      data: { effectiveUntil: new Date() },
-    });
+    const state = await this.prisma.$transaction(async (tx) => {
+      await tx.lotAgronomicState.updateMany({
+        where: { fieldLotId, effectiveUntil: null },
+        data: { effectiveUntil: new Date() },
+      });
 
-    const state = await this.prisma.lotAgronomicState.create({
-      data: {
-        organizationId,
-        fieldLotId,
-        ftipCropStandId: dto.ftipCropStandId,
-        primaryCropCode: dto.primaryCropCode,
-        varietyCodes: dto.varietyCodes ?? [],
-        plantingDate: dto.plantingDate ? new Date(dto.plantingDate) : undefined,
-        densityPlantsHa: dto.densityPlantsHa,
-        expectedYieldKgHa: dto.expectedYieldKgHa,
-        phenologicalStageCode: dto.phenologicalStageCode,
-        irrigationTypeCode: dto.irrigationTypeCode,
-        productionSystemCode: dto.productionSystemCode,
-        createdBy: userId,
-      },
+      return tx.lotAgronomicState.create({
+        data: {
+          organizationId,
+          fieldLotId,
+          ftipCropStandId: dto.ftipCropStandId,
+          primaryCropCode: dto.primaryCropCode,
+          varietyCodes: dto.varietyCodes ?? [],
+          plantingDate: dto.plantingDate ? new Date(dto.plantingDate) : undefined,
+          densityPlantsHa: dto.densityPlantsHa,
+          expectedYieldKgHa: dto.expectedYieldKgHa,
+          phenologicalStageCode: dto.phenologicalStageCode,
+          irrigationTypeCode: dto.irrigationTypeCode,
+          productionSystemCode: dto.productionSystemCode,
+          createdBy: userId,
+        },
+      });
     });
 
     await this.twin.refresh(organizationId, fieldLotId);

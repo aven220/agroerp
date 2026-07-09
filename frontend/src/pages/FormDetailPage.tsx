@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { LoadingState } from '../components/ux/LoadingState';
 import { FormAvailabilityBadges } from '../components/forms/FormAvailabilityBadges';
 import { FormLifecycleStepper } from '../components/forms/FormLifecycleStepper';
@@ -139,6 +141,66 @@ export function FormDetailPage() {
 
   const modifierName = user ? `${user.firstName} ${user.lastName}`.trim() : undefined;
 
+  const formFlowStep =
+    form.status === 'published'
+      ? 'capture'
+      : form.status === 'draft' || form.status === 'in_review' || form.status === 'approved'
+        ? 'publish'
+        : 'design';
+
+  const formNextActions = (() => {
+    const base = `/formularios/${form.id}`;
+    if (form.status === 'published') {
+      return [
+        {
+          label: 'Ejecutar en web',
+          description: 'Pruebe el formulario publicado',
+          to: `${base}/ejecutar`,
+          primary: true,
+          icon: '▶️',
+        },
+        {
+          label: 'Ir a recolección',
+          description: 'Revise envíos y capturas de campo',
+          to: '/formularios/recoleccion',
+          icon: '📥',
+        },
+        {
+          label: 'Asignar campaña',
+          description: 'Distribuya el formulario a equipos',
+          to: '/formularios/campanas',
+          icon: '🎯',
+        },
+      ];
+    }
+    if (form.status === 'draft' || form.status === 'approved') {
+      return [
+        {
+          label: 'Continuar diseño',
+          description: 'Ajuste campos y validaciones',
+          to: `${base}/disenar`,
+          primary: true,
+          icon: '✏️',
+        },
+        {
+          label: 'Probar simulador',
+          description: 'Valide el comportamiento antes de publicar',
+          to: `${base}/disenar?tab=simulator`,
+          icon: '🧪',
+        },
+      ];
+    }
+    return [
+      {
+        label: 'Editar diseño',
+        description: 'Retome el formulario en el diseñador',
+        to: `${base}/disenar`,
+        primary: true,
+        icon: '✏️',
+      },
+    ];
+  })();
+
   return (
     <>
       <Header
@@ -160,6 +222,14 @@ export function FormDetailPage() {
             )}
           </div>
         }
+      />
+
+      <FlowProgress flowId="forms" currentStepId={formFlowStep} />
+
+      <FlowNextActions
+        title="Siguiente paso en el ciclo"
+        subtitle={getNextLifecycleHint(form.status)}
+        actions={formNextActions}
       />
 
       <div className="form-detail-layout">

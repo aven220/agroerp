@@ -208,58 +208,62 @@ export class ProducersService {
       dto.producerNumber ??
       (await this.generateProducerNumber(organizationId));
 
-    const producer = await this.prisma.producer.create({
-      data: {
-        organizationId,
-        producerNumber,
-        producerTypeCode: dto.producerTypeCode,
-        legalName: dto.legalName,
-        commercialName: dto.commercialName,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        documentTypeCode: dto.documentTypeCode,
-        documentNumber: dto.documentNumber,
-        taxId: dto.taxId,
-        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-        genderCode: dto.genderCode,
-        maritalStatusCode: dto.maritalStatusCode,
-        nationalityCode: dto.nationalityCode,
-        primaryLanguageCode: dto.primaryLanguageCode,
-        educationLevelCode: dto.educationLevelCode,
-        ethnicGroupCode: dto.ethnicGroupCode,
-        categoryCode: dto.categoryCode,
-        leadSourceCode: dto.leadSourceCode,
-        yearsExperience: dto.yearsExperience,
-        photoContentId: dto.photoContentId,
-        signatureContentId: dto.signatureContentId,
-        taxRegimeCode: dto.taxRegimeCode,
-        paymentPreferenceCode: dto.paymentPreferenceCode,
-        assignedBuyerId: dto.assignedBuyerId,
-        assignedTechnicianId: dto.assignedTechnicianId,
-        municipalityCode: dto.municipalityCode,
-        veredaCode: dto.veredaCode,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-        notes: dto.notes,
-        tags: dto.tags ?? [],
-        metadata: (dto.metadata ?? {}) as Prisma.InputJsonValue,
-        externalId: dto.externalId,
-        lifecycleStatus: 'pre_registered',
-        createdBy: userId,
-        updatedBy: userId,
-        lastActivityAt: new Date(),
-      },
-    });
+    const producer = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.producer.create({
+        data: {
+          organizationId,
+          producerNumber,
+          producerTypeCode: dto.producerTypeCode,
+          legalName: dto.legalName,
+          commercialName: dto.commercialName,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          documentTypeCode: dto.documentTypeCode,
+          documentNumber: dto.documentNumber,
+          taxId: dto.taxId,
+          birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+          genderCode: dto.genderCode,
+          maritalStatusCode: dto.maritalStatusCode,
+          nationalityCode: dto.nationalityCode,
+          primaryLanguageCode: dto.primaryLanguageCode,
+          educationLevelCode: dto.educationLevelCode,
+          ethnicGroupCode: dto.ethnicGroupCode,
+          categoryCode: dto.categoryCode,
+          leadSourceCode: dto.leadSourceCode,
+          yearsExperience: dto.yearsExperience,
+          photoContentId: dto.photoContentId,
+          signatureContentId: dto.signatureContentId,
+          taxRegimeCode: dto.taxRegimeCode,
+          paymentPreferenceCode: dto.paymentPreferenceCode,
+          assignedBuyerId: dto.assignedBuyerId,
+          assignedTechnicianId: dto.assignedTechnicianId,
+          municipalityCode: dto.municipalityCode,
+          veredaCode: dto.veredaCode,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          notes: dto.notes,
+          tags: dto.tags ?? [],
+          metadata: (dto.metadata ?? {}) as Prisma.InputJsonValue,
+          externalId: dto.externalId,
+          lifecycleStatus: 'pre_registered',
+          createdBy: userId,
+          updatedBy: userId,
+          lastActivityAt: new Date(),
+        },
+      });
 
-    await this.prisma.producerLifecycleEvent.create({
-      data: {
-        organizationId,
-        producerId: producer.id,
-        fromStatus: null,
-        toStatus: 'pre_registered',
-        actorId: userId,
-        reasonNotes: 'Alta inicial',
-      },
+      await tx.producerLifecycleEvent.create({
+        data: {
+          organizationId,
+          producerId: created.id,
+          fromStatus: null,
+          toStatus: 'pre_registered',
+          actorId: userId,
+          reasonNotes: 'Alta inicial',
+        },
+      });
+
+      return created;
     });
 
     await this.core.emitProducerCreated(

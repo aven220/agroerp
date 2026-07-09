@@ -81,6 +81,17 @@ export class SessionsService {
     });
   }
 
+  async findActiveByRefreshToken(refreshToken: string) {
+    const hash = this.hashToken(refreshToken);
+    return this.prisma.session.findFirst({
+      where: {
+        refreshTokenHash: hash,
+        status: SessionStatus.active,
+        expiresAt: { gt: new Date() },
+      },
+    });
+  }
+
   async validateSession(sessionId: string, jti?: string): Promise<boolean> {
     const session = await this.prisma.session.findUnique({
       where: { id: sessionId },

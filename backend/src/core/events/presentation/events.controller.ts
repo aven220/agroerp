@@ -49,9 +49,10 @@ export class EventsController {
   @RequirePermissions('event:read')
   @ApiOperation({ summary: 'Events for a specific aggregate' })
   findByAggregate(
+    @CurrentUser() user: { organizationId: string },
     @Param('type') type: string,
     @Param('id') id: string,
   ) {
-    return this.events.getByAggregate(type, id);
+    return this.events.getByAggregate(type, id, user.organizationId);
   }
 }

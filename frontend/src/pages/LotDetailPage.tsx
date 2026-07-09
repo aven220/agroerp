@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { LoadingState } from '../components/ux/LoadingState';
+import { useAuth } from '../context/AuthContext';
+import { buildRecordExplorerPath } from '../record-explorer/types';
 import {
   addFieldOperation,
   addLotDocument,
@@ -28,6 +32,7 @@ type Tab = 'perfil' | 'twin' | 'labores' | 'costos' | 'cosechas' | 'geometria' |
 export function LotDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
   const [lot, setLot] = useState<FieldLotProfile | null>(null);
   const [twin, setTwin] = useState<LotDigitalTwin | null>(null);
   const [timeline, setTimeline] = useState<Array<{
@@ -128,15 +133,60 @@ export function LotDetailPage() {
                 Ver finca
               </Link>
             )}
+            {hasPermission('lot:read') && id ? (
+              <Link to={buildRecordExplorerPath('lot', id)} className="btn">
+                Expediente 360°
+              </Link>
+            ) : null}
             <button type="button" className="btn" onClick={() => setLifecycleOpen(true)}>
               Cambiar estado
             </button>
-            <Link to={`/lotes/${id}/editar`} className="btn btn-primary">
-              Editar
-            </Link>
+            {hasPermission('lot:update') ? (
+              <Link to={`/lotes/${id}/editar`} className="btn btn-primary">
+                Editar
+              </Link>
+            ) : null}
           </div>
         }
       />
+
+      <FlowProgress flowId="agricultural" currentStepId="lot" />
+
+      {id ? (
+        <FlowNextActions
+          title="Continuar con…"
+          subtitle="Consulte el expediente completo y los indicadores del lote."
+          actions={[
+            ...(hasPermission('lot:read')
+              ? [
+                  {
+                    label: 'Expediente 360°',
+                    description: 'Vista unificada del lote productivo',
+                    to: buildRecordExplorerPath('lot', id),
+                    primary: true,
+                    icon: '📂',
+                  },
+                ]
+              : []),
+            {
+              label: 'Indicadores de lotes',
+              description: 'Dashboard agronómico FMDT',
+              to: '/lotes/dashboard',
+              icon: '📊',
+            },
+            ...(lot.farmUnitId
+              ? [
+                  {
+                    label: 'Ver finca asociada',
+                    description: lot.farmUnit?.farmName ?? 'Regreso al contexto territorial',
+                    to: `/fincas/${lot.farmUnitId}`,
+                    icon: '🏡',
+                  },
+                ]
+              : []),
+          ]}
+        />
+      ) : null}
 
       {twin && (
         <div className="detail-scores">
@@ -158,7 +208,7 @@ export function LotDetailPage() {
             className={`tab-btn ${tab === t ? 'active' : ''}`}
             onClick={() => setTab(t)}
           >
-            {t === 'twin' ? 'Digital Twin' : t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === 'twin' ? 'Indicadores' : t === 'timeline' ? 'Historial' : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </nav>

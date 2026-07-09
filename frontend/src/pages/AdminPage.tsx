@@ -1,10 +1,13 @@
 import { LoadingState } from '../components/ux/LoadingState';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { PermissionMatrix } from '../components/admin/PermissionMatrix';
+import { AdminHub } from '../components/admin/AdminHub';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
+import { RoleWizardModal } from '../components/admin/RoleWizardModal';
+import { UserWizardModal, type UserWizardFormData } from '../components/admin/UserWizardModal';
 import { Header } from '../components/layout/Header';
 import { DataTable } from '../components/ui/DataTable';
-import { Modal } from '../components/ui/Modal';
 import { ConfirmDialog } from '../components/ui/Drawer';
 import {
   createRole,
@@ -16,6 +19,7 @@ import {
   updateRole,
   updateUser,
 } from '../api/identity';
+import { USER_STATUS_LABELS } from '../lib/adminLabels';
 import { useAuth } from '../context/AuthContext';
 import type { Permission, Role, SystemUser } from '../types';
 
@@ -24,6 +28,14 @@ type AdminTab = 'roles' | 'users';
 function userDocumentNumber(u: SystemUser): string {
   const doc = u.profile?.documentNumber;
   return typeof doc === 'string' && doc.trim() ? doc : '—';
+}
+
+function userStatusLabel(u: SystemUser): string {
+  if (u.lockedAt) {
+    const reason = u.lockedReason ? ` — ${u.lockedReason}` : '';
+    return `Cuenta bloqueada${reason}`;
+  }
+  return USER_STATUS_LABELS[u.status] ?? u.status;
 }
 
 interface AdminPageProps {
@@ -44,9 +56,6 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
 
   const [roleModal, setRoleModal] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [roleName, setRoleName] = useState('');
-  const [roleSlug, setRoleSlug] = useState('');
-  const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
   const [roleSaving, setRoleSaving] = useState(false);
   const [roleError, setRoleError] = useState<string | null>(null);
 
@@ -58,28 +67,33 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
   const [userError, setUserError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SystemUser | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
-  const [userForm, setUserForm] = useState({
+  const [flowHint, setFlowHint] = useState<'role-created' | 'user-created' | null>(null);
+  const [userForm, setUserForm] = useState<UserWizardFormData>({
     email: '',
     password: '',
     firstName: '',
     lastName: '',
     documentNumber: '',
     roleSlug: 'viewer',
-    status: 'active' as 'active' | 'inactive' | 'locked' | 'pending' | 'expired',
+    status: 'active',
   });
 
   const canCreateUser = hasPermission('user:create');
   const canUpdateUser = hasPermission('user:update');
   const canDeleteUser = hasPermission('user:delete');
+  const canReadRoles = hasPermission('role:read');
+  const canCreateRole = hasPermission('role:create');
+  const canUpdateRole = hasPermission('role:update');
+  const canReadUsers = hasPermission('user:read');
 
-  const emptyUserForm = (defaultRoleSlug?: string) => ({
+  const emptyUserForm = (defaultRoleSlug?: string): UserWizardFormData => ({
     email: '',
     password: '',
     firstName: '',
     lastName: '',
     documentNumber: '',
     roleSlug: defaultRoleSlug ?? roles[0]?.slug ?? 'viewer',
-    status: 'active' as const,
+    status: 'active',
   });
 
   function switchTab(next: AdminTab) {
@@ -113,7 +127,7 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
       documentNumber:
         typeof u.profile?.documentNumber === 'string' ? u.profile.documentNumber : '',
       roleSlug: u.userRoles?.[0]?.role.slug ?? roles[0]?.slug ?? 'viewer',
-      status: (u.status as typeof userForm.status) || 'active',
+      status: (u.status as UserWizardFormData['status']) || 'active',
     });
     setUserModal(true);
   }
@@ -147,45 +161,31 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
 
   function openRoleCreate() {
     setEditingRole(null);
-    setRoleName('');
-    setRoleSlug('');
-    setSelectedPerms([]);
     setRoleError(null);
     setRoleModal(true);
   }
 
   function openRoleEdit(role: Role) {
     setEditingRole(role);
-    setRoleName(role.name);
-    setRoleSlug(role.slug);
-    setSelectedPerms(
-      role.rolePermissions.map(
-        (rp) => `${rp.permission.resource}:${rp.permission.action}`,
-      ),
-    );
     setRoleError(null);
     setRoleModal(true);
   }
 
-  async function saveRole(e: React.FormEvent) {
-    e.preventDefault();
+  async function saveRole(data: { name: string; slug: string; permissionKeys: string[] }) {
     setRoleSaving(true);
     setRoleError(null);
     try {
       if (editingRole) {
-        await updateRole(editingRole.id, {
-          name: roleName,
-          slug: roleSlug,
-          permissionKeys: selectedPerms,
-        });
+        await updateRole(editingRole.id, data);
       } else {
-        await createRole({
-          name: roleName,
-          slug: roleSlug,
-          permissionKeys: selectedPerms,
-        });
+        await createRole(data);
       }
       setRoleModal(false);
+      if (!editingRole) {
+        setFlowHint('role-created');
+        setTab('users');
+        if (!usersRoute) navigate('/administracion/usuarios');
+      }
       await load();
     } catch (err) {
       setRoleError(
@@ -200,35 +200,37 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
     }
   }
 
-  async function saveUser(e: React.FormEvent) {
-    e.preventDefault();
+  async function saveUser(data: UserWizardFormData) {
     setUserSaving(true);
     setUserError(null);
     try {
       if (userModalMode === 'edit' && editingUserId) {
         const payload: Parameters<typeof updateUser>[1] = {
-          firstName: userForm.firstName.trim(),
-          lastName: userForm.lastName.trim(),
-          status: userForm.status,
-          documentNumber: userForm.documentNumber.trim(),
-          roleSlugs: userForm.roleSlug ? [userForm.roleSlug] : undefined,
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          status: data.status,
+          documentNumber: data.documentNumber.trim(),
+          roleSlugs: data.roleSlug ? [data.roleSlug] : undefined,
         };
-        if (userForm.password.trim()) {
-          payload.password = userForm.password;
+        if (data.password.trim()) {
+          payload.password = data.password;
         }
         await updateUser(editingUserId, payload);
       } else {
         await createUser({
-          email: userForm.email.trim(),
-          password: userForm.password,
-          firstName: userForm.firstName.trim(),
-          lastName: userForm.lastName.trim(),
-          documentNumber: userForm.documentNumber.trim() || undefined,
-          roleSlugs: userForm.roleSlug ? [userForm.roleSlug] : undefined,
+          email: data.email.trim(),
+          password: data.password,
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          documentNumber: data.documentNumber.trim() || undefined,
+          roleSlugs: data.roleSlug ? [data.roleSlug] : undefined,
         });
       }
       setUserModal(false);
       setUserForm(emptyUserForm());
+      if (userModalMode === 'create') {
+        setFlowHint('user-created');
+      }
       await load();
     } catch (err) {
       setUserError(
@@ -260,77 +262,184 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
 
   const headerActions =
     tab === 'roles' ? (
-      <button type="button" className="btn btn-primary" onClick={openRoleCreate}>
-        + Nuevo rol
-      </button>
+      canCreateRole ? (
+        <button type="button" className="btn btn-primary" onClick={openRoleCreate}>
+          Crear rol
+        </button>
+      ) : null
     ) : canCreateUser ? (
       <button type="button" className="btn btn-primary" onClick={openUserCreate}>
-        + Nuevo usuario
+        Crear usuario
       </button>
     ) : null;
 
   return (
     <>
       <Header
-        title={tab === 'users' ? 'Usuarios del sistema' : 'Roles y permisos'}
-        subtitle={
-          tab === 'users'
-            ? 'Crear, editar y eliminar cuentas de acceso'
-            : 'Configuración de roles y permisos de la organización'
-        }
+        title="Administración"
+        subtitle="Gestione usuarios, roles y accesos de su organización"
         actions={headerActions}
       />
 
-      <div className="tabs">
-        <button
-          type="button"
-          className={tab === 'roles' ? 'tab active' : 'tab'}
-          onClick={() => switchTab('roles')}
-        >
-          Roles y permisos
-        </button>
-        <button
-          type="button"
-          className={tab === 'users' ? 'tab active' : 'tab'}
-          onClick={() => switchTab('users')}
-        >
-          Usuarios
-        </button>
+      <FlowProgress
+        flowId="organization"
+        currentStepId={
+          flowHint === 'user-created'
+            ? 'onboarding'
+            : flowHint === 'role-created'
+              ? 'user'
+              : usersRoute
+                ? 'user'
+                : tab === 'roles'
+                  ? 'role'
+                  : undefined
+        }
+        className="admin-hub-flow"
+      />
+
+      {flowHint === 'role-created' ? (
+        <FlowNextActions
+          title="Rol creado — siguiente paso"
+          subtitle="Invite a la primera persona de su equipo y asígnele el rol recién definido."
+          dismissible
+          onDismiss={() => setFlowHint(null)}
+          actions={[
+            {
+              label: 'Crear usuario',
+              description: 'Asigne el nuevo rol a una cuenta de acceso',
+              onClick: () => {
+                setFlowHint(null);
+                openUserCreate();
+              },
+              primary: true,
+              icon: '👤',
+            },
+            {
+              label: 'Revisar permisos del rol',
+              description: 'Ajuste qué módulos puede usar este perfil',
+              onClick: () => {
+                setFlowHint(null);
+                setTab('roles');
+                navigate('/administracion');
+              },
+              icon: '🔐',
+            },
+          ]}
+        />
+      ) : null}
+
+      {flowHint === 'user-created' ? (
+        <FlowNextActions
+          title="Usuario creado — siguiente paso"
+          subtitle="El usuario ya puede ingresar. Revise la auditoría tras el primer acceso."
+          dismissible
+          onDismiss={() => setFlowHint(null)}
+          actions={[
+            {
+              label: 'Ver auditoría de accesos',
+              description: 'Confirme el primer inicio de sesión',
+              to: '/iam/auditoria',
+              primary: true,
+              icon: '📋',
+            },
+            {
+              label: 'Crear otro usuario',
+              description: 'Invite más personas a la organización',
+              onClick: () => {
+                setFlowHint(null);
+                openUserCreate();
+              },
+              icon: '➕',
+            },
+            {
+              label: 'Centro de seguridad',
+              description: 'Políticas MFA y sesiones activas',
+              to: '/iam',
+              icon: '🛡️',
+            },
+          ]}
+        />
+      ) : null}
+
+      {!loading && (canReadRoles || canReadUsers) ? (
+        <AdminHub
+          roles={roles}
+          users={users}
+          canCreateRole={canCreateRole}
+          canCreateUser={canCreateUser}
+          onCreateRole={openRoleCreate}
+          onCreateUser={openUserCreate}
+          activeTab={tab}
+        />
+      ) : null}
+
+      <div className="tabs admin-tabs">
+        {canReadRoles ? (
+          <button
+            type="button"
+            className={tab === 'roles' ? 'tab active' : 'tab'}
+            onClick={() => switchTab('roles')}
+          >
+            Roles y permisos
+          </button>
+        ) : null}
+        {canReadUsers ? (
+          <button
+            type="button"
+            className={tab === 'users' ? 'tab active' : 'tab'}
+            onClick={() => switchTab('users')}
+          >
+            Usuarios
+          </button>
+        ) : null}
       </div>
 
-      {loading ? (
-        <LoadingState variant="table" message="Cargando administración" />
+      {userError && !userModal && !roleModal ? (
+        <div className="alert alert-error">{userError}</div>
+      ) : null}
+
+      {!canReadRoles && !canReadUsers ? (
+        <div className="alert alert-error">No tiene permisos para administrar roles o usuarios.</div>
+      ) : loading ? (
+        <LoadingState variant="table" message="Cargando administración…" />
       ) : tab === 'roles' ? (
         <DataTable<Role>
           gridId="admin-roles"
           data={roles}
+          emptyMessage="No hay roles definidos. Use «Crear rol» para definir el primer perfil de acceso."
           columns={[
             { key: 'name', label: 'Rol', render: (r) => r.name },
-            { key: 'slug', label: 'Slug', render: (r) => r.slug },
             {
               key: 'perms',
               label: 'Permisos',
-              render: (r) => r.rolePermissions?.length ?? 0,
+              render: (r) => `${r.rolePermissions?.length ?? 0} permisos`,
             },
             {
               key: 'users',
-              label: 'Usuarios',
+              label: 'Usuarios asignados',
               render: (r) => r._count?.userRoles ?? 0,
+            },
+            {
+              key: 'type',
+              label: 'Tipo',
+              render: (r) => (r.isSystem ? 'Sistema' : 'Personalizado'),
             },
             {
               key: 'actions',
               label: '',
               render: (r) => (
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openRoleEdit(r);
-                  }}
-                >
-                  Editar permisos
-                </button>
+                canUpdateRole ? (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openRoleEdit(r);
+                    }}
+                  >
+                    Configurar permisos
+                  </button>
+                ) : null
               ),
             },
           ]}
@@ -339,6 +448,7 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
         <DataTable<SystemUser>
           gridId="admin-users"
           data={users}
+          emptyMessage="No hay usuarios. Use «Crear usuario» para dar acceso a la primera persona."
           columns={[
             {
               key: 'name',
@@ -350,23 +460,17 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
               label: 'Documento',
               render: (r) => userDocumentNumber(r),
             },
-            { key: 'email', label: 'Email', render: (r) => r.email },
+            { key: 'email', label: 'Correo', render: (r) => r.email },
             {
               key: 'roles',
-              label: 'Roles',
+              label: 'Rol',
               render: (r) =>
                 r.userRoles?.map((ur) => ur.role.name).join(', ') ?? '—',
             },
             {
               key: 'status',
               label: 'Estado',
-              render: (r) => {
-                if (r.lockedAt) {
-                  const reason = r.lockedReason ? ` — ${r.lockedReason}` : '';
-                  return `Bloqueado (IAM)${reason}`;
-                }
-                return r.status;
-              },
+              render: (r) => userStatusLabel(r),
             },
             ...(canUpdateUser || canDeleteUser
               ? [
@@ -408,200 +512,37 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
         />
       )}
 
-      <Modal
+      <RoleWizardModal
         open={roleModal}
-        title={editingRole ? 'Editar rol' : 'Nuevo rol'}
+        editingRole={editingRole}
+        permissions={permissions}
+        saving={roleSaving}
+        error={roleError}
         onClose={() => !roleSaving && setRoleModal(false)}
-        wide
-      >
-        <form onSubmit={saveRole} className="form-grid">
-          {roleError ? <div className="alert alert-error" style={{ gridColumn: '1 / -1' }}>{roleError}</div> : null}
-          {editingRole?.isSystem ? (
-            <p className="text-muted" style={{ gridColumn: '1 / -1', margin: 0 }}>
-              Rol de sistema: nombre y slug bloqueados. Los permisos pueden ajustarse según política de la organización.
-            </p>
-          ) : null}
-          <label>
-            Nombre
-            <input
-              value={roleName}
-              onChange={(e) => setRoleName(e.target.value)}
-              required
-              disabled={editingRole?.isSystem || roleSaving}
-            />
-          </label>
-          <label>
-            Slug
-            <input
-              value={roleSlug}
-              onChange={(e) => setRoleSlug(e.target.value)}
-              required
-              disabled={editingRole?.isSystem || roleSaving}
-            />
-          </label>
-          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-            <span className="ds-field-label">Permisos del rol</span>
-            <PermissionMatrix
-              permissions={permissions}
-              selected={selectedPerms}
-              onChange={setSelectedPerms}
-            />
-          </div>
-          <div className="form-actions">
-            <button type="button" className="btn" onClick={() => setRoleModal(false)} disabled={roleSaving}>
-              Cancelar
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={roleSaving}>
-              {roleSaving ? 'Guardando…' : 'Guardar rol'}
-            </button>
-          </div>
-        </form>
-      </Modal>
+        onSave={saveRole}
+      />
 
-      <Modal
+      <UserWizardModal
         open={userModal}
-        title={userModalMode === 'edit' ? 'Editar usuario' : 'Nuevo usuario'}
+        mode={userModalMode}
+        roles={roles}
+        initial={userForm}
+        locked={editingUserLocked}
+        saving={userSaving}
+        error={userError}
         onClose={() => !userSaving && setUserModal(false)}
-      >
-        <form onSubmit={saveUser} className="form-grid">
-          {userError ? (
-            <div className="alert alert-error" role="alert">
-              {userError}
-            </div>
-          ) : null}
-          {editingUserLocked ? (
-            <div className="alert alert-warning" role="alert">
-              Este usuario tiene un bloqueo IAM por intentos fallidos de login. Guarde con estado{' '}
-              <strong>Activo</strong> para quitar el bloqueo y permitir el acceso.
-            </div>
-          ) : null}
-          <label>
-            Nombre
-            <input
-              value={userForm.firstName}
-              onChange={(e) => setUserForm({ ...userForm, firstName: e.target.value })}
-              required
-            />
-          </label>
-          <label>
-            Apellido
-            <input
-              value={userForm.lastName}
-              onChange={(e) => setUserForm({ ...userForm, lastName: e.target.value })}
-              required
-            />
-          </label>
-          <label>
-            Documento de identidad
-            <input
-              value={userForm.documentNumber}
-              onChange={(e) => setUserForm({ ...userForm, documentNumber: e.target.value })}
-              required={userModalMode === 'create'}
-              placeholder="Cédula, NIT, pasaporte…"
-            />
-          </label>
-          {userModalMode === 'create' ? (
-            <>
-              <label>
-                Email
-                <input
-                  type="email"
-                  value={userForm.email}
-                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Contraseña
-                <input
-                  type="password"
-                  value={userForm.password}
-                  onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                  required
-                  minLength={8}
-                />
-              </label>
-            </>
-          ) : (
-            <>
-              <label>
-                Email
-                <input type="email" value={userForm.email} disabled />
-              </label>
-              <label>
-                Nueva contraseña
-                <input
-                  type="password"
-                  value={userForm.password}
-                  onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                  minLength={8}
-                  placeholder="Dejar vacío para no cambiar"
-                  autoComplete="new-password"
-                />
-              </label>
-            </>
-          )}
-          <label>
-            Rol
-            <select
-              value={userForm.roleSlug}
-              onChange={(e) => setUserForm({ ...userForm, roleSlug: e.target.value })}
-            >
-              {roles.map((r) => (
-                <option key={r.id} value={r.slug}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {userModalMode === 'edit' ? (
-            <label>
-              Estado
-              <select
-                value={userForm.status}
-                onChange={(e) =>
-                  setUserForm({
-                    ...userForm,
-                    status: e.target.value as typeof userForm.status,
-                  })
-                }
-              >
-                <option value="active">Activo</option>
-                <option value="inactive">Inactivo</option>
-                <option value="locked">Bloqueado</option>
-                <option value="pending">Pendiente</option>
-              </select>
-            </label>
-          ) : null}
-          <div className="form-actions">
-            <button
-              type="button"
-              className="btn"
-              onClick={() => setUserModal(false)}
-              disabled={userSaving}
-            >
-              Cancelar
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={userSaving}>
-              {userSaving
-                ? 'Guardando…'
-                : userModalMode === 'edit'
-                  ? 'Guardar cambios'
-                  : 'Crear usuario'}
-            </button>
-          </div>
-        </form>
-      </Modal>
+        onSave={saveUser}
+      />
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Eliminar usuario"
         message={
           deleteTarget
-            ? `¿Eliminar la cuenta de ${deleteTarget.firstName} ${deleteTarget.lastName} (${deleteTarget.email})? Esta acción desactiva el acceso del usuario.`
+            ? `¿Eliminar la cuenta de ${deleteTarget.firstName} ${deleteTarget.lastName} (${deleteTarget.email})?\n\nEl usuario perderá el acceso al sistema. Esta acción no se puede deshacer.`
             : ''
         }
-        confirmLabel={deleteSaving ? 'Eliminando…' : 'Eliminar'}
+        confirmLabel={deleteSaving ? 'Eliminando…' : 'Sí, eliminar usuario'}
         cancelLabel="Cancelar"
         variant="danger"
         onConfirm={confirmDeleteUser}

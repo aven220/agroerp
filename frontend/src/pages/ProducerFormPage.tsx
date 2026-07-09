@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { EnterpriseForm } from '../components/data-workspace/EnterpriseForm';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import {
   checkDuplicate,
   createProducer,
@@ -124,6 +125,8 @@ export function ProducerFormPage() {
         title={isEdit ? 'Editar productor' : 'Nuevo productor'}
         subtitle="Expediente PRM"
       />
+
+      {!isEdit ? <FlowProgress flowId="agricultural" currentStepId="producer" /> : null}
 
       <EnterpriseForm
         title={isEdit ? 'Expediente del productor' : 'Registro de nuevo productor'}

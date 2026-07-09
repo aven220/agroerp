@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { EmptyState } from '../components/ui/EmptyState';
 import { exportIamRole, listIamRoles } from '../api/iam';
 
 export function IamRolesPage() {
@@ -17,22 +18,58 @@ export function IamRolesPage() {
 
   return (
     <>
-      <Header title="Administrador de Roles" subtitle="Clonar · versionar · exportar" actions={<Link to="/iam" className="btn">Centro Seguridad</Link>} />
+      <Header
+        title="Roles de seguridad"
+        subtitle="Defina qué puede hacer cada perfil en la organización"
+        actions={<Link to="/iam" className="btn">Centro de seguridad</Link>}
+      />
+      <p className="muted page-help">
+        Los roles agrupan permisos. El identificador interno es un código técnico usado por el sistema; los usuarios solo ven el nombre del rol.
+      </p>
       {error ? <div className="alert alert-error">{error}</div> : null}
+      {roles.length === 0 && !error ? (
+        <EmptyState
+          illustration="data"
+          title="No hay roles configurados"
+          description="Los roles definen los permisos de cada tipo de usuario en la organización."
+          action={{ label: 'Ir a administración', to: '/administracion' }}
+        />
+      ) : (
       <table className="data-table">
-        <thead><tr><th>Nombre</th><th>Slug</th><th>Sistema</th><th></th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Identificador interno</th><th>Rol del sistema</th><th></th></tr></thead>
         <tbody>
           {roles.map((r) => (
             <tr key={r.id}>
               <td>{r.name}</td>
-              <td>{r.slug}</td>
+              <td><code>{r.slug}</code></td>
               <td>{r.isSystem ? 'Sí' : 'No'}</td>
-              <td><button type="button" className="btn btn-sm" onClick={() => exportIamRole(r.id).then((d) => alert(JSON.stringify(d, null, 2))).catch((err) => setError(err instanceof Error ? err.message : 'Exportación fallida'))}>Exportar</button></td>
+              <td>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  title="Descargar definición del rol para respaldo o migración"
+                  onClick={() =>
+                    exportIamRole(r.id)
+                      .then((d) => {
+                        const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `rol-${r.slug}.json`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      })
+                      .catch((err) => setError(err instanceof Error ? err.message : 'Exportación fallida'))
+                  }
+                >
+                  Exportar
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
-      {!error && roles.length === 0 ? <p className="text-muted">No hay roles para mostrar.</p> : null}
+      )}
     </>
   );
 }

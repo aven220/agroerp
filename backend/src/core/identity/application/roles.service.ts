@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/shared/infrastructure/database/prisma.service';
 import { CoreEngineService } from '@/core/engine/application/core-engine.service';
 import { EVENT_TYPES } from '@agroerp/shared';
@@ -90,6 +90,10 @@ export class RolesService {
     assignedBy: string,
   ) {
     await this.findOne(organizationId, roleId);
+    const member = await this.prisma.user.findFirst({
+      where: { id: targetUserId, organizationId, deletedAt: null },
+    });
+    if (!member) throw new NotFoundException('User not found');
     await this.prisma.userRole.upsert({
       where: { userId_roleId: { userId: targetUserId, roleId } },
       update: {},
@@ -114,6 +118,11 @@ export class RolesService {
     targetUserId: string,
     revokedBy: string,
   ) {
+    await this.findOne(organizationId, roleId);
+    const member = await this.prisma.user.findFirst({
+      where: { id: targetUserId, organizationId, deletedAt: null },
+    });
+    if (!member) throw new NotFoundException('User not found');
     await this.prisma.userRole.deleteMany({
       where: { userId: targetUserId, roleId },
     });

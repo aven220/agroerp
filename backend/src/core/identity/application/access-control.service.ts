@@ -87,11 +87,12 @@ export class AccessControlService implements AuthorizationService {
     });
 
     const rolePerms = [
-      ...user.userRoles.flatMap((ur) =>
-        ur.role.rolePermissions.map(
+      ...user.userRoles.flatMap((ur) => {
+        if (ur.role.organizationId !== organizationId) return [];
+        return ur.role.rolePermissions.map(
           (rp) => `${rp.permission.resource}:${rp.permission.action}`,
-        ),
-      ),
+        );
+      }),
       ...temporaryRoles.flatMap((tr) =>
         tr.role.rolePermissions.map(
           (rp) => `${rp.permission.resource}:${rp.permission.action}`,
@@ -113,7 +114,9 @@ export class AccessControlService implements AuthorizationService {
 
     const roles = [
       ...new Set([
-        ...user.userRoles.map((ur) => ur.role.slug),
+        ...user.userRoles
+          .filter((ur) => ur.role.organizationId === organizationId)
+          .map((ur) => ur.role.slug),
         ...temporaryRoles.map((tr) => tr.role.slug),
         ...user.substitutionsAs.flatMap((s) => (s.roleSlugs as string[]) ?? []),
       ]),

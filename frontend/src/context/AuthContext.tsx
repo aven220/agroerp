@@ -103,11 +103,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshProfile()
       .catch(() => {
         localStorage.removeItem('agroerp_token');
+        localStorage.removeItem('agroerp_refresh');
         setUser(null);
       })
       .finally(() => setLoading(false));
 
     const onUnauthorized = () => {
+      localStorage.removeItem('agroerp_refresh');
       setUser(null);
     };
     window.addEventListener('agroerp:unauthorized', onUnauthorized);

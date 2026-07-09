@@ -30,14 +30,14 @@ export class CapturePackageService {
       this.assignments.getAssignmentsForUser(organizationId, userId),
     ]);
 
-    const assignmentByFormId = new Map(
-      userAssignments.map((a) => [a.formId, a]),
+    const assignmentByFormKey = new Map(
+      userAssignments.map((a) => [a.form.formKey, a]),
     );
 
-    const assignedFormIds = new Set(userAssignments.map((a) => a.formId));
+    const assignedFormKeys = new Set(userAssignments.map((a) => a.form.formKey));
     const formsToInclude =
-      assignedFormIds.size > 0
-        ? bootstrap.forms.filter((f) => assignedFormIds.has(f.id))
+      assignedFormKeys.size > 0
+        ? bootstrap.forms.filter((f) => assignedFormKeys.has(f.formKey))
         : bootstrap.forms;
 
     const packageForms: CapturePackageForm[] = [];
@@ -45,7 +45,7 @@ export class CapturePackageService {
       const detail = await this.query.getFormDefinition(organizationId, summary.id);
       const schema = detail.schema as FormDefinitionSchema;
       const settings = schema.settings ?? {};
-      const assignment = assignmentByFormId.get(summary.id);
+      const assignment = assignmentByFormKey.get(summary.formKey);
 
       packageForms.push({
         ...detail,
@@ -67,7 +67,10 @@ export class CapturePackageService {
     );
 
     const packageAssignments: CapturePackageAssignment[] = userAssignments.map(
-      (a) => this.mapAssignment(a),
+      (a) => {
+        const published = bootstrap.forms.find((f) => f.formKey === a.form.formKey);
+        return this.mapAssignment(a, published?.id ?? a.formId);
+      },
     );
 
     const generatedAt = new Date().toISOString();
@@ -103,10 +106,10 @@ export class CapturePackageService {
       this.assignments.getAssignmentsForUser(organizationId, userId),
     ]);
 
-    const assignedFormIds = new Set(userAssignments.map((a) => a.formId));
+    const assignedFormKeys = new Set(userAssignments.map((a) => a.form.formKey));
     const relevantForms =
-      assignedFormIds.size > 0
-        ? bootstrap.forms.filter((f) => assignedFormIds.has(f.id))
+      assignedFormKeys.size > 0
+        ? bootstrap.forms.filter((f) => assignedFormKeys.has(f.formKey))
         : bootstrap.forms;
 
     const formEntries = relevantForms.map((f) => ({
@@ -158,7 +161,8 @@ export class CapturePackageService {
     return this.catalogs.extractCatalogKeysFromSchemas([schema]);
   }
 
-  private mapAssignment(assignment: {
+  private mapAssignment(
+    assignment: {
     id: string;
     formId: string;
     status: string;
@@ -166,10 +170,12 @@ export class CapturePackageService {
     contextType: string | null;
     contextId: string | null;
     assignedAt: Date;
-  }): CapturePackageAssignment {
+  },
+    resolvedFormId?: string,
+  ): CapturePackageAssignment {
     return {
       assignmentId: assignment.id,
-      formId: assignment.formId,
+      formId: resolvedFormId ?? assignment.formId,
       status: assignment.status,
       dueAt: assignment.dueAt?.toISOString() ?? null,
       contextType: assignment.contextType,

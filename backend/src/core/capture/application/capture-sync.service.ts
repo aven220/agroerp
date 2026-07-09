@@ -14,6 +14,14 @@ export class CaptureSyncService {
     ctx?: RequestContext,
   ): Promise<CaptureSyncResponse> {
     const globalDeviceInfo = dto.deviceInfo;
+    const filesByExternalId = new Map<string, NonNullable<CaptureSyncInput['files']>>();
+
+    for (const file of dto.files ?? []) {
+      if (!file.externalId) continue;
+      const list = filesByExternalId.get(file.externalId) ?? [];
+      list.push(file);
+      filesByExternalId.set(file.externalId, list);
+    }
 
     const batch = await this.submissions.syncBatch(
       organizationId,
@@ -25,7 +33,10 @@ export class CaptureSyncService {
           externalId: item.externalId,
           gpsLocation: item.gpsLocation,
           gpsTrack: item.gpsTrack,
-          deviceInfo: item.deviceInfo ?? globalDeviceInfo,
+          deviceInfo: {
+            ...(item.deviceInfo ?? globalDeviceInfo ?? {}),
+            captureFiles: filesByExternalId.get(item.externalId) ?? [],
+          },
           clientCreatedAt: item.clientCreatedAt,
         })),
       },

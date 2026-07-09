@@ -2,9 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { FormsPlatformNav } from '../components/forms/FormsPlatformNav';
+import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ux/LoadingState';
 import { listForms, listSubmissions, type FormSubmission } from '../api/forms';
 import { formatFormDate } from '../form-studio/form-lifecycle';
+import {
+  buildRecordExplorerPath,
+  type UreRouteEntityType,
+} from '../record-explorer/types';
 
 const SYNC_LABELS: Record<string, string> = {
   synced: 'Sincronizado',
@@ -19,10 +24,12 @@ export function FormCollectionPage() {
   const [search, setSearch] = useState('');
   const [forms, setForms] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<FormSubmission | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const [subs, formList] = await Promise.all([
         listSubmissions(formFilter ? { formId: formFilter } : undefined),
@@ -30,6 +37,8 @@ export function FormCollectionPage() {
       ]);
       setItems(subs);
       setForms(formList.map((f) => ({ id: f.id, name: f.name })));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar envíos');
     } finally {
       setLoading(false);
     }
@@ -59,11 +68,13 @@ export function FormCollectionPage() {
     withMedia: filtered.filter((s) => hasMediaInData(s.data)).length,
   }), [filtered]);
 
+  const selectedEntityLink = selected ? extractEntityLinkFromSubmission(selected) : null;
+
   return (
     <>
       <Header
         title="Recolección"
-        subtitle="Cada envío es un registro independiente con trazabilidad de sync y evidencias"
+        subtitle="Cada envío es un registro con trazabilidad, evidencias y estado de sincronización"
       />
       <FormsPlatformNav />
 
@@ -76,6 +87,8 @@ export function FormCollectionPage() {
         <div className="kpi-card"><span className="kpi-label">Con multimedia</span><span className="kpi-value">{kpis.withMedia}</span></div>
       </div>
 
+      {error ? <div className="alert alert-error">{error}</div> : null}
+
       <div className="filter-bar">
         <input placeholder="Buscar…" value={search} onChange={(e) => setSearch(e.target.value)} />
         <select value={formFilter} onChange={(e) => setFormFilter(e.target.value)}>
@@ -83,7 +96,7 @@ export function FormCollectionPage() {
           {forms.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
         </select>
         <select value={syncFilter} onChange={(e) => setSyncFilter(e.target.value)}>
-          <option value="">Todo sync</option>
+          <option value="">Toda sincronización</option>
           <option value="synced">Sincronizado</option>
           <option value="pending">Pendiente</option>
           <option value="conflict">Conflicto</option>
@@ -93,21 +106,29 @@ export function FormCollectionPage() {
 
       <div className="form-collection-layout">
         <div className="form-collection-list">
-          {loading ? <LoadingState variant="table" /> : (
+          {loading ? (
+            <LoadingState variant="table" />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              illustration="records"
+              title="Sin envíos"
+              description="No hay registros que coincidan con los filtros actuales."
+              hint="Los envíos aparecen aquí tras sincronizar desde Capture o diligenciar en web."
+              action={{ label: 'Ver formularios', to: '/formularios' }}
+            />
+          ) : (
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Formulario</th>
                   <th>Estado</th>
-                  <th>Sync</th>
+                  <th>Sincronización</th>
                   <th>GPS</th>
                   <th>Fecha</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={5} className="muted">Sin registros</td></tr>
-                ) : filtered.map((s) => (
+                {filtered.map((s) => (
                   <tr
                     key={s.id}
                     className={selected?.id === s.id ? 'selected-row' : ''}
@@ -136,7 +157,7 @@ export function FormCollectionPage() {
                 <div><dt>ID</dt><dd><code>{selected.id.slice(0, 8)}…</code></dd></div>
                 <div><dt>Formulario</dt><dd>{selected.form?.name}</dd></div>
                 <div><dt>Versión</dt><dd>v{selected.formVersion}</dd></div>
-                <div><dt>Sync</dt><dd>{SYNC_LABELS[selected.syncStatus] ?? selected.syncStatus}</dd></div>
+                <div><dt>Sincronización</dt><dd>{SYNC_LABELS[selected.syncStatus] ?? selected.syncStatus}</dd></div>
                 <div><dt>Fecha</dt><dd>{formatFormDate(selected.createdAt)}</dd></div>
               </dl>
               {selected.gpsLocation ? (
@@ -153,6 +174,14 @@ export function FormCollectionPage() {
                   </div>
                 ))}
               </dl>
+              {selectedEntityLink ? (
+                <Link
+                  to={buildRecordExplorerPath(selectedEntityLink.entityType, selectedEntityLink.recordId)}
+                  className="btn btn-sm"
+                >
+                  {selectedEntityLink.label}
+                </Link>
+              ) : null}
               <Link to="/formularios/exportar" className="btn btn-sm">Exportar datos</Link>
             </>
           )}
@@ -178,4 +207,55 @@ function formatValue(val: unknown): string {
   if (Array.isArray(val)) return val.join(', ');
   if (typeof val === 'object') return JSON.stringify(val);
   return String(val);
+}
+
+interface SubmissionEntityLink {
+  entityType: UreRouteEntityType;
+  recordId: string;
+  label: string;
+}
+
+function extractEntityLinkFromSubmission(submission: FormSubmission): SubmissionEntityLink | null {
+  const ctx = submission.context as Record<string, unknown> | undefined;
+  const resolved = ctx?.resolvedEntity as { entityType?: string; entityId?: string } | undefined;
+  if (resolved?.entityType && resolved?.entityId) {
+    return mapEntityToLink(resolved.entityType, resolved.entityId);
+  }
+
+  const data = submission.data ?? {};
+  const producerId = readStringId(data, ['producerId', 'producer_id']);
+  if (producerId) {
+    return { entityType: 'producer', recordId: producerId, label: 'Ver expediente completo' };
+  }
+  const farmId = readStringId(data, ['farmId', 'farm_id', 'farmUnitId', 'farm_unit_id']);
+  if (farmId) {
+    return { entityType: 'farm', recordId: farmId, label: 'Ver expediente completo' };
+  }
+  const lotId = readStringId(data, ['lotId', 'lot_id', 'fieldLotId', 'field_lot_id']);
+  if (lotId) {
+    return { entityType: 'lot', recordId: lotId, label: 'Ver expediente completo' };
+  }
+  return null;
+}
+
+function readStringId(data: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = data[key];
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return null;
+}
+
+function mapEntityToLink(entityType: string, recordId: string): SubmissionEntityLink | null {
+  const normalized = entityType.trim().toLowerCase();
+  if (normalized === 'producer') {
+    return { entityType: 'producer', recordId, label: 'Ver expediente completo' };
+  }
+  if (normalized === 'farm' || normalized === 'farmunit') {
+    return { entityType: 'farm', recordId, label: 'Ver expediente completo' };
+  }
+  if (normalized === 'lot' || normalized === 'fieldlotprofile') {
+    return { entityType: 'lot', recordId, label: 'Ver expediente completo' };
+  }
+  return null;
 }

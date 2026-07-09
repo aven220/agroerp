@@ -76,7 +76,7 @@ export function MobileHome() {
 
       {pendingItems.length > 0 ? (
         <section className="mobile-home-section">
-          <h2 className="mobile-section-title">Pendientes de sync</h2>
+          <h2 className="mobile-section-title">Pendientes de sincronización</h2>
           <ul className="mobile-pending-list">
             {pendingItems.map((item) => (
               <li key={item.id} className="mobile-pending-item">

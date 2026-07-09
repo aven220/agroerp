@@ -2,6 +2,7 @@ import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/shared/infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '@/shared/presentation/decorators/current-user.decorator';
+import { assertEntityReadPermission } from '@/shared/application/entity-read-authorization';
 import { AgriculturalTimelineService } from '../application/agricultural-timeline.service';
 import { TimelineQueryService } from '../application/timeline-query.service';
 
@@ -22,7 +23,7 @@ export class AgriculturalTimelineController {
   @ApiQuery({ name: 'types', required: false, description: 'Comma-separated event types' })
   @ApiQuery({ name: 'limit', required: false })
   getTimeline(
-    @CurrentUser() user: { organizationId: string },
+    @CurrentUser() user: { organizationId: string; permissions?: string[] },
     @Param('entity') entity: string,
     @Param('id') id: string,
     @Query('from') from?: string,
@@ -30,6 +31,7 @@ export class AgriculturalTimelineController {
     @Query('types') types?: string,
     @Query('limit') limit?: string,
   ) {
+    assertEntityReadPermission(user, entity);
     const filter = this.queryService.parseFilter({ from, to, types, limit });
     return this.timeline.getTimeline(user.organizationId, entity, id, filter);
   }

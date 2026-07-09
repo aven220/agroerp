@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { LoadingState } from '../components/ux/LoadingState';
+import { useAuth } from '../context/AuthContext';
+import { buildRecordExplorerPath } from '../record-explorer/types';
 import {
   addProducerNote,
   getProducer,
@@ -26,6 +30,7 @@ type Tab = 'perfil' | 'contactos' | 'fincas' | 'certificaciones' | 'documentos' 
 export function ProducerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
   const [producer, setProducer] = useState<Producer | null>(null);
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
   const [tab, setTab] = useState<Tab>('perfil');
@@ -104,15 +109,60 @@ export function ProducerDetailPage() {
             <button type="button" className="btn" onClick={() => navigate('/productores')}>
               Volver
             </button>
+            {hasPermission('producer:read') && id ? (
+              <Link to={buildRecordExplorerPath('producer', id)} className="btn">
+                Expediente 360°
+              </Link>
+            ) : null}
             <button type="button" className="btn" onClick={() => setLifecycleOpen(true)}>
               Cambiar estado
             </button>
-            <Link to={`/productores/${id}/editar`} className="btn btn-primary">
-              Editar
-            </Link>
+            {hasPermission('producer:update') ? (
+              <Link to={`/productores/${id}/editar`} className="btn btn-primary">
+                Editar
+              </Link>
+            ) : null}
           </div>
         }
       />
+
+      <FlowProgress flowId="agricultural" currentStepId="producer" />
+
+      {id ? (
+        <FlowNextActions
+          title="Continuar registro agrícola"
+          subtitle="Complete el expediente territorial del productor."
+          actions={[
+            ...(hasPermission('farm:create')
+              ? [
+                  {
+                    label: 'Registrar finca',
+                    description: 'Asocie la primera unidad territorial',
+                    to: `/fincas/nueva?productor=${id}`,
+                    primary: true,
+                    icon: '🏡',
+                  },
+                ]
+              : []),
+            ...(hasPermission('producer:read')
+              ? [
+                  {
+                    label: 'Expediente 360°',
+                    description: 'Vista unificada del productor',
+                    to: buildRecordExplorerPath('producer', id),
+                    icon: '📂',
+                  },
+                ]
+              : []),
+            {
+              label: 'Ver indicadores',
+              description: 'Dashboard y métricas del módulo PRM',
+              to: '/productores/dashboard',
+              icon: '📊',
+            },
+          ]}
+        />
+      ) : null}
 
       {actionError ? <div className="alert alert-error">{actionError}</div> : null}
       <div className="detail-scores">

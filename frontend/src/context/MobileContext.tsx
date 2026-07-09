@@ -63,27 +63,47 @@ export function MobileProvider({ children }: { children: ReactNode }) {
     setPullRefreshing(false);
   }, []);
 
-  const value: MobileContextValue = {
-    isMobile,
-    isTablet,
-    isTouch,
-    moreOpen,
-    setMoreOpen,
-    syncOpen,
-    setSyncOpen,
-    captureOpen,
-    setCaptureOpen,
-    mobileTabs,
-    quickTiles,
-    online: offline.online,
-    pendingCount: offline.pendingCount,
-    queueItems: offline.items,
-    enqueueDraft: offline.enqueue,
-    updateQueueItem: offline.updateItem,
-    removeQueueItem: offline.removeItem,
-    pullRefreshing,
-    triggerPullRefresh,
-  };
+  const value = useMemo<MobileContextValue>(
+    () => ({
+      isMobile,
+      isTablet,
+      isTouch,
+      moreOpen,
+      setMoreOpen,
+      syncOpen,
+      setSyncOpen,
+      captureOpen,
+      setCaptureOpen,
+      mobileTabs,
+      quickTiles,
+      online: offline.online,
+      pendingCount: offline.pendingCount,
+      queueItems: offline.items,
+      enqueueDraft: offline.enqueue,
+      updateQueueItem: offline.updateItem,
+      removeQueueItem: offline.removeItem,
+      pullRefreshing,
+      triggerPullRefresh,
+    }),
+    [
+      isMobile,
+      isTablet,
+      isTouch,
+      moreOpen,
+      syncOpen,
+      captureOpen,
+      mobileTabs,
+      quickTiles,
+      offline.online,
+      offline.pendingCount,
+      offline.items,
+      offline.enqueue,
+      offline.updateItem,
+      offline.removeItem,
+      pullRefreshing,
+      triggerPullRefresh,
+    ],
+  );
 
   return <MobileContext.Provider value={value}>{children}</MobileContext.Provider>;
 }

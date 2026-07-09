@@ -278,6 +278,11 @@ export class AuthService {
         secret: this.config.getOrThrow('JWT_REFRESH_SECRET'),
       });
 
+      const session = await this.sessions.findActiveByRefreshToken(refreshToken);
+      if (!session || session.userId !== payload.sub) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
       const user = await this.prisma.user.findFirst({
         where: { id: payload.sub, deletedAt: null },
         include: {
@@ -294,8 +299,16 @@ export class AuthService {
       }
 
       const roles = user.userRoles.map((ur) => ur.role.slug);
-      return await this.buildAuthResponse(user, roles, { refreshToken });
-    } catch {
+      const response = await this.buildAuthResponse(user, roles);
+      await this.sessions.revoke(
+        session.organizationId,
+        session.id,
+        'token_rotation',
+        session.userId,
+      );
+      return response;
+    } catch (err) {
+      if (err instanceof UnauthorizedException) throw err;
       throw new UnauthorizedException('Invalid refresh token');
     }
   }

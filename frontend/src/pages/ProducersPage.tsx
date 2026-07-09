@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { DataTable } from '../components/ui/DataTable';
+import { EmptyState } from '../components/ui/EmptyState';
+import { useAuth } from '../context/AuthContext';
 import {
   deleteProducer,
   exportProducers,
@@ -25,6 +27,10 @@ const LIFECYCLE_LABELS: Record<string, string> = {
 
 export function ProducersPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission('producer:create');
+  const canUpdate = hasPermission('producer:update');
+  const canDelete = hasPermission('producer:delete');
   const [filters, setFilters] = useState<ProducerFilters>({ page: 1, limit: 25 });
   const [items, setItems] = useState<Producer[]>([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
@@ -42,20 +48,14 @@ export function ProducersPage() {
     });
   }, []);
 
-  const load = useCallback(async () => {
+  const loadList = useCallback(async () => {
     if (!hasItemsRef.current) setLoading(true);
     setError(null);
     try {
-      const [list, dash, segs] = await Promise.all([
-        listProducers(filters),
-        getProducerDashboard(),
-        listSegments(),
-      ]);
+      const list = await listProducers(filters);
       setItems(list.items);
       hasItemsRef.current = list.items.length > 0;
       setPagination(list.pagination);
-      setDashboard(dash);
-      setSegments(segs);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar');
     } finally {
@@ -63,11 +63,25 @@ export function ProducersPage() {
     }
   }, [filters]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const loadMeta = useCallback(async () => {
+    try {
+      const [dash, segs] = await Promise.all([getProducerDashboard(), listSegments()]);
+      setDashboard(dash);
+      setSegments(segs);
+    } catch {
+      /* KPIs opcionales — no bloquean la tabla */
+    }
+  }, []);
 
-  async function handleExport() {
+  useEffect(() => {
+    loadList();
+  }, [loadList]);
+
+  useEffect(() => {
+    loadMeta();
+  }, [loadMeta]);
+
+  const handleExport = useCallback(async () => {
     const result = await exportProducers(filters);
     const blob = new Blob([result.csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -76,15 +90,32 @@ export function ProducersPage() {
     a.download = `productores-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }
+  }, [filters]);
 
-  async function handleDelete(row: Producer) {
+  const handleDelete = useCallback(async (row: Producer) => {
     if (!confirm(`¿Archivar productor "${row.legalName}"?`)) return;
-    await deleteProducer(row.id);
-    load();
-  }
+    try {
+      await deleteProducer(row.id);
+      loadList();
+      getProducerDashboard().then(setDashboard).catch(() => {});
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo archivar');
+    }
+  }, [loadList]);
 
-  const serverFilters = (
+  const handleRowClick = useCallback((r: Producer) => {
+    navigate(`/productores/${r.id}`);
+  }, [navigate]);
+
+  const handlePageChange = useCallback((p: number) => {
+    setFilters((f) => ({ ...f, page: p }));
+  }, []);
+
+  const handlePageSizeChange = useCallback((limit: number) => {
+    setFilters((f) => ({ ...f, limit, page: 1 }));
+  }, []);
+
+  const serverFilters = useMemo(() => (
     <>
       <select
         className="ds-input edw-density-select"
@@ -134,13 +165,102 @@ export function ProducersPage() {
         aria-label="Filtrar por municipio"
       />
     </>
-  );
+  ), [filters.lifecycleStatus, filters.segmentId, filters.municipalityCode, segments]);
+
+  const columns = useMemo(() => [
+    {
+      key: 'code',
+      label: 'Código',
+      render: (r: Producer) => r.producerNumber,
+      sortable: true,
+    },
+    {
+      key: 'name',
+      label: 'Nombre',
+      render: (r: Producer) => r.legalName,
+      sortable: true,
+    },
+    {
+      key: 'doc',
+      label: 'Documento',
+      render: (r: Producer) => `${r.documentTypeCode} ${r.documentNumber}`,
+    },
+    {
+      key: 'muni',
+      label: 'Municipio',
+      render: (r: Producer) => r.municipalityCode ?? '—',
+    },
+    {
+      key: 'status',
+      label: 'Estado',
+      render: (r: Producer) => (
+        <span className={`badge badge-${r.lifecycleStatus}`}>
+          {LIFECYCLE_LABELS[r.lifecycleStatus] ?? r.lifecycleStatus}
+        </span>
+      ),
+    },
+    {
+      key: 'quality',
+      label: 'Calidad',
+      render: (r: Producer) => r.qualityScore,
+    },
+    {
+      key: 'activity',
+      label: 'Última actividad',
+      render: (r: Producer) =>
+        r.lastActivityAt
+          ? new Date(r.lastActivityAt).toLocaleDateString('es-CO')
+          : '—',
+    },
+    {
+      key: 'actions',
+      label: 'Acciones',
+      render: (r: Producer) => (
+        <div className="row-actions">
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/productores/${r.id}`);
+            }}
+          >
+            Ver
+          </button>
+          {canUpdate ? (
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/productores/${r.id}/editar`);
+              }}
+            >
+              Editar
+            </button>
+          ) : null}
+          {canDelete ? (
+            <button
+              type="button"
+              className="btn btn-sm btn-danger"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(r);
+              }}
+            >
+              Archivar
+            </button>
+          ) : null}
+        </div>
+      ),
+    },
+  ], [canUpdate, canDelete, navigate, handleDelete]);
 
   return (
     <>
       <Header
         title="Productores"
-        subtitle="Gestión de expedientes PRM"
+        subtitle="Registre y administre los productores de su organización"
         actions={
           <div className="row-actions">
             <Link to="/productores/dashboard" className="btn">
@@ -149,13 +269,15 @@ export function ProducersPage() {
             <Link to="/productores/mapa" className="btn">
               Mapa
             </Link>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => navigate('/productores/nuevo')}
-            >
-              + Nuevo productor
-            </button>
+            {canCreate ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => navigate('/productores/nuevo')}
+              >
+                + Nuevo productor
+              </button>
+            ) : null}
           </div>
         }
       />
@@ -171,11 +293,11 @@ export function ProducersPage() {
             <span className="kpi-value">{dashboard.kpis.active}</span>
           </div>
           <div className="kpi-card">
-            <span className="kpi-label">Pend. aprobación</span>
+            <span className="kpi-label">Pendientes de aprobación</span>
             <span className="kpi-value">{dashboard.kpis.pendingApproval}</span>
           </div>
           <div className="kpi-card">
-            <span className="kpi-label">Score calidad</span>
+            <span className="kpi-label">Índice de calidad</span>
             <span className="kpi-value">{dashboard.kpis.avgQualityScore}</span>
           </div>
         </div>
@@ -183,6 +305,16 @@ export function ProducersPage() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
+      {!loading && items.length === 0 && !error ? (
+        <EmptyState
+          illustration="data"
+          title="Aún no hay productores registrados"
+          description="Los productores son la base de su operación agrícola. Registre el primero para vincular fincas, lotes y formularios de campo."
+          hint="También puede importar productores desde un formulario de captura en dispositivos móviles."
+          action={canCreate ? { label: 'Registrar productor', to: '/productores/nuevo' } : undefined}
+          secondaryAction={{ label: 'Ver mapa', to: '/productores/mapa' }}
+        />
+      ) : (
       <DataTable<Producer>
         gridId="producers"
         data={items}
@@ -191,97 +323,16 @@ export function ProducersPage() {
         totalCount={pagination.total}
         page={pagination.page}
         pageSize={filters.limit ?? 25}
-        onPageChange={(p) => setFilters((f) => ({ ...f, page: p }))}
-        onPageSizeChange={(limit) => setFilters((f) => ({ ...f, limit, page: 1 }))}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
         onQuickSearchChange={handleQuickSearchChange}
         onExport={handleExport}
-        onRowClick={(r) => navigate(`/productores/${r.id}`)}
+        onRowClick={handleRowClick}
         toolbar={serverFilters}
-        columns={[
-          {
-            key: 'code',
-            label: 'Código',
-            render: (r) => r.producerNumber,
-            sortable: true,
-          },
-          {
-            key: 'name',
-            label: 'Nombre',
-            render: (r) => r.legalName,
-            sortable: true,
-          },
-          {
-            key: 'doc',
-            label: 'Documento',
-            render: (r) => `${r.documentTypeCode} ${r.documentNumber}`,
-          },
-          {
-            key: 'muni',
-            label: 'Municipio',
-            render: (r) => r.municipalityCode ?? '—',
-          },
-          {
-            key: 'status',
-            label: 'Estado',
-            render: (r) => (
-              <span className={`badge badge-${r.lifecycleStatus}`}>
-                {LIFECYCLE_LABELS[r.lifecycleStatus] ?? r.lifecycleStatus}
-              </span>
-            ),
-          },
-          {
-            key: 'quality',
-            label: 'Calidad',
-            render: (r) => r.qualityScore,
-          },
-          {
-            key: 'activity',
-            label: 'Última actividad',
-            render: (r) =>
-              r.lastActivityAt
-                ? new Date(r.lastActivityAt).toLocaleDateString('es-CO')
-                : '—',
-          },
-          {
-            key: 'actions',
-            label: 'Acciones',
-            render: (r) => (
-              <div className="row-actions">
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/productores/${r.id}`);
-                  }}
-                >
-                  Ver
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/productores/${r.id}/editar`);
-                  }}
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-danger"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(r);
-                  }}
-                >
-                  Archivar
-                </button>
-              </div>
-            ),
-          },
-        ]}
+        columns={columns}
+        emptyMessage="No se encontraron productores con los filtros aplicados."
       />
+      )}
     </>
   );
 }

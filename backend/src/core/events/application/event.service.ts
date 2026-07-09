@@ -25,8 +25,12 @@ export class EventService implements OnModuleInit {
     return stored;
   }
 
-  async getByAggregate(aggregateType: string, aggregateId: string) {
-    return this.eventStore.getByAggregate(aggregateType, aggregateId);
+  async getByAggregate(
+    aggregateType: string,
+    aggregateId: string,
+    organizationId: string,
+  ) {
+    return this.eventStore.getByAggregate(aggregateType, aggregateId, organizationId);
   }
 
   async getSince(organizationId: string, cursor: bigint, limit?: number) {

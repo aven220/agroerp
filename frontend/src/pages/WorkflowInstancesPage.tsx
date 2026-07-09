@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { LoadingState } from '../components/ux/LoadingState';
 import {
   cancelWorkflowInstance,
@@ -21,6 +22,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export function WorkflowInstancesPage() {
+  const [searchParams] = useSearchParams();
   const [items, setItems] = useState<WorkflowInstance[]>([]);
   const [status, setStatus] = useState('');
   const [selected, setSelected] = useState<WorkflowInstance | null>(null);
@@ -37,6 +39,14 @@ export function WorkflowInstancesPage() {
   }, [status]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const instanceId = searchParams.get('id');
+    if (instanceId) {
+      openDetail(instanceId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- abrir detalle desde URL EFX
+  }, [searchParams]);
 
   async function openDetail(id: string) {
     const [inst, hist] = await Promise.all([
@@ -80,6 +90,8 @@ export function WorkflowInstancesPage() {
           </div>
         }
       />
+
+      <FlowProgress flowId="workflow" currentStepId="detail" />
 
       <div className="filter-bar">
         <select value={status} onChange={(e) => setStatus(e.target.value)}>

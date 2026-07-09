@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { LoadingState } from '../components/ux/LoadingState';
+import { useAuth } from '../context/AuthContext';
 import {
   cloneWorkflowDefinition,
   deactivateWorkflowDefinition,
@@ -21,6 +22,12 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function WorkflowsPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canImport = hasPermission('workflow:import');
+  const canCreate = hasPermission('workflow:create');
+  const canUpdate = hasPermission('workflow:update');
+  const canPublish = hasPermission('workflow:publish');
+  const canAdmin = hasPermission('workflow:admin');
   const [items, setItems] = useState<WorkflowDefinition[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,18 +103,22 @@ export function WorkflowsPage() {
             <Link to="/procesos/dashboard" className="btn">Dashboard</Link>
             <Link to="/procesos/bandeja" className="btn">Bandeja</Link>
             <Link to="/procesos/instancias" className="btn">Instancias</Link>
-            <label className="btn">
-              {importing ? 'Importando...' : 'Importar'}
-              <input
-                type="file"
-                accept=".json"
-                hidden
-                onChange={(e) => e.target.files?.[0] && handleImport(e.target.files[0])}
-              />
-            </label>
-            <button type="button" className="btn btn-primary" onClick={() => navigate('/procesos/nuevo')}>
-              + Nuevo proceso
-            </button>
+            {canImport ? (
+              <label className="btn">
+                {importing ? 'Importando...' : 'Importar'}
+                <input
+                  type="file"
+                  accept=".json"
+                  hidden
+                  onChange={(e) => e.target.files?.[0] && handleImport(e.target.files[0])}
+                />
+              </label>
+            ) : null}
+            {canCreate ? (
+              <button type="button" className="btn btn-primary" onClick={() => navigate('/procesos/nuevo')}>
+                + Nuevo proceso
+              </button>
+            ) : null}
           </div>
         }
       />
@@ -155,15 +166,19 @@ export function WorkflowsPage() {
                     <td>{row.active ? 'Sí' : 'No'}</td>
                     <td>
                       <div className="row-actions">
-                        <Link to={`/procesos/${row.id}/disenar`} className="btn btn-sm">Diseñar</Link>
-                        {latest?.status === 'draft' && (
+                        {canUpdate ? (
+                          <Link to={`/procesos/${row.id}/disenar`} className="btn btn-sm">Diseñar</Link>
+                        ) : null}
+                        {latest?.status === 'draft' && canPublish ? (
                           <button type="button" className="btn btn-sm" onClick={() => handlePublish(row)}>Publicar</button>
-                        )}
-                        <button type="button" className="btn btn-sm" onClick={() => handleClone(row)}>Clonar</button>
+                        ) : null}
+                        {canCreate ? (
+                          <button type="button" className="btn btn-sm" onClick={() => handleClone(row)}>Clonar</button>
+                        ) : null}
                         <button type="button" className="btn btn-sm" onClick={() => handleExport(row)}>Exportar</button>
-                        {row.active && (
+                        {row.active && canAdmin ? (
                           <button type="button" className="btn btn-sm btn-danger" onClick={() => handleDeactivate(row)}>Desactivar</button>
-                        )}
+                        ) : null}
                       </div>
                     </td>
                   </tr>

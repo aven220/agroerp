@@ -161,7 +161,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const expandGroup = useCallback((id: NavCategoryId) => {
-    setCollapsedGroups((prev) => ({ ...prev, [id]: false }));
+    setCollapsedGroups((prev) => {
+      if (prev[id] === false) return prev;
+      return { ...prev, [id]: false };
+    });
   }, []);
 
   const addFavorite = useCallback((item: NavItem) => {
@@ -195,7 +198,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const recordVisit = useCallback((pathname: string) => {
     const match = findNavItemByPath(pathname) ?? ALL_NAV_ITEMS.find((i) => i.to === pathname);
     if (!match || match.to === '/') return;
-    setNavHistory((prev) => [match, ...prev.filter((h) => h.id !== match.id)].slice(0, 15));
+    setNavHistory((prev) => {
+      if (prev[0]?.id === match.id) return prev;
+      return [match, ...prev.filter((h) => h.id !== match.id)].slice(0, 15);
+    });
   }, []);
 
   useEffect(() => {

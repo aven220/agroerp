@@ -19,6 +19,7 @@ export class EventsProvider implements TimelineProvider {
     const domainEvents = await this.events.getByAggregate(
       context.aggregateType,
       context.entityId,
+      context.organizationId,
     );
 
     return domainEvents

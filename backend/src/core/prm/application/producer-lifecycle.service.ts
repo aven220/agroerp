@@ -44,29 +44,33 @@ export class ProducerLifecycleService {
       );
     }
 
-    const updated = await this.prisma.producer.update({
-      where: { id: producerId },
-      data: {
-        lifecycleStatus: toStatus,
-        ...(toStatus === 'active' && !producer.activatedAt
-          ? { activatedAt: new Date() }
-          : {}),
-        lastActivityAt: new Date(),
-        updatedBy: userId,
-        version: { increment: 1 },
-      },
-    });
+    const { updated, lifecycleEvent } = await this.prisma.$transaction(async (tx) => {
+      const updatedProducer = await tx.producer.update({
+        where: { id: producerId },
+        data: {
+          lifecycleStatus: toStatus,
+          ...(toStatus === 'active' && !producer.activatedAt
+            ? { activatedAt: new Date() }
+            : {}),
+          lastActivityAt: new Date(),
+          updatedBy: userId,
+          version: { increment: 1 },
+        },
+      });
 
-    const lifecycleEvent = await this.prisma.producerLifecycleEvent.create({
-      data: {
-        organizationId,
-        producerId,
-        fromStatus,
-        toStatus,
-        reasonCode: dto.reasonCode,
-        reasonNotes: dto.reasonNotes,
-        actorId: userId,
-      },
+      const lifecycleEvent = await tx.producerLifecycleEvent.create({
+        data: {
+          organizationId,
+          producerId,
+          fromStatus,
+          toStatus,
+          reasonCode: dto.reasonCode,
+          reasonNotes: dto.reasonNotes,
+          actorId: userId,
+        },
+      });
+
+      return { updated: updatedProducer, lifecycleEvent };
     });
 
     await this.core.emitProducerLifecycleChanged(

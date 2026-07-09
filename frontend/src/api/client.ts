@@ -17,7 +17,10 @@ function getToken(): string | null {
 
 export function setToken(token: string | null) {
   if (token) localStorage.setItem('agroerp_token', token);
-  else localStorage.removeItem('agroerp_token');
+  else {
+    localStorage.removeItem('agroerp_token');
+    localStorage.removeItem('agroerp_refresh');
+  }
 }
 
 export async function apiRequest<T>(

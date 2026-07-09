@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -405,19 +406,31 @@ export class ServiceAccountsController {
 export class UserScopesController {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async assertUserInOrg(organizationId: string, userId: string) {
+    const member = await this.prisma.user.findFirst({
+      where: { id: userId, organizationId, deletedAt: null },
+    });
+    if (!member) throw new NotFoundException('User not found');
+  }
+
   @Get()
   @RequirePermissions('user:read')
-  list(@Param('userId') userId: string) {
+  async list(
+    @CurrentUser() user: { organizationId: string },
+    @Param('userId') userId: string,
+  ) {
+    await this.assertUserInOrg(user.organizationId, userId);
     return this.prisma.userScope.findMany({ where: { userId } });
   }
 
   @Post()
   @RequirePermissions('user:update')
-  assign(
-    @CurrentUser() user: { id: string },
+  async assign(
+    @CurrentUser() user: { id: string; organizationId: string },
     @Param('userId') userId: string,
     @Body() dto: AssignUserScopeDto,
   ) {
+    await this.assertUserInOrg(user.organizationId, userId);
     return this.prisma.userScope.create({
       data: {
         userId,
@@ -431,7 +444,12 @@ export class UserScopesController {
 
   @Delete(':scopeId')
   @RequirePermissions('user:update')
-  remove(@Param('userId') userId: string, @Param('scopeId') scopeId: string) {
+  async remove(
+    @CurrentUser() user: { organizationId: string },
+    @Param('userId') userId: string,
+    @Param('scopeId') scopeId: string,
+  ) {
+    await this.assertUserInOrg(user.organizationId, userId);
     return this.prisma.userScope.deleteMany({ where: { id: scopeId, userId } });
   }
 }

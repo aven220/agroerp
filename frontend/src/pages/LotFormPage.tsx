@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { createLot, getEligibleFtipLots, getLot, setLotGeometry, updateLot } from '../api/fmdt';
 import { listFarms } from '../api/ftip';
 import { listProducers } from '../api/prm';
@@ -37,6 +38,8 @@ const emptyForm: LotFormState = {
 export function LotFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const presetFarmId = searchParams.get('finca') ?? '';
   const isEdit = Boolean(id);
   const [form, setForm] = useState<LotFormState>(emptyForm);
   const [version, setVersion] = useState(1);
@@ -67,6 +70,12 @@ export function LotFormPage() {
       setEligibleLots((r.items as typeof eligibleLots) ?? []),
     );
   }, [farmFilter]);
+
+  useEffect(() => {
+    if (!isEdit && presetFarmId) {
+      setFarmFilter(presetFarmId);
+    }
+  }, [isEdit, presetFarmId]);
 
   useEffect(() => {
     if (!id) return;
@@ -158,6 +167,8 @@ export function LotFormPage() {
           </button>
         }
       />
+
+      {!isEdit ? <FlowProgress flowId="agricultural" currentStepId="lot" /> : null}
 
       {error && <div className="alert alert-error">{error}</div>}
 
