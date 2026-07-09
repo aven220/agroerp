@@ -25,6 +25,13 @@ const LIFECYCLE_LABELS: Record<string, string> = {
   archived: 'Archivado',
 };
 
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  CC: 'Cédula',
+  CE: 'Cédula extranjería',
+  NIT: 'NIT',
+  PAS: 'Pasaporte',
+};
+
 export function ProducersPage() {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
@@ -183,7 +190,10 @@ export function ProducersPage() {
     {
       key: 'doc',
       label: 'Documento',
-      render: (r: Producer) => `${r.documentTypeCode} ${r.documentNumber}`,
+      render: (r: Producer) => {
+        const docType = DOCUMENT_TYPE_LABELS[r.documentTypeCode] ?? r.documentTypeCode;
+        return `${docType} ${r.documentNumber}`;
+      },
     },
     {
       key: 'muni',
@@ -201,8 +211,8 @@ export function ProducersPage() {
     },
     {
       key: 'quality',
-      label: 'Calidad',
-      render: (r: Producer) => r.qualityScore,
+      label: 'Índice de calidad',
+      render: (r: Producer) => (r.qualityScore != null ? r.qualityScore : '—'),
     },
     {
       key: 'activity',

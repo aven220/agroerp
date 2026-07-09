@@ -42,7 +42,7 @@ export function EscmCustomersPage() {
       <Header
         title="Clientes comerciales"
         subtitle="Individuales, empresas, cooperativas, exportadores y más"
-        actions={<Link to="/comercial" className="btn">ESCM</Link>}
+        actions={<Link to="/comercial" className="btn">Comercial</Link>}
       />
       {error ? <section className="panel error-panel">{error}</section> : null}
       <section className="panel">

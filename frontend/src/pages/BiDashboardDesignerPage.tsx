@@ -119,7 +119,7 @@ export function BiDashboardDesignerPage() {
     <>
       <Header
         title={isNew ? 'Constructor de Dashboards' : `Editar: ${name}`}
-        subtitle="Diseñador drag & drop EBIAP"
+        subtitle="Diseñe tableros arrastrando widgets"
         actions={
           <div className="row-actions">
             <button type="button" className="btn" onClick={() => navigate('/bi/dashboards')}>Cancelar</button>

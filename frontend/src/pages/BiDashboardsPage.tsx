@@ -54,7 +54,7 @@ export function BiDashboardsPage() {
     <>
       <Header
         title="Administrador de Dashboards"
-        subtitle="EBIAP — visualización empresarial"
+        subtitle="Tableros y visualización de indicadores"
         actions={
           <div className="row-actions">
             <Link to="/bi" className="btn">Centro BI</Link>

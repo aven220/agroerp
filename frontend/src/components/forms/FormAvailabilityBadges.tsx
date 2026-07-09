@@ -25,7 +25,7 @@ export function FormAvailabilityBadges({ form, showSyncCheck, inMobileBootstrap 
         📱 {ANDROID_AVAILABILITY_LABELS[android]}
         {showSyncCheck && inMobileBootstrap !== undefined ? (
           <span className="form-sync-indicator">
-            {inMobileBootstrap ? ' · en paquete móvil' : ' · pendiente de descarga'}
+            {inMobileBootstrap ? ' · listo en celular' : ' · pendiente en celular'}
           </span>
         ) : null}
       </span>

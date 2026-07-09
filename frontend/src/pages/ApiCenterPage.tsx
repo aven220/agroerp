@@ -9,13 +9,13 @@ export function ApiCenterPage() {
 
   useEffect(() => { getApiCenter().then(setCenter); }, []);
 
-  if (!center) return <LoadingState variant="dashboard" message="Cargando Centro de APIs..." />;
+  if (!center) return <LoadingState variant="dashboard" message="Cargando APIs..." />;
 
   return (
     <>
       <Header
-        title="Centro de APIs — EAMIP"
-        subtitle="Gestión empresarial de APIs e integraciones"
+        title="Gestión de APIs"
+        subtitle="Catálogo de servicios, clientes y métricas de consumo"
         actions={
           <div className="row-actions">
             <Link to="/apis/catalogo" className="btn btn-primary">Catálogo</Link>

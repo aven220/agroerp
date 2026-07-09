@@ -11,7 +11,7 @@ export function EscmAuditPage() {
 
   return (
     <>
-      <Header title="Auditoría ESCM" subtitle="Creación, edición, precios y condiciones" actions={<Link to="/comercial" className="btn">ESCM</Link>} />
+      <Header title="Auditoría comercial" subtitle="Creación, edición, precios y condiciones" actions={<Link to="/comercial" className="btn">Comercial</Link>} />
       <section className="panel">
         <table className="data-table">
           <thead><tr><th>Entidad</th><th>Clave</th><th>Acción</th><th>Usuario</th><th>Fecha</th><th>Detalle</th></tr></thead>

@@ -11,7 +11,7 @@ export function EimsAuditPage() {
 
   return (
     <>
-      <Header title="Auditoría EIMS" subtitle="Creación, edición y configuración" actions={<Link to="/inventario" className="btn">EIMS</Link>} />
+      <Header title="Auditoría de inventario" subtitle="Creación, edición y configuración" actions={<Link to="/inventario" className="btn">Inventario</Link>} />
       <section className="panel">
         <table className="data-table">
           <thead><tr><th>Entidad</th><th>Clave</th><th>Acción</th><th>Usuario</th><th>Fecha</th></tr></thead>

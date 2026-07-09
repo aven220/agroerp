@@ -36,7 +36,7 @@ export function EphpCenterPage() {
 
   return (
     <>
-      <Header title="Centro de Sanidad Vegetal" subtitle="Sprint 4 — Fitosanidad" actions={EPHP_LINKS} />
+      <Header title="Centro de Sanidad Vegetal" subtitle="Monitoreo de plagas, enfermedades y tratamientos" actions={EPHP_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Plagas cat.</span><span className="kpi-value">{String(indicators?.pestCatalog ?? '—')}</span></div>
         <div className="kpi-card"><span className="kpi-label">Enfermedades</span><span className="kpi-value">{String(indicators?.diseaseCatalog ?? '—')}</span></div>

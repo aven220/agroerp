@@ -17,6 +17,13 @@ import {
 const STATE_TYPES = ['initial', 'intermediate', 'final', 'cancelled'] as const;
 const GATEWAY_TYPES = ['none', 'exclusive', 'parallel', 'inclusive'] as const;
 
+const GATEWAY_TYPE_LABELS: Record<string, string> = {
+  none: 'Sin bifurcación',
+  exclusive: 'Decisión (una ruta)',
+  parallel: 'Rutas en paralelo',
+  inclusive: 'Decisión (varias rutas)',
+};
+
 export function WorkflowDesignerPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -136,8 +143,8 @@ export function WorkflowDesignerPage() {
   return (
     <>
       <Header
-        title={isNew ? 'Nuevo proceso BPM' : `Diseñador — ${name}`}
-        subtitle="Estados · transiciones · gateways · reglas"
+        title={isNew ? 'Nuevo proceso' : `Diseñar — ${name}`}
+        subtitle="Defina etapas, aprobaciones y reglas del flujo de trabajo"
         actions={
           <div className="row-actions">
             <button type="button" className="btn" onClick={() => navigate('/procesos')}>Volver</button>
@@ -158,7 +165,7 @@ export function WorkflowDesignerPage() {
 
       {isNew && (
         <div className="panel form-row">
-          <input placeholder="workflow_key" value={workflowKey} onChange={(e) => setWorkflowKey(e.target.value)} />
+          <input placeholder="Código interno (opcional, se genera si se deja vacío)" value={workflowKey} onChange={(e) => setWorkflowKey(e.target.value)} aria-label="Código interno del proceso" />
           <input placeholder="Nombre del proceso" value={name} onChange={(e) => setName(e.target.value)} />
           <select value={category} onChange={(e) => setCategory(e.target.value)}>
             {PROCESS_CATEGORIES.map((c) => (
@@ -182,9 +189,8 @@ export function WorkflowDesignerPage() {
                 >
                   <div className="bpm-node-type">{STATE_TYPE_LABELS[state.type]}</div>
                   <strong>{state.name}</strong>
-                  <code>{state.key}</code>
                   {state.gatewayType && state.gatewayType !== 'none' && (
-                    <span className="bpm-gateway">{state.gatewayType}</span>
+                    <span className="bpm-gateway">{GATEWAY_TYPE_LABELS[state.gatewayType] ?? state.gatewayType}</span>
                   )}
                   {state.slaHours && <span className="bpm-sla">SLA {state.slaHours}h</span>}
                   {outgoing.length > 0 && (
@@ -220,28 +226,31 @@ export function WorkflowDesignerPage() {
                 className={`designer-field ${selectedState === s.key ? 'selected' : ''}`}
                 onClick={() => setSelectedState(s.key)}
               >
-                <strong>{s.name}</strong> <code>{s.key}</code> — {STATE_TYPE_LABELS[s.type]}
+                <strong>{s.name}</strong> — {STATE_TYPE_LABELS[s.type]}
               </div>
             ))}
           </section>
           <aside className="designer-inspector panel">
             {stateObj ? (
               <>
-                <h3>Estado: {stateObj.key}</h3>
-                <label>Nombre<input value={stateObj.name} onChange={(e) => updateState(stateObj.key, { name: e.target.value })} /></label>
-                <label>Clave<input value={stateObj.key} onChange={(e) => updateState(stateObj.key, { key: e.target.value })} /></label>
-                <label>Tipo
+                <h3>Estado: {stateObj.name}</h3>
+                <label>Nombre visible<input value={stateObj.name} onChange={(e) => updateState(stateObj.key, { name: e.target.value })} /></label>
+                <details>
+                  <summary>Código interno (avanzado)</summary>
+                  <label style={{ display: 'block', marginTop: '0.5rem' }}>Código<input value={stateObj.key} onChange={(e) => updateState(stateObj.key, { key: e.target.value })} /></label>
+                </details>
+                <label>Tipo de etapa
                   <select value={stateObj.type} onChange={(e) => updateState(stateObj.key, { type: e.target.value as WorkflowStateDefinition['type'] })}>
                     {STATE_TYPES.map((t) => <option key={t} value={t}>{STATE_TYPE_LABELS[t]}</option>)}
                   </select>
                 </label>
-                <label>Gateway
+                <label>Tipo de decisión
                   <select value={stateObj.gatewayType ?? 'none'} onChange={(e) => updateState(stateObj.key, { gatewayType: e.target.value as WorkflowStateDefinition['gatewayType'] })}>
-                    {GATEWAY_TYPES.map((g) => <option key={g} value={g}>{g}</option>)}
+                    {GATEWAY_TYPES.map((g) => <option key={g} value={g}>{GATEWAY_TYPE_LABELS[g] ?? g}</option>)}
                   </select>
                 </label>
-                <label>SLA (horas)<input type="number" value={stateObj.slaHours ?? ''} onChange={(e) => updateState(stateObj.key, { slaHours: Number(e.target.value) || undefined })} /></label>
-                <label>Subproceso<input value={stateObj.subprocessKey ?? ''} onChange={(e) => updateState(stateObj.key, { subprocessKey: e.target.value || undefined })} /></label>
+                <label>Plazo máximo (horas)<input type="number" value={stateObj.slaHours ?? ''} onChange={(e) => updateState(stateObj.key, { slaHours: Number(e.target.value) || undefined })} /></label>
+                <label>Subproceso vinculado<input value={stateObj.subprocessKey ?? ''} onChange={(e) => updateState(stateObj.key, { subprocessKey: e.target.value || undefined })} placeholder="Opcional" /></label>
                 <button type="button" className="btn btn-sm btn-danger" onClick={() => removeState(stateObj.key)}>Eliminar</button>
               </>
             ) : (
@@ -263,16 +272,19 @@ export function WorkflowDesignerPage() {
                 className={`designer-field ${selectedTransition === t.key ? 'selected' : ''}`}
                 onClick={() => setSelectedTransition(t.key)}
               >
-                <strong>{t.name}</strong> ({t.from} → {t.to})
+                <strong>{t.name}</strong> ({schema.states.find((s) => s.key === t.from)?.name ?? t.from} → {schema.states.find((s) => s.key === t.to)?.name ?? t.to})
               </div>
             ))}
           </section>
           <aside className="designer-inspector panel">
             {transitionObj ? (
               <>
-                <h3>Transición: {transitionObj.key}</h3>
-                <label>Nombre<input value={transitionObj.name} onChange={(e) => updateTransition(transitionObj.key, { name: e.target.value })} /></label>
-                <label>Clave<input value={transitionObj.key} onChange={(e) => updateTransition(transitionObj.key, { key: e.target.value })} /></label>
+                <h3>Transición: {transitionObj.name}</h3>
+                <label>Nombre visible<input value={transitionObj.name} onChange={(e) => updateTransition(transitionObj.key, { name: e.target.value })} /></label>
+                <details>
+                  <summary>Código interno (avanzado)</summary>
+                  <label style={{ display: 'block', marginTop: '0.5rem' }}>Código<input value={transitionObj.key} onChange={(e) => updateTransition(transitionObj.key, { key: e.target.value })} /></label>
+                </details>
                 <label>Desde
                   <select value={transitionObj.from} onChange={(e) => updateTransition(transitionObj.key, { from: e.target.value })}>
                     <option value="*">* (cualquiera)</option>
@@ -284,8 +296,8 @@ export function WorkflowDesignerPage() {
                     {schema.states.map((s) => <option key={s.key} value={s.key}>{s.name}</option>)}
                   </select>
                 </label>
-                <label>Permisos (coma)<input value={transitionObj.permissions?.join(', ') ?? ''} onChange={(e) => updateTransition(transitionObj.key, { permissions: e.target.value.split(',').map((p) => p.trim()).filter(Boolean) })} /></label>
-                <label>SLA tarea (h)<input type="number" value={transitionObj.dueInHours ?? ''} onChange={(e) => updateTransition(transitionObj.key, { dueInHours: Number(e.target.value) || undefined })} /></label>
+                <label>Quién puede ejecutar (roles, separados por coma)<input value={transitionObj.permissions?.join(', ') ?? ''} onChange={(e) => updateTransition(transitionObj.key, { permissions: e.target.value.split(',').map((p) => p.trim()).filter(Boolean) })} placeholder="Opcional" /></label>
+                <label>Plazo de tarea (horas)<input type="number" value={transitionObj.dueInHours ?? ''} onChange={(e) => updateTransition(transitionObj.key, { dueInHours: Number(e.target.value) || undefined })} /></label>
                 <label><input type="checkbox" checked={transitionObj.requirements?.comment ?? false} onChange={(e) => updateTransition(transitionObj.key, { requirements: { ...transitionObj.requirements, comment: e.target.checked } })} /> Requiere comentario</label>
                 <button type="button" className="btn btn-sm btn-danger" onClick={() => removeTransition(transitionObj.key)}>Eliminar</button>
               </>
@@ -298,9 +310,9 @@ export function WorkflowDesignerPage() {
 
       {tab === 'rules' && (
         <div className="panel">
-          <p>Reglas globales configurables en el esquema JSON del proceso.</p>
+          <p>Reglas avanzadas del proceso. Para configuraciones complejas, use importación desde archivo o contacte al administrador.</p>
           <pre className="code-block">{JSON.stringify(schema.rules ?? [], null, 2)}</pre>
-          <p className="text-muted">Use el API o importación JSON para reglas avanzadas (condiciones por rol, datos, eventos).</p>
+          <p className="text-muted">Las reglas permiten condiciones por rol, datos del formulario o eventos del negocio.</p>
         </div>
       )}
     </>

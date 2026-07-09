@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { FlowProgress } from '../components/flow/FlowProgress';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { LoadingState } from '../components/ux/LoadingState';
 import {
   cancelWorkflowInstance,
@@ -13,6 +14,8 @@ import {
   type WorkflowHistoryEntry,
   type WorkflowInstance,
 } from '../api/workflows';
+import { labelWorkflowStep } from '../lib/humanizeCopy';
+import { labelWorkflowStatus } from '../lib/userLabels';
 
 const STATUS_LABELS: Record<string, string> = {
   active: 'Activo',
@@ -111,8 +114,8 @@ export function WorkflowInstancesPage() {
               <thead>
                 <tr>
                   <th>Proceso</th>
-                  <th>Estado actual</th>
-                  <th>Status</th>
+                  <th>Paso actual</th>
+                  <th>Situación</th>
                   <th>Inicio</th>
                   <th></th>
                 </tr>
@@ -121,10 +124,9 @@ export function WorkflowInstancesPage() {
                 {items.map((row) => (
                   <tr key={row.id} className={selected?.id === row.id ? 'selected-row' : ''}>
                     <td>
-                      <strong>{row.workflowDefinition?.name ?? row.id.slice(0, 8)}</strong>
-                      <div className="text-muted">{row.workflowDefinition?.workflowKey}</div>
+                      <strong>{row.workflowDefinition?.name ?? 'Solicitud'}</strong>
                     </td>
-                    <td><code>{row.currentState}</code></td>
+                    <td>{labelWorkflowStep(row.currentState)}</td>
                     <td><span className={`badge badge-${row.status}`}>{STATUS_LABELS[row.status] ?? row.status}</span></td>
                     <td>{new Date(row.startedAt).toLocaleString()}</td>
                     <td>
@@ -140,14 +142,55 @@ export function WorkflowInstancesPage() {
         {selected && (
           <aside className="panel detail-panel">
             <h3>{selected.workflowDefinition?.name}</h3>
-            <p>Estado: <code>{selected.currentState}</code></p>
-            <p>Status: {STATUS_LABELS[selected.status] ?? selected.status}</p>
+            <p>Estado actual: <strong>{labelWorkflowStep(selected.currentState)}</strong></p>
+            <p>Situación: {STATUS_LABELS[selected.status] ?? selected.status}</p>
+
+            <FlowNextActions
+              title="Continuar el proceso"
+              subtitle={
+                selected.status === 'completed'
+                  ? 'Esta solicitud finalizó. Revise el historial o atienda la siguiente tarea.'
+                  : 'Gestione esta instancia o vuelva a la bandeja de tareas.'
+              }
+              actions={[
+                ...(selected.status === 'active'
+                  ? [
+                      {
+                        label: 'Ir a bandeja',
+                        description: 'Atienda tareas pendientes de aprobación',
+                        to: '/procesos/bandeja',
+                        primary: true,
+                        icon: '📥',
+                      },
+                    ]
+                  : []),
+                ...(selected.status === 'completed'
+                  ? [
+                      {
+                        label: 'Siguiente tarea',
+                        description: 'Vuelva a la bandeja de aprobaciones',
+                        to: '/procesos/bandeja',
+                        primary: true,
+                        icon: '→',
+                      },
+                    ]
+                  : []),
+                {
+                  label: 'Ver catálogo de procesos',
+                  description: 'Consulte definiciones y versiones',
+                  to: '/procesos',
+                  icon: '📋',
+                },
+              ]}
+              className="flow-next-actions-inline"
+            />
+
             {selected.assignments && selected.assignments.length > 0 && (
               <div>
                 <h4>Asignaciones pendientes</h4>
                 <ul>
                   {selected.assignments.map((a) => (
-                    <li key={a.id}>{a.stateKey} — {a.status}</li>
+                    <li key={a.id}>{labelWorkflowStep(a.stateKey)} — {labelWorkflowStatus(a.status)}</li>
                   ))}
                 </ul>
               </div>

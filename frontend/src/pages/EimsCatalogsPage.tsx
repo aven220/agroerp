@@ -17,13 +17,13 @@ export function EimsCatalogsPage() {
 
   return (
     <>
-      <Header title="Catálogos de inventario" subtitle="Tipos, categorías, UOM, motivos y más" actions={<Link to="/inventario" className="btn">EIMS</Link>} />
+      <Header title="Catálogos de inventario" subtitle="Tipos, categorías, UOM, motivos y más" actions={<Link to="/inventario" className="btn">Inventario</Link>} />
       <section className="panel">
         <select value={catalogKey} onChange={(e) => setCatalogKey(e.target.value)}>
           {keys.map((k) => <option key={k} value={k}>{k}</option>)}
         </select>
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <input placeholder="entryKey" value={form.entryKey} onChange={(e) => setForm({ ...form, entryKey: e.target.value })} />
+          <input placeholder="Código de catálogo" value={form.entryKey} onChange={(e) => setForm({ ...form, entryKey: e.target.value })} />
           <input placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <input placeholder="Código" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
           <button className="btn" onClick={() => upsertEimsCatalog({ catalogKey, ...form }).then(reload)}>Guardar</button>

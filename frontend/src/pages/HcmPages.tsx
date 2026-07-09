@@ -11,7 +11,7 @@ export function HcmCenterPage() {
   return (
     <>
       <Header
-        title="Centro de Talento Humano — HCM"
+        title="Centro de recursos humanos"
         subtitle="Empleados, organización y expedientes"
         actions={
           <div className="row-actions">
@@ -62,7 +62,7 @@ export function HcmOrgPage() {
       <Header title="Gestor organizacional" subtitle="Empresas, sucursales, áreas, departamentos y cargos" actions={
         <div className="row-actions">
           <button className="btn" onClick={() => import('../api/hcm').then(({ rebuildHcmOrgChart }) => rebuildHcmOrgChart().then(reload))}>Reconstruir organigrama</button>
-          <Link to="/rrhh" className="btn">HCM</Link>
+          <Link to="/rrhh" className="btn">Personal</Link>
         </div>
       } />
       <section className="panel"><h3>Empresas ({companies.length})</h3>
@@ -107,7 +107,7 @@ export function HcmEmployeesPage() {
 
   return (
     <>
-      <Header title="Centro de empleados" subtitle="Expedientes y estado laboral" actions={<Link to="/rrhh" className="btn">HCM</Link>} />
+      <Header title="Centro de empleados" subtitle="Expedientes y estado laboral" actions={<Link to="/rrhh" className="btn">Personal</Link>} />
       <table className="data-table panel">
         <thead><tr><th>Número</th><th>Nombre</th><th>Documento</th><th>Departamento</th><th>Cargo</th><th>Estado</th><th>Expediente</th></tr></thead>
         <tbody>
@@ -202,7 +202,7 @@ export function HcmOrgChartPage() {
 
   return (
     <>
-      <Header title="Organigrama interactivo" subtitle="Jerarquía organizacional" actions={<Link to="/rrhh" className="btn">HCM</Link>} />
+      <Header title="Organigrama interactivo" subtitle="Jerarquía organizacional" actions={<Link to="/rrhh" className="btn">Personal</Link>} />
       <section className="panel">{orgChart.map((n) => renderNode(n))}</section>
     </>
   );
@@ -218,7 +218,7 @@ export function HcmSearchPage() {
 
   return (
     <>
-      <Header title="Buscador avanzado" subtitle="Empleados por nombre, documento o número" actions={<Link to="/rrhh" className="btn">HCM</Link>} />
+      <Header title="Buscador avanzado" subtitle="Empleados por nombre, documento o número" actions={<Link to="/rrhh" className="btn">Personal</Link>} />
       <section className="panel">
         <div className="row-actions">
           <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar colaborador..." />
@@ -250,7 +250,7 @@ export function HcmContractsPage() {
 
   return (
     <>
-      <Header title="Contratos laborales" subtitle="Indefinidos, fijos, obra, aprendizaje y más" actions={<Link to="/rrhh" className="btn">HCM</Link>} />
+      <Header title="Contratos laborales" subtitle="Indefinidos, fijos, obra, aprendizaje y más" actions={<Link to="/rrhh" className="btn">Personal</Link>} />
       <table className="data-table panel">
         <thead><tr><th>Contrato</th><th>Empleado</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Renovaciones</th><th>Estado</th></tr></thead>
         <tbody>
@@ -279,7 +279,7 @@ export function HcmAuditPage() {
 
   return (
     <>
-      <Header title="Auditoría HCM" subtitle="Creación, cambios, traslados y contratos" actions={<Link to="/rrhh" className="btn">HCM</Link>} />
+      <Header title="Auditoría de personal" subtitle="Creación, cambios, traslados y contratos" actions={<Link to="/rrhh" className="btn">Personal</Link>} />
       <table className="data-table panel">
         <thead><tr><th>Fecha</th><th>Entidad</th><th>Clave</th><th>Acción</th><th>Usuario</th></tr></thead>
         <tbody>

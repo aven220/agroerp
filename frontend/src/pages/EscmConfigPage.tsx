@@ -35,7 +35,7 @@ export function EscmConfigPage() {
 
   return (
     <>
-      <Header title="Configuración comercial" subtitle="Descuentos, promociones, crédito y precios especiales" actions={<Link to="/comercial" className="btn">ESCM</Link>} />
+      <Header title="Configuración comercial" subtitle="Descuentos, promociones, crédito y precios especiales" actions={<Link to="/comercial" className="btn">Comercial</Link>} />
       <section className="panel">
         <h3>Descuentos automáticos</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -68,8 +68,8 @@ export function EscmConfigPage() {
       <section className="panel">
         <h3>Precio por cliente</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input placeholder="customerKey" value={customerPricing.customerKey} onChange={(e) => setCustomerPricing({ ...customerPricing, customerKey: e.target.value })} />
-          <input placeholder="itemKey" value={customerPricing.itemKey} onChange={(e) => setCustomerPricing({ ...customerPricing, itemKey: e.target.value })} />
+          <input placeholder="Código de cliente" value={customerPricing.customerKey} onChange={(e) => setCustomerPricing({ ...customerPricing, customerKey: e.target.value })} />
+          <input placeholder="Código del artículo" value={customerPricing.itemKey} onChange={(e) => setCustomerPricing({ ...customerPricing, itemKey: e.target.value })} />
           <input type="number" placeholder="Precio" value={customerPricing.unitPrice} onChange={(e) => setCustomerPricing({ ...customerPricing, unitPrice: Number(e.target.value) })} />
           <button className="btn" onClick={() => upsertEscmCustomerPricing(customerPricing.customerKey, customerPricing)}>Guardar</button>
         </div>
@@ -78,7 +78,7 @@ export function EscmConfigPage() {
         <h3>Precio por región</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input placeholder="regionKey" value={regionalPricing.regionKey} onChange={(e) => setRegionalPricing({ ...regionalPricing, regionKey: e.target.value })} />
-          <input placeholder="itemKey" value={regionalPricing.itemKey} onChange={(e) => setRegionalPricing({ ...regionalPricing, itemKey: e.target.value })} />
+          <input placeholder="Código del artículo" value={regionalPricing.itemKey} onChange={(e) => setRegionalPricing({ ...regionalPricing, itemKey: e.target.value })} />
           <input type="number" value={regionalPricing.unitPrice} onChange={(e) => setRegionalPricing({ ...regionalPricing, unitPrice: Number(e.target.value) })} />
           <button className="btn" onClick={() => upsertEscmRegionalPricing(regionalPricing)}>Guardar</button>
         </div>
@@ -87,7 +87,7 @@ export function EscmConfigPage() {
         <h3>Precio por temporada</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input placeholder="seasonKey" value={seasonPricing.seasonKey} onChange={(e) => setSeasonPricing({ ...seasonPricing, seasonKey: e.target.value })} />
-          <input placeholder="itemKey" value={seasonPricing.itemKey} onChange={(e) => setSeasonPricing({ ...seasonPricing, itemKey: e.target.value })} />
+          <input placeholder="Código del artículo" value={seasonPricing.itemKey} onChange={(e) => setSeasonPricing({ ...seasonPricing, itemKey: e.target.value })} />
           <input type="number" value={seasonPricing.unitPrice} onChange={(e) => setSeasonPricing({ ...seasonPricing, unitPrice: Number(e.target.value) })} />
           <input type="date" value={seasonPricing.validFrom} onChange={(e) => setSeasonPricing({ ...seasonPricing, validFrom: e.target.value })} />
           <input type="date" value={seasonPricing.validTo} onChange={(e) => setSeasonPricing({ ...seasonPricing, validTo: e.target.value })} />
@@ -97,7 +97,7 @@ export function EscmConfigPage() {
       <section className="panel">
         <h3>Límite de crédito por cliente</h3>
         <div style={{ display: 'flex', gap: 8 }}>
-          <input placeholder="customerKey" value={creditLimit.customerKey} onChange={(e) => setCreditLimit({ ...creditLimit, customerKey: e.target.value })} />
+          <input placeholder="Código de cliente" value={creditLimit.customerKey} onChange={(e) => setCreditLimit({ ...creditLimit, customerKey: e.target.value })} />
           <input type="number" placeholder="Límite" value={creditLimit.creditLimit} onChange={(e) => setCreditLimit({ ...creditLimit, creditLimit: Number(e.target.value) })} />
           <button className="btn" onClick={() => upsertEscmCreditLimit(creditLimit.customerKey, creditLimit)}>Guardar</button>
         </div>

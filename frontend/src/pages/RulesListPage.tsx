@@ -61,7 +61,7 @@ export function RulesListPage() {
       />
       {showForm && (
         <div className="panel form-row">
-          <input placeholder="rule_key" value={form.ruleKey} onChange={(e) => setForm({ ...form, ruleKey: e.target.value })} />
+          <input placeholder="Código de regla" value={form.ruleKey} onChange={(e) => setForm({ ...form, ruleKey: e.target.value })} />
           <input placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <select value={form.eventCategory} onChange={(e) => setForm({ ...form, eventCategory: e.target.value })}>
             <option value="producer">Productores</option>

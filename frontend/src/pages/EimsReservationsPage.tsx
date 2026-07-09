@@ -55,7 +55,7 @@ export function EimsReservationsPage() {
               Liberar vencidas
             </button>
             <Link to="/inventario/abastecimiento" className="btn">Abastecimiento</Link>
-            <Link to="/inventario" className="btn">EIMS</Link>
+            <Link to="/inventario" className="btn">Inventario</Link>
           </>
         }
       />

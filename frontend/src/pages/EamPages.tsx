@@ -32,7 +32,7 @@ export function EamCenterPage() {
 
   return (
     <>
-      <Header title="Centro de Activos" subtitle="Enterprise Asset Management" actions={EAM_LINKS} />
+      <Header title="Centro de Activos" subtitle="Activos, mantenimiento y confiabilidad operativa" actions={EAM_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Activos</span><span className="kpi-value">{String(center?.assetCount ?? '—')}</span></div>
         <div className="kpi-card"><span className="kpi-label">Valor total</span><span className="kpi-value">{String(indicators?.totalValue ?? '—')}</span></div>
@@ -40,7 +40,7 @@ export function EamCenterPage() {
         <div className="kpi-card"><span className="kpi-label">Garantías por vencer</span><span className="kpi-value">{String(indicators?.expiringWarranties ?? '—')}</span></div>
       </div>
       <section className="card">
-        <button className="btn btn-primary" onClick={() => bootstrapEam().then(() => getEamCenter().then(setCenter))}>Inicializar EAM</button>
+        <button className="btn btn-primary" onClick={() => bootstrapEam().then(() => getEamCenter().then(setCenter))}>Configurar módulo de activos</button>
       </section>
     </>
   );

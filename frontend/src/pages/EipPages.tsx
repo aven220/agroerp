@@ -56,7 +56,7 @@ export function EipCenterPage() {
 
   return (
     <>
-      <Header title="Centro de Integraciones EIP" subtitle="Plataforma Enterprise — Sprint 2" actions={EIP_LINKS} />
+      <Header title="Centro de integraciones" subtitle="Conectores, APIs y mensajería empresarial" actions={EIP_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Invocaciones 24h</span><span className="kpi-value">{dashboard?.invocations24h ?? '—'}</span></div>
         <div className="kpi-card"><span className="kpi-label">Éxito 24h</span><span className="kpi-value">{dashboard?.successRate24h ?? '—'}%</span></div>
@@ -64,7 +64,7 @@ export function EipCenterPage() {
         <div className="kpi-card"><span className="kpi-label">Health Score</span><span className="kpi-value">{dashboard?.healthScore ?? '—'}</span></div>
       </div>
       <section className="card">
-        <button className="btn btn-primary" onClick={() => bootstrapEip().then(setCenter)}>Inicializar EIP</button>
+        <button className="btn btn-primary" onClick={() => bootstrapEip().then(setCenter)}>Configurar integraciones</button>
       </section>
       <section className="card">
         <h3>Componentes activos</h3>
@@ -84,7 +84,7 @@ export function EipApisPage() {
 
   return (
     <>
-      <Header title="Catálogo de APIs" subtitle="API Gateway centralizado" actions={EIP_LINKS} />
+      <Header title="Catálogo de APIs" subtitle="Catálogo de interfaces disponibles" actions={EIP_LINKS} />
       <section className="card row-actions">
         <button className="btn" onClick={() => createEipPolicy({ policyKey: `POL-${Date.now()}`, apiKey: 'default-api', ratePerMinute: 120 }).then(() => listEipPolicies().then(setPolicies))}>Nueva política</button>
       </section>
@@ -153,7 +153,7 @@ export function EipEventsPage() {
 
   return (
     <>
-      <Header title="Monitor de Eventos" subtitle="Event Bus empresarial" actions={EIP_LINKS} />
+      <Header title="Monitor de Eventos" subtitle="Eventos entre sistemas conectados" actions={EIP_LINKS} />
       <section className="card row-actions">
         <button className="btn" onClick={() => publishEipEvent({ topicKey: 'custom.integration', eventType: 'TestEvent', payload: { ts: Date.now() } }).then(() => listEipEventMessages().then(setMessages))}>Publicar evento</button>
       </section>
@@ -194,7 +194,7 @@ export function EipMessagingPage() {
 
   return (
     <>
-      <Header title="Panel de Mensajería" subtitle="RabbitMQ, Kafka, Azure, AWS, GCP" actions={EIP_LINKS} />
+      <Header title="Panel de Mensajería" subtitle="Canales de mensajería empresarial" actions={EIP_LINKS} />
       <section className="card"><h3>Slots disponibles</h3><pre>{JSON.stringify(slots, null, 2)}</pre></section>
       <section className="card"><h3>Proveedores configurados ({providers.length})</h3><pre>{JSON.stringify(providers, null, 2)}</pre></section>
     </>
@@ -249,7 +249,7 @@ export function EipRulesPage() {
 
   return (
     <>
-      <Header title="Motor BRE — Facade EIP" subtitle="Reglas reutilizables vía EBRE" actions={EIP_LINKS} />
+      <Header title="Motor de reglas de negocio" subtitle="Reglas reutilizables para integraciones" actions={EIP_LINKS} />
       <section className="card row-actions">
         <button className="btn" onClick={() => createEipBinding({ bindingKey: `BIND-${Date.now()}`, ruleKey: 'default-rule', moduleRef: 'erp', scope: 'module' }).then(() => listEipBindings().then(setBindings))}>Nuevo binding</button>
         <button className="btn" onClick={() => bridgeEipEvent({ moduleRef: 'erp', eventType: 'EipTest', payload: { ok: true } })}>Bridge evento</button>

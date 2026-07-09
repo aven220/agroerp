@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { FormFieldControl } from '../components/forms/FormFieldControl';
 import { MobileFormWizard } from '../components/mobile/MobileFormWizard';
 import { useMobileOptional } from '../context/MobileContext';
@@ -8,6 +10,7 @@ import { useDeviceCapabilities } from '../hooks/useDeviceCapabilities';
 import { getForm, renderForm, submitForm } from '../api/forms';
 import type { FormFieldDefinition } from '../api/forms';
 import { UDFE_LAYOUT_FIELD_TYPES } from '../api/forms';
+import { markProcessMilestone } from '../lib/processWorkspace';
 
 const LAYOUT = new Set<string>(UDFE_LAYOUT_FIELD_TYPES);
 
@@ -140,7 +143,16 @@ export function FormFillPage() {
 
       await submitForm(id, { data, draft, gpsLocation, context: {} });
       localStorage.removeItem(`agroerp_form_draft_${id}`);
-      navigate('/formularios/envios');
+      markProcessMilestone('forms', 'capture', {
+        entityId: id,
+        entityName: name,
+        entityType: 'form_submission',
+      });
+      markProcessMilestone('agricultural', 'activity', {
+        entityName: name,
+        entityType: 'form_capture',
+      });
+      navigate('/formularios/recoleccion?paso=completado');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al enviar');
       if (draftId && mobile?.updateQueueItem) {
@@ -189,13 +201,16 @@ export function FormFillPage() {
   return (
     <>
       {!mobile?.isMobile ? (
-        <Header
-          title={name || 'Formulario'}
-          subtitle="Captura dinámica UDFE"
-          actions={
-            <button type="button" className="btn" onClick={() => navigate(-1)}>Cancelar</button>
-          }
-        />
+        <>
+          <Header
+            title={name || 'Formulario'}
+            subtitle="Complete los campos y envíe para registrar la actividad"
+            actions={
+              <button type="button" className="btn" onClick={() => navigate(-1)}>Cancelar</button>
+            }
+          />
+          <FlowProgress flowId="forms" currentStepId="capture" compact />
+        </>
       ) : null}
       {error && <div className="alert alert-error">{error}</div>}
       {mobile?.isMobile ? (

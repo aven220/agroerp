@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import {
   getWizardState,
   listCoffeeFarms,
@@ -53,7 +55,7 @@ export function CoffeeWizardPage() {
     const ticket = await wizardArrival({ searchMethod: method, producerName: query || undefined });
     setTicketKey(ticket.ticketKey);
     setStep(1);
-    setMessage(`Ticket ${ticket.ticketKey} creado`);
+    setMessage(`Recepción iniciada — ticket ${ticket.ticketKey}`);
   };
 
   const search = async () => {
@@ -83,9 +85,21 @@ export function CoffeeWizardPage() {
   return (
     <>
       <Header
-        title="Wizard de recepción"
-        subtitle="Ingreso guiado del productor"
-        actions={<Link to="/compras/cola" className="btn">Cola</Link>}
+        title="Asistente de recepción de café"
+        subtitle="Siga los pasos: llegada → productor → origen → pesaje → confirmación"
+        actions={<Link to="/compras/cola" className="btn">Ver cola</Link>}
+      />
+
+      <FlowProgress flowId="purchases" currentStepId="wizard" />
+
+      <FlowNextActions
+        title="Después de la recepción"
+        subtitle="Continúe el proceso de compra sin volver al menú."
+        actions={[
+          { label: 'Ir a pesaje', description: 'Registre el peso del café recibido', to: '/compras/pesaje', icon: '⚖️' },
+          { label: 'Control de calidad', description: 'Evalúe muestras y fotos', to: '/compras/calidad', icon: '🔬' },
+          { label: 'Liquidaciones', description: 'Cierre la compra con el productor', to: '/compras/liquidaciones', icon: '💰' },
+        ]}
       />
       <section className="panel">
         <div className="row-actions">

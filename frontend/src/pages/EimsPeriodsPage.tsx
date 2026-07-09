@@ -25,7 +25,7 @@ export function EimsPeriodsPage() {
         actions={
           <>
             <Link to="/inventario/kardex" className="btn">Kardex</Link>
-            <Link to="/inventario" className="btn">EIMS</Link>
+            <Link to="/inventario" className="btn">Inventario</Link>
           </>
         }
       />

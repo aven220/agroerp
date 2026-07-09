@@ -7,13 +7,13 @@ import { LoadingState } from '../components/ux/LoadingState';
 export function PerfCenterPage() {
   const [dash, setDash] = useState<EpopDashboard | null>(null);
   useEffect(() => { getEpopCenter().then(setDash); }, []);
-  if (!dash) return <LoadingState variant="dashboard" message="Cargando Performance Center..." />;
+  if (!dash) return <LoadingState variant="dashboard" message="Cargando rendimiento del sistema..." />;
 
   return (
     <>
       <Header
-        title="Performance Center — EPOP"
-        subtitle="Enterprise Performance & Optimization Platform"
+        title="Rendimiento del sistema"
+        subtitle="Consultas lentas, caché y optimización de la plataforma"
         actions={
           <div className="row-actions">
             <Link to="/rendimiento/consultas" className="btn">Consultas</Link>

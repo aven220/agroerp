@@ -23,7 +23,7 @@ export function EfmFaCenterPage() {
             <Link to="/finanzas/activos-fijos/inventario" className="btn">Inventario físico</Link>
             <Link to="/finanzas/activos-fijos/historial" className="btn">Historial</Link>
             <Link to="/finanzas/activos-fijos/dashboard" className="btn">Dashboard</Link>
-            <Link to="/finanzas" className="btn">EFM</Link>
+            <Link to="/finanzas" className="btn">Finanzas</Link>
           </div>
         }
       />

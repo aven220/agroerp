@@ -21,8 +21,8 @@ export function IamUsersPage() {
   return (
     <>
       <Header
-        title="Usuarios — vista de seguridad"
-        subtitle="Consulta de solo lectura con detalle de autenticación y último acceso"
+        title="Consulta de usuarios"
+        subtitle="Vista de solo lectura para auditoría de accesos. Para crear o editar, use Administración."
         actions={
           <div className="row-actions">
             <Link to="/administracion/usuarios" className="btn btn-primary">

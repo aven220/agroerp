@@ -11,7 +11,7 @@ export function WidgetShell({
   id,
   children,
   empty,
-  emptyMessage = 'Sin datos',
+  emptyMessage = 'Aún no hay información para mostrar',
 }: WidgetShellProps) {
   return (
     <section className="ure-widget card" id={id}>

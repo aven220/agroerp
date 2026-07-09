@@ -36,7 +36,7 @@ export function EffmCenterPage() {
 
   return (
     <>
-      <Header title="Centro de Maquinaria" subtitle="Sprint 7 — EFFM" actions={EFFM_LINKS} />
+      <Header title="Centro de Maquinaria" subtitle="Maquinaria, mantenimiento y uso de equipos" actions={EFFM_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Máquinas</span><span className="kpi-value">{String(indicators?.activeMachines ?? '—')}</span></div>
         <div className="kpi-card"><span className="kpi-label">Implementos</span><span className="kpi-value">{String(indicators?.activeImplements ?? '—')}</span></div>

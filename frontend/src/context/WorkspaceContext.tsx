@@ -42,8 +42,10 @@ interface WorkspaceContextValue {
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
+const WORKSPACE_LAYOUT_VERSION = 2;
+
 function storageKey(userId: string | undefined, role: DashboardRole) {
-  return `agroerp_workspace_${userId ?? 'anon'}_${role}`;
+  return `agroerp_workspace_v${WORKSPACE_LAYOUT_VERSION}_${userId ?? 'anon'}_${role}`;
 }
 
 function cloneDefaults(role: DashboardRole): WorkspaceState {

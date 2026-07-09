@@ -174,7 +174,7 @@ export function FormsPage() {
   }
 
   async function handleDuplicate(row: FormDefinition) {
-    const newKey = prompt('Nueva clave de formulario:', `${row.formKey}-copia`);
+    const newKey = prompt('Nombre interno para la copia (solo letras minúsculas y guiones bajos):', `${row.formKey}-copia`);
     if (!newKey) return;
     try {
       const created = await duplicateForm(row.id, newKey);
@@ -317,13 +317,13 @@ export function FormsPage() {
           <div className="kpi-card"><span className="kpi-label">Total</span><span className="kpi-value">{dashboard.kpis.totalForms}</span></div>
           <div className="kpi-card kpi-green"><span className="kpi-label">Publicados</span><span className="kpi-value">{dashboard.kpis.publishedForms}</span></div>
           <div className="kpi-card"><span className="kpi-label">Borradores</span><span className="kpi-value">{dashboard.kpis.draftForms}</span></div>
-          <div className="kpi-card"><span className="kpi-label">En paquete móvil</span><span className="kpi-value">{bootstrapIds.size}</span></div>
+          <div className="kpi-card"><span className="kpi-label">Disponibles en campo</span><span className="kpi-value">{bootstrapIds.size}</span></div>
         </div>
       )}
 
       <div className="filter-bar form-mis-filters">
         <input
-          placeholder="Buscar por nombre o clave…"
+          placeholder="Buscar por nombre…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') loadList(); }}
@@ -344,7 +344,7 @@ export function FormsPage() {
           ))}
         </div>
         <select value={viewMode} onChange={(e) => setViewMode(e.target.value as 'latest' | 'all')} aria-label="Modo de vista">
-          <option value="latest">Última versión por clave</option>
+          <option value="latest">Última versión de cada formulario</option>
           <option value="all">Todas las versiones</option>
         </select>
       </div>
@@ -375,7 +375,7 @@ export function FormsPage() {
                   <div>
                     <Link to={`/formularios/${row.id}`} className="form-mis-title">{row.name}</Link>
                     <p className="muted form-mis-sub">
-                      <code>{row.formKey}</code> · v{row.version}
+                      Versión {row.version} · {FORM_STATUS_LABELS[row.status] ?? row.status}
                       {isHighlighted ? <span className="form-mis-saved-badge"> ✓ Guardado recientemente</span> : null}
                     </p>
                   </div>
@@ -402,7 +402,7 @@ export function FormsPage() {
                   {row.status === 'published' && canUpdateForm ? (
                     <>
                       <button type="button" className="btn btn-sm" onClick={() => navigate(`/formularios/${row.id}/ejecutar`)}>Usar en web</button>
-                      <button type="button" className="btn btn-sm" onClick={() => handleVerifySync(row)} title="Comprueba si el formulario está incluido en el paquete para dispositivos">Verificar en móvil</button>
+                      <button type="button" className="btn btn-sm" onClick={() => handleVerifySync(row)} title="Comprueba si el formulario ya está disponible en celulares">Verificar en celular</button>
                     </>
                   ) : null}
                   {row.status === 'published' && canPublishForm ? (

@@ -7,9 +7,14 @@ import { getEneacInbox } from '../../api/eneac';
 import type { NotificationMessage } from '../../api/eneac';
 import { getBpmsInbox } from '../../api/bpms';
 import { getWorkflowInbox } from '../../api/workflows';
+import type { WorkflowAssignment } from '../../api/workflows';
 import { listEsdjeCalendar } from '../../api/scheduler';
 import type { EsdjeJob } from '../../api/scheduler';
+import { getFormDashboard, listForms, listCampaigns } from '../../api/forms';
+import type { FormDefinition } from '../../api/forms';
+import { getProducerDashboard } from '../../api/prm';
 import { aiChat } from '../../api/ai';
+import { useAuth } from '../../context/AuthContext';
 import { useDashboardStats } from '../../hooks/useResources';
 import { useAutoRefresh, useInView } from '../../hooks/useInView';
 import { useNavigation } from '../../context/NavigationContext';
@@ -17,6 +22,9 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { getQuickActionsForRole } from '../../config/widgetRegistry';
 import type { WidgetDefinition, WidgetKind } from '../../config/widgetRegistry';
 import type { AuditLog } from '../../types';
+import { formatActivityMessage } from '../../lib/activityLabels';
+import { getContinueWorkItems, kindIcon, type WorkEntityVisit } from '../../lib/workEntityHistory';
+import { EmptyState } from '../ui/EmptyState';
 import { WidgetLoading } from './WidgetShell';
 
 interface Props {
@@ -115,10 +123,22 @@ function KpiBiWidget() {
 
 function QuickActionsWidget() {
   const { dashboardRole } = useWorkspace();
-  const actions = getQuickActionsForRole(dashboardRole);
+  const { hasPermission } = useAuth();
+  const actions = getQuickActionsForRole(dashboardRole, hasPermission);
+
+  if (!actions.length) {
+    return (
+      <EmptyState
+        illustration="permissions"
+        title="Sin acciones disponibles"
+        description="Su perfil no tiene permisos para acciones rápidas en este momento."
+        hint="Contacte al administrador si necesita acceso adicional."
+      />
+    );
+  }
+
   return (
     <div className="ws-quick-actions-wrap">
-      <p className="ws-quick-actions-lead">Acciones principales según su perfil</p>
       <div className="ws-quick-actions">
         {actions.map((a) => (
           <Link key={a.id} to={a.to} className="ws-quick-action">
@@ -131,10 +151,190 @@ function QuickActionsWidget() {
   );
 }
 
+function ContinueWorkWidget() {
+  const { user } = useAuth();
+  const items = getContinueWorkItems(user?.id, 6);
+
+  if (!items.length) {
+    return (
+      <EmptyState
+        illustration="folder"
+        title="Aún no hay historial reciente"
+        description="Cuando visite productores, fincas, formularios u otros registros, aparecerán aquí para retomar con un clic."
+        action={{ label: 'Registrar primer productor', to: '/productores/nuevo', variant: 'primary' }}
+        secondaryAction={{ label: 'Explorar formularios', to: '/formularios' }}
+      />
+    );
+  }
+
+  return (
+    <div className="ws-continue-grid" role="list">
+      {items.map((item) => (
+        <ContinueWorkCard key={`${item.kind}-${item.id}`} item={item} />
+      ))}
+    </div>
+  );
+}
+
+function ContinueWorkCard({ item }: { item: WorkEntityVisit }) {
+  const kindLabels: Record<WorkEntityVisit['kind'], string> = {
+    producer: 'Último productor',
+    farm: 'Última finca',
+    lot: 'Último lote',
+    form: 'Último formulario',
+    process: 'Último proceso',
+    purchase: 'Última compra',
+  };
+
+  return (
+    <Link to={item.to} className="ws-continue-card" role="listitem">
+      <span className="ws-continue-icon" aria-hidden>{kindIcon(item.kind)}</span>
+      <span className="ws-continue-kind">{kindLabels[item.kind]}</span>
+      <strong className="ws-continue-label">{item.label}</strong>
+      <time className="ws-continue-time">
+        {new Date(item.visitedAt).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}
+      </time>
+    </Link>
+  );
+}
+
+interface PendingWorkItem {
+  id: string;
+  icon: string;
+  label: string;
+  detail?: string;
+  to: string;
+}
+
+function PendingWorkWidget() {
+  const [items, setItems] = useState<PendingWorkItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { ref, visible } = useInView();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const pending: PendingWorkItem[] = [];
+
+    try {
+      const [wf, bpms, drafts, formDash, producerDash, campaigns] = await Promise.all([
+        getWorkflowInbox().catch(() => [] as WorkflowAssignment[]),
+        getBpmsInbox().catch(() => [] as unknown[]),
+        listForms({ status: 'draft' }).catch(() => [] as FormDefinition[]),
+        getFormDashboard().catch(() => null),
+        getProducerDashboard().catch(() => null),
+        listCampaigns({ status: 'active' }).catch(() => []),
+      ]);
+
+      for (const assignment of wf.slice(0, 3)) {
+        const name = assignment.instance?.workflowKey ?? assignment.stateKey;
+        pending.push({
+          id: `wf-${assignment.id}`,
+          icon: '📥',
+          label: 'Solicitud pendiente de aprobación',
+          detail: name,
+          to: '/procesos/bandeja',
+        });
+      }
+
+      if (bpms.length > 0) {
+        pending.push({
+          id: 'bpms-inbox',
+          icon: '⚙',
+          label: `${bpms.length} proceso${bpms.length > 1 ? 's' : ''} automatizado${bpms.length > 1 ? 's' : ''} pendiente${bpms.length > 1 ? 's' : ''}`,
+          to: '/bpms/bandeja',
+        });
+      }
+
+      for (const form of drafts.slice(0, 3)) {
+        pending.push({
+          id: `draft-${form.id}`,
+          icon: '📝',
+          label: 'Formulario en borrador',
+          detail: form.name,
+          to: `/formularios/${form.id}/disenar`,
+        });
+      }
+
+      if (formDash?.kpis.pendingAssignments) {
+        pending.push({
+          id: 'form-assignments',
+          icon: '📋',
+          label: `${formDash.kpis.pendingAssignments} captura${formDash.kpis.pendingAssignments > 1 ? 's' : ''} pendiente${formDash.kpis.pendingAssignments > 1 ? 's' : ''}`,
+          to: '/formularios/recoleccion',
+        });
+      }
+
+      if (producerDash?.kpis.pendingApproval) {
+        pending.push({
+          id: 'producer-approval',
+          icon: '👤',
+          label: `${producerDash.kpis.pendingApproval} productor${producerDash.kpis.pendingApproval > 1 ? 'es' : ''} por aprobar`,
+          to: '/productores',
+        });
+      }
+
+      for (const camp of campaigns.slice(0, 2)) {
+        pending.push({
+          id: `camp-${camp.id}`,
+          icon: '🎯',
+          label: 'Campaña activa',
+          detail: camp.name,
+          to: '/formularios/campanas',
+        });
+      }
+
+      setItems(pending.slice(0, 8));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { if (visible) load(); }, [visible, load]);
+  useAutoRefresh(load, 45000, visible);
+
+  if (!visible) return <div ref={ref} className="ws-lazy-placeholder" />;
+  if (loading) return <WidgetLoading />;
+  if (!items.length) {
+    return (
+      <div ref={ref} className="ws-positive-empty" role="status">
+        <span className="ws-positive-icon" aria-hidden>✓</span>
+        <p><strong>¡Todo al día!</strong> No tiene tareas pendientes que requieran su atención ahora.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref}>
+      <ul className="ws-pending-list" aria-label="Trabajo pendiente">
+        {items.map((item) => (
+          <li key={item.id}>
+            <Link to={item.to} className="ws-pending-item">
+              <span className="ws-pending-icon" aria-hidden>{item.icon}</span>
+              <span className="ws-pending-text">
+                <strong>{item.label}</strong>
+                {item.detail ? <span className="ws-pending-detail">{item.detail}</span> : null}
+              </span>
+              <span className="ws-pending-chevron" aria-hidden>›</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function FavoritesWidget() {
   const { favorites } = useNavigation();
   const sorted = [...favorites].sort((a, b) => a.order - b.order);
-  if (!sorted.length) return <p className="muted">Marque pantallas con ☆ en el menú.</p>;
+  if (!sorted.length) {
+    return (
+      <EmptyState
+        illustration="folder"
+        title="Aún no tiene favoritos"
+        description="Marque pantallas frecuentes con ☆ en el menú lateral para acceder rápidamente desde aquí."
+      />
+    );
+  }
   return (
     <div className="quick-links">
       {sorted.map((f) => (
@@ -154,7 +354,14 @@ function NotificationsWidget() {
   useAutoRefresh(load, 30000, visible);
 
   if (!visible) return <div ref={ref} className="ws-lazy-placeholder" />;
-  if (!items.length) return <p className="muted" ref={ref}>Sin notificaciones pendientes</p>;
+  if (!items.length) {
+    return (
+      <div ref={ref} className="ws-positive-empty" role="status">
+        <span className="ws-positive-icon" aria-hidden>✓</span>
+        <p><strong>Sin alertas nuevas.</strong> Le avisaremos cuando haya notificaciones importantes.</p>
+      </div>
+    );
+  }
 
   return (
     <div ref={ref}>
@@ -173,6 +380,7 @@ function NotificationsWidget() {
 
 function ActivityWidget({ team }: { team?: boolean }) {
   const [logs, setLogs] = useState<AuditLog[]>([]);
+  const { user } = useAuth();
   const { ref, visible } = useInView();
   const load = useCallback(() => {
     listAuditLogs({ limit: team ? 12 : 8 }).then(setLogs).catch(() => {});
@@ -181,16 +389,28 @@ function ActivityWidget({ team }: { team?: boolean }) {
   useAutoRefresh(load, 60000, visible);
 
   if (!visible) return <div ref={ref} className="ws-lazy-placeholder" />;
-  if (!logs.length) return <p className="muted" ref={ref}>Sin actividad registrada</p>;
+  if (!logs.length) {
+    return (
+      <EmptyState
+        illustration="records"
+        title="Aún no hay actividad registrada"
+        description="Cuando su equipo cree productores, formularios o procesos, verá un resumen legible aquí."
+        action={{ label: 'Registrar productor', to: '/productores/nuevo' }}
+      />
+    );
+  }
+
+  const actorFallback = user?.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : 'Un usuario';
 
   return (
     <div ref={ref}>
-      <ul className="activity-list">
+      <ul className="activity-list ws-activity-human">
         {logs.map((log) => (
           <li key={log.id}>
-            <span className="activity-action">{log.action}</span>
-            <span className="activity-entity">{log.entityType} · {log.entityId.slice(0, 8)}…</span>
-            <time>{new Date(log.createdAt).toLocaleString('es-CO')}</time>
+            <span className="activity-message">{formatActivityMessage(log, actorFallback)}</span>
+            <time dateTime={log.createdAt}>
+              {new Date(log.createdAt).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })}
+            </time>
           </li>
         ))}
       </ul>
@@ -211,17 +431,24 @@ function PendingWidget() {
 
   const total = wf.length + bpms.length;
   if (!visible) return <div ref={ref} className="ws-lazy-placeholder" />;
-  if (!total) return <p className="muted" ref={ref}>Sin pendientes</p>;
+  if (!total) {
+    return (
+      <div ref={ref} className="ws-positive-empty" role="status">
+        <span className="ws-positive-icon" aria-hidden>✓</span>
+        <p><strong>Sin aprobaciones pendientes.</strong> Su bandeja está al día.</p>
+      </div>
+    );
+  }
 
   return (
     <div ref={ref} className="ws-pending">
       <div className="ws-pending-summary">
         <span className="ws-pending-count">{total}</span>
-        <span>elementos pendientes</span>
+        <span>aprobaciones pendientes</span>
       </div>
       <div className="ws-cluster">
-        <Link to="/procesos/bandeja" className="btn btn-sm">Bandeja BPM ({wf.length})</Link>
-        <Link to="/bpms/bandeja" className="btn btn-sm">Bandeja BPMS ({bpms.length})</Link>
+        <Link to="/procesos/bandeja" className="btn btn-sm">Bandeja de procesos ({wf.length})</Link>
+        <Link to="/bpms/bandeja" className="btn btn-sm">Procesos automatizados ({bpms.length})</Link>
       </div>
     </div>
   );
@@ -240,7 +467,16 @@ function CalendarWidget() {
     .slice(0, 6);
 
   if (!visible) return <div ref={ref} className="ws-lazy-placeholder" />;
-  if (!upcoming.length) return <p className="muted" ref={ref}>Sin eventos programados</p>;
+  if (!upcoming.length) {
+    return (
+      <EmptyState
+        illustration="data"
+        title="Agenda libre por ahora"
+        description="No hay tareas programadas próximas. Revise el centro de tareas para planificar actividades."
+        action={{ label: 'Ver tareas programadas', to: '/tareas' }}
+      />
+    );
+  }
 
   return (
     <div ref={ref}>
@@ -322,7 +558,15 @@ function AiWidget() {
 }
 
 function LinksWidget({ links }: { links?: { to: string; label: string }[] }) {
-  if (!links?.length) return <p className="muted">Sin enlaces configurados</p>;
+  if (!links?.length) {
+    return (
+      <EmptyState
+        illustration="folder"
+        title="Sin accesos configurados"
+        description="Personalice su panel para agregar enlaces útiles a su rol."
+      />
+    );
+  }
   return (
     <div className="quick-links">
       {links.map((l) => <Link key={l.to} to={l.to} className="quick-link">{l.label}</Link>)}
@@ -338,6 +582,10 @@ export function WidgetBody({ kind, definition }: Props) {
       return <KpiBiWidget />;
     case 'quick-actions':
       return <QuickActionsWidget />;
+    case 'continue-work':
+      return <ContinueWorkWidget />;
+    case 'pending-work':
+      return <PendingWorkWidget />;
     case 'favorites':
       return <FavoritesWidget />;
     case 'notifications':

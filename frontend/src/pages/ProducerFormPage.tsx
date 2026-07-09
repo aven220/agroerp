@@ -10,6 +10,7 @@ import {
   updateProducer,
   type CreateProducerPayload,
 } from '../api/prm';
+import { markProcessMilestone } from '../lib/processWorkspace';
 
 const emptyForm: CreateProducerPayload = {
   producerTypeCode: 'natural',
@@ -101,7 +102,12 @@ export function ProducerFormPage() {
         navigate(`/productores/${id}`);
       } else {
         const created = await createProducer(form);
-        navigate(`/productores/${created.id}`);
+        markProcessMilestone('agricultural', 'producer', {
+          entityId: created.id,
+          entityName: form.legalName,
+          entityType: 'producer',
+        });
+        navigate(`/productores/${created.id}?paso=completado`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar');
@@ -123,7 +129,11 @@ export function ProducerFormPage() {
     <>
       <Header
         title={isEdit ? 'Editar productor' : 'Nuevo productor'}
-        subtitle="Expediente PRM"
+        subtitle={
+          isEdit
+            ? 'Actualice los datos del productor. Los cambios se guardan al confirmar.'
+            : 'Complete los datos básicos. Después podrá registrar las fincas asociadas.'
+        }
       />
 
       {!isEdit ? <FlowProgress flowId="agricultural" currentStepId="producer" /> : null}
@@ -203,39 +213,47 @@ export function ProducerFormPage() {
           {
             id: 'location',
             title: 'Ubicación',
-            description: 'Municipio y coordenadas GPS',
+            description: 'Indique dónde opera el productor',
             content: (
               <div className="form-grid">
                 <label>
-                  Código municipio
+                  Municipio
                   <input
                     value={form.municipalityCode ?? ''}
                     onChange={(e) => set('municipalityCode', e.target.value)}
+                    placeholder="Ej. Medellín o código DANE 05001"
+                    aria-describedby="producer-muni-hint"
                   />
+                  <small id="producer-muni-hint" className="muted">
+                    Escriba el nombre del municipio o su código oficial si lo conoce.
+                  </small>
                 </label>
                 <label>
-                  Vereda
+                  Vereda o corregimiento
                   <input
                     value={form.veredaCode ?? ''}
                     onChange={(e) => set('veredaCode', e.target.value)}
+                    placeholder="Ej. El Progreso"
                   />
                 </label>
                 <label>
-                  Latitud
+                  Latitud (opcional)
                   <input
                     type="number"
                     step="any"
                     value={form.latitude ?? ''}
                     onChange={(e) => set('latitude', e.target.value ? parseFloat(e.target.value) : undefined)}
+                    placeholder="6.2442"
                   />
                 </label>
                 <label>
-                  Longitud
+                  Longitud (opcional)
                   <input
                     type="number"
                     step="any"
                     value={form.longitude ?? ''}
                     onChange={(e) => set('longitude', e.target.value ? parseFloat(e.target.value) : undefined)}
+                    placeholder="-75.5812"
                   />
                 </label>
               </div>
@@ -248,15 +266,15 @@ export function ProducerFormPage() {
             content: (
               <div className="form-grid">
                 <label>
-                  Categoría
+                  Categoría comercial
                   <select
                     value={form.categoryCode ?? ''}
                     onChange={(e) => set('categoryCode', e.target.value)}
                   >
-                    <option value="">—</option>
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
+                    <option value="">Sin categoría</option>
+                    <option value="A">Categoría A — alto volumen</option>
+                    <option value="B">Categoría B — medio volumen</option>
+                    <option value="C">Categoría C — bajo volumen</option>
                   </select>
                 </label>
                 <label>

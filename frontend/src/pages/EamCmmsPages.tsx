@@ -37,7 +37,7 @@ export function EamCmmsCenterPage() {
 
   return (
     <>
-      <Header title="Centro de Mantenimiento" subtitle="CMMS / EAM empresarial" actions={CMMS_LINKS} />
+      <Header title="Centro de Mantenimiento" subtitle="Planes y órdenes de mantenimiento" actions={CMMS_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Planes activos</span><span className="kpi-value">{((center?.plans as unknown[]) ?? []).length}</span></div>
         <div className="kpi-card"><span className="kpi-label">Órdenes abiertas</span><span className="kpi-value">{((center?.openOrders as unknown[]) ?? []).length}</span></div>
@@ -45,7 +45,7 @@ export function EamCmmsCenterPage() {
         <div className="kpi-card"><span className="kpi-label">Cumplimiento</span><span className="kpi-value">{String(indicators?.completionPct ?? '—')}%</span></div>
       </div>
       <section className="card">
-        <button className="btn btn-primary" onClick={() => bootstrapEamCmms().then(() => getEamCmmsCenter().then(setCenter))}>Inicializar CMMS</button>
+        <button className="btn btn-primary" onClick={() => bootstrapEamCmms().then(() => getEamCmmsCenter().then(setCenter))}>Configurar mantenimiento</button>
       </section>
     </>
   );

@@ -12,10 +12,10 @@ export function EscmParametersPage() {
 
   return (
     <>
-      <Header title="Parámetros comerciales" subtitle="Configuración general del proceso de ventas" actions={<Link to="/comercial" className="btn">ESCM</Link>} />
+      <Header title="Parámetros comerciales" subtitle="Configuración general del proceso de ventas" actions={<Link to="/comercial" className="btn">Comercial</Link>} />
       <section className="panel">
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input placeholder="parameterKey" value={form.parameterKey} onChange={(e) => setForm({ ...form, parameterKey: e.target.value })} />
+          <input placeholder="Nombre del parámetro" value={form.parameterKey} onChange={(e) => setForm({ ...form, parameterKey: e.target.value })} />
           <input placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <input placeholder="JSON value" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} style={{ minWidth: 240 }} />
           <button

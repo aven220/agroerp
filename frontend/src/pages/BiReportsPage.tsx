@@ -30,7 +30,7 @@ export function BiReportsPage() {
     <>
       <Header
         title="Centro de Reportes"
-        subtitle="Generador universal EBIAP"
+        subtitle="Cree reportes personalizados con filtros y agrupaciones"
         actions={<Link to="/bi" className="btn">Centro BI</Link>}
       />
 

@@ -21,7 +21,7 @@ export function EscmCrmDashboardPage() {
             <Link to="/comercial/oportunidades" className="btn">Oportunidades</Link>
             <Link to="/comercial/cotizaciones" className="btn">Cotizaciones</Link>
             <Link to="/comercial/agenda" className="btn">Agenda</Link>
-            <Link to="/comercial" className="btn">ESCM</Link>
+            <Link to="/comercial" className="btn">Comercial</Link>
           </div>
         }
       />

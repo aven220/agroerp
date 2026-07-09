@@ -1,11 +1,8 @@
 import { useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { ROLE_LABELS } from '../../config/widgetRegistry';
-import { useAuth } from '../../context/AuthContext';
 import { WidgetPicker } from './WidgetPicker';
 
 export function WorkspaceToolbar() {
-  const { user } = useAuth();
   const {
     views,
     activeViewId,
@@ -75,7 +72,7 @@ export function WorkspaceToolbar() {
           ) : null}
         </div>
         <p className="ws-toolbar-sub ds-caption">
-          {ROLE_LABELS[dashboardRole]} · {user?.firstName} {user?.lastName}
+          Personalice su centro de trabajo o cambie de vista
         </p>
       </div>
       <div className="ws-toolbar-right">

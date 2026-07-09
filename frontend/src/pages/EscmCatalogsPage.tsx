@@ -15,13 +15,13 @@ export function EscmCatalogsPage() {
 
   return (
     <>
-      <Header title="Catálogos comerciales" subtitle="Tipos, segmentos, canales, monedas, impuestos y más" actions={<Link to="/comercial" className="btn">ESCM</Link>} />
+      <Header title="Catálogos comerciales" subtitle="Tipos, segmentos, canales, monedas, impuestos y más" actions={<Link to="/comercial" className="btn">Comercial</Link>} />
       <section className="panel">
         <select value={catalogKey} onChange={(e) => setCatalogKey(e.target.value)}>
           {keys.map((k) => <option key={k} value={k}>{k}</option>)}
         </select>
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <input placeholder="entryKey" value={form.entryKey} onChange={(e) => setForm({ ...form, entryKey: e.target.value })} />
+          <input placeholder="Código de catálogo" value={form.entryKey} onChange={(e) => setForm({ ...form, entryKey: e.target.value })} />
           <input placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <input placeholder="Código" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
           <button className="btn" onClick={() => upsertEscmCatalog({ catalogKey, ...form }).then(reload)}>Guardar</button>

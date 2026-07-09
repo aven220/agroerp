@@ -80,7 +80,7 @@ export function BiQueryBuilderPage() {
           </label>
           <label>
             Agrupar por
-            <input value={groupBy} onChange={(e) => setGroupBy(e.target.value)} placeholder="ej. lifecycleStatus" />
+            <input value={groupBy} onChange={(e) => setGroupBy(e.target.value)} placeholder="Ej. estado del registro" />
           </label>
           <label>
             Límite

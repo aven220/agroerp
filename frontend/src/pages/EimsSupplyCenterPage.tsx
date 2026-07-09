@@ -36,7 +36,7 @@ export function EimsSupplyCenterPage() {
             </button>
             <Link to="/inventario/reservas" className="btn">Reservas</Link>
             <Link to="/inventario/planificador" className="btn">Planificador</Link>
-            <Link to="/inventario" className="btn">EIMS</Link>
+            <Link to="/inventario" className="btn">Inventario</Link>
           </>
         }
       />

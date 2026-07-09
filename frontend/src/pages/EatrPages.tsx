@@ -37,7 +37,7 @@ export function EatrCenterPage() {
 
   return (
     <>
-      <Header title="Centro de Trazabilidad" subtitle="Sprint 5 — EATR" actions={EATR_LINKS} />
+      <Header title="Centro de Trazabilidad" subtitle="Trazabilidad desde origen hasta destino" actions={EATR_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Lotes prod.</span><span className="kpi-value">{String(indicators?.productionLots ?? '—')}</span></div>
         <div className="kpi-card"><span className="kpi-label">Lotes comerciales</span><span className="kpi-value">{String(indicators?.commercialLots ?? '—')}</span></div>

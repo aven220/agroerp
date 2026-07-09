@@ -29,7 +29,7 @@ export function CoffeeKardexPage() {
       />
       <section className="panel">
         <div style={{ display: 'flex', gap: 8 }}>
-          <input placeholder="Filtrar lotKey" value={lotKey} onChange={(e) => setLotKey(e.target.value)} />
+          <input placeholder="Filtrar por lote" value={lotKey} onChange={(e) => setLotKey(e.target.value)} />
           <button className="btn" onClick={reload}>Filtrar</button>
         </div>
       </section>

@@ -43,7 +43,7 @@ export function EaceCenterPage() {
 
   return (
     <>
-      <Header title="Ecosistema AgriTech Colaborativo" subtitle="Sprint 9 — EACE" actions={EACE_LINKS} />
+      <Header title="Ecosistema AgriTech Colaborativo" subtitle="Cooperativas, asesores y marketplace agrícola" actions={EACE_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Productores</span><span className="kpi-value">{String(indicators?.activeProducers ?? '—')}</span></div>
         <div className="kpi-card"><span className="kpi-label">Organizaciones</span><span className="kpi-value">{String(indicators?.collaborativeOrgs ?? '—')}</span></div>

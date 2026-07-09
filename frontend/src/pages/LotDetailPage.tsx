@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
+import { ProcessWorkspacePanel } from '../components/process/ProcessWorkspacePanel';
 import { LoadingState } from '../components/ux/LoadingState';
 import { useAuth } from '../context/AuthContext';
 import { buildRecordExplorerPath } from '../record-explorer/types';
@@ -152,18 +153,36 @@ export function LotDetailPage() {
 
       <FlowProgress flowId="agricultural" currentStepId="lot" />
 
+      <ProcessWorkspacePanel
+        flowId="agricultural"
+        currentStepId="lot"
+        entityName={lot.lotName}
+      />
+
       {id ? (
         <FlowNextActions
           title="Continuar con…"
           subtitle="Consulte el expediente completo y los indicadores del lote."
           actions={[
+            {
+              label: 'Capturar actividad',
+              description: 'Registre labores de campo con un formulario',
+              to: '/formularios/recoleccion',
+              primary: true,
+              icon: '📋',
+            },
+            {
+              label: 'Registrar cultivo',
+              description: 'Actualice variedades y estado agronómico',
+              to: '/plataforma-agritech/cultivos',
+              icon: '☕',
+            },
             ...(hasPermission('lot:read')
               ? [
                   {
                     label: 'Expediente 360°',
                     description: 'Vista unificada del lote productivo',
                     to: buildRecordExplorerPath('lot', id),
-                    primary: true,
                     icon: '📂',
                   },
                 ]

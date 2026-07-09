@@ -60,7 +60,7 @@ export function WorkflowDashboardPage() {
         <section className="panel">
           <h3>Cuellos de botella por estado</h3>
           {bottlenecks.length === 0 ? (
-            <p className="text-muted">Sin datos</p>
+            <p className="text-muted">Aún no hay información</p>
           ) : (
             <table className="data-table">
               <thead>

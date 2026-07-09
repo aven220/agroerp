@@ -97,7 +97,7 @@ export function HedDashboardPage() {
               a.click();
               setMessage('Exportación generada');
             }))}>Exportar</button>
-          <Link to="/rrhh" className="btn">HCM</Link>
+          <Link to="/rrhh" className="btn">Personal</Link>
         </div>
       } />
       {message ? <section className="panel"><p>{message}</p></section> : null}
@@ -105,8 +105,8 @@ export function HedDashboardPage() {
         <div className="row-actions">
           <input className="input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
           <input className="input" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          <input className="input" placeholder="Área (departmentKey)" value={departmentKey} onChange={(e) => setDepartmentKey(e.target.value)} />
-          <input className="input" placeholder="Sede (branchKey)" value={branchKey} onChange={(e) => setBranchKey(e.target.value)} />
+          <input className="input" placeholder="Área o departamento" value={departmentKey} onChange={(e) => setDepartmentKey(e.target.value)} />
+          <input className="input" placeholder="Sede o sucursal" value={branchKey} onChange={(e) => setBranchKey(e.target.value)} />
           <button className="btn" onClick={reload}>Aplicar filtros</button>
         </div>
       </section>

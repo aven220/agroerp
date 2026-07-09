@@ -21,7 +21,7 @@ export function EscmConditionsPage() {
 
   return (
     <>
-      <Header title="Condiciones comerciales" subtitle="Pago, entrega, incoterms y términos especiales" actions={<Link to="/comercial" className="btn">ESCM</Link>} />
+      <Header title="Condiciones comerciales" subtitle="Pago, entrega, incoterms y términos especiales" actions={<Link to="/comercial" className="btn">Comercial</Link>} />
       <section className="panel">
         <h3>Nueva condición</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

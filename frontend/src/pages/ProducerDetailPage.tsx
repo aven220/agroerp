@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
+import { ProcessWorkspacePanel } from '../components/process/ProcessWorkspacePanel';
 import { LoadingState } from '../components/ux/LoadingState';
 import { useAuth } from '../context/AuthContext';
 import { buildRecordExplorerPath } from '../record-explorer/types';
@@ -128,6 +129,12 @@ export function ProducerDetailPage() {
 
       <FlowProgress flowId="agricultural" currentStepId="producer" />
 
+      <ProcessWorkspacePanel
+        flowId="agricultural"
+        currentStepId="producer"
+        entityName={producer.legalName}
+      />
+
       {id ? (
         <FlowNextActions
           title="Continuar registro agrícola"
@@ -137,13 +144,25 @@ export function ProducerDetailPage() {
               ? [
                   {
                     label: 'Registrar finca',
-                    description: 'Asocie la primera unidad territorial',
+                    description: 'Siguiente paso del registro agrícola',
                     to: `/fincas/nueva?productor=${id}`,
                     primary: true,
                     icon: '🏡',
                   },
                 ]
               : []),
+            {
+              label: 'Capturar actividad',
+              description: 'Registre labores de campo con formularios',
+              to: '/formularios/recoleccion',
+              icon: '📋',
+            },
+            {
+              label: 'Bandeja de aprobaciones',
+              description: 'Revise solicitudes pendientes',
+              to: '/procesos/bandeja',
+              icon: '✅',
+            },
             ...(hasPermission('producer:read')
               ? [
                   {
@@ -156,7 +175,7 @@ export function ProducerDetailPage() {
               : []),
             {
               label: 'Ver indicadores',
-              description: 'Dashboard y métricas del módulo PRM',
+              description: 'Resumen de productores y actividad reciente',
               to: '/productores/dashboard',
               icon: '📊',
             },
@@ -168,7 +187,11 @@ export function ProducerDetailPage() {
       <div className="detail-scores">
         <div className="score-chip">Calidad: {producer.qualityScore}</div>
         <div className="score-chip">Riesgo: {producer.riskScore}</div>
-        {producer.categoryCode && <div className="score-chip">Cat. {producer.categoryCode}</div>}
+        {producer.categoryCode && (
+          <div className="score-chip">
+            Categoría {producer.categoryCode}
+          </div>
+        )}
       </div>
 
       <nav className="tab-nav">

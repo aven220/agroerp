@@ -18,10 +18,10 @@ export function EimsWarehousesPage() {
 
   return (
     <>
-      <Header title="Bodegas y centros" subtitle="Bodegas, acopios, silos, patios y cuartos fríos" actions={<Link to="/inventario" className="btn">EIMS</Link>} />
+      <Header title="Bodegas y centros" subtitle="Bodegas, acopios, silos, patios y cuartos fríos" actions={<Link to="/inventario" className="btn">Inventario</Link>} />
       <section className="panel">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-          <input placeholder="warehouseKey" value={form.warehouseKey} onChange={(e) => setForm({ ...form, warehouseKey: e.target.value })} />
+          <input placeholder="Código de bodega" value={form.warehouseKey} onChange={(e) => setForm({ ...form, warehouseKey: e.target.value })} />
           <input placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <select value={form.warehouseType} onChange={(e) => setForm({ ...form, warehouseType: e.target.value })}>
             <option value="warehouse">Bodega</option>

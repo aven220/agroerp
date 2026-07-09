@@ -36,7 +36,7 @@ export function ProducerDashboardPage() {
   return (
     <>
       <Header
-        title="Dashboard PRM"
+        title="Indicadores de productores"
         subtitle="KPIs y cartera de productores"
         actions={
           <Link to="/productores" className="btn">

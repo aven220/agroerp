@@ -34,7 +34,7 @@ export function TasksListPage() {
     <>
       <Header
         title="Administrador de tareas"
-        subtitle="Catálogo ESDJE"
+        subtitle="Tareas automáticas programadas en el sistema"
         actions={
           <div className="row-actions">
             <Link to="/tareas" className="btn">Centro</Link>
@@ -55,7 +55,7 @@ export function TasksListPage() {
           </select>
         </div>
         <div className="form-row">
-          <input placeholder="Clave (jobKey)" value={form.jobKey} onChange={(e) => setForm({ ...form, jobKey: e.target.value })} />
+          <input placeholder="Código de tarea" value={form.jobKey} onChange={(e) => setForm({ ...form, jobKey: e.target.value })} />
           <input placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <select value={form.handlerType} onChange={(e) => setForm({ ...form, handlerType: e.target.value })}>
             <option value="module.generic">Genérico</option>

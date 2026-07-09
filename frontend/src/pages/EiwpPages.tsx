@@ -35,7 +35,7 @@ export function EiwpCenterPage() {
 
   return (
     <>
-      <Header title="Centro de Gestión Hídrica" subtitle="Sprint 3 — Riego Inteligente" actions={EIWP_LINKS} />
+      <Header title="Centro de Gestión Hídrica" subtitle="Programación de riego y monitoreo hídrico" actions={EIWP_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Fuentes</span><span className="kpi-value">{String(indicators?.waterSources ?? '—')}</span></div>
         <div className="kpi-card"><span className="kpi-label">Sectores</span><span className="kpi-value">{String(indicators?.activeSectors ?? '—')}</span></div>

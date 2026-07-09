@@ -7,14 +7,14 @@ import { LoadingState } from '../components/ux/LoadingState';
 export function IoTCenterPage() {
   const [center, setCenter] = useState<IotCenter | null>(null);
   useEffect(() => { getIotCenter().then(setCenter); }, []);
-  if (!center) return <LoadingState variant="dashboard" message="Cargando Centro IoT..." />;
+  if (!center) return <LoadingState variant="dashboard" message="Cargando dispositivos conectados..." />;
 
   const d = center.dashboard;
   return (
     <>
       <Header
-        title="Centro IoT — EIESDP"
-        subtitle="Enterprise IoT, Edge & Smart Devices Platform"
+        title="Dispositivos y sensores"
+        subtitle="Telemetría, alertas y firmware de equipos en campo"
         actions={
           <div className="row-actions">
             <Link to="/iot/dispositivos" className="btn">Dispositivos</Link>

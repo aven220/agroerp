@@ -11,13 +11,13 @@ export function EfmCenterPage() {
   const reload = () => getEfmCenter().then(setCenter).catch((e) => setError(e.message));
   useEffect(() => { reload(); }, []);
 
-  if (!center && !error) return <LoadingState variant="page" message="Cargando EFM..." />;
+  if (!center && !error) return <LoadingState variant="page" message="Cargando finanzas..." />;
 
   return (
     <>
       <Header
-        title="Enterprise Financial Management — EFM"
-        subtitle="Plan de cuentas, parámetros y motor contable"
+        title="Finanzas"
+        subtitle="Plan de cuentas, períodos, asientos y reportes contables"
         actions={
           <div className="row-actions">
             <button className="btn" onClick={() => seedEfm().then(reload).catch((e) => setError(e.message))}>Sembrar financiero</button>
@@ -72,7 +72,7 @@ export function EfmCoaPage() {
   }, []);
   return (
     <>
-      <Header title="Administrador del plan de cuentas" subtitle="Jerarquías, auxiliares, control e impuestos" actions={<Link to="/finanzas" className="btn">EFM</Link>} />
+      <Header title="Administrador del plan de cuentas" subtitle="Jerarquías, auxiliares, control e impuestos" actions={<Link to="/finanzas" className="btn">Finanzas</Link>} />
       <section className="panel">
         <h3>Cuentas ({accounts.length})</h3>
         <table className="data-table">
@@ -112,7 +112,7 @@ export function EfmConfigPage() {
   }, []);
   return (
     <>
-      <Header title="Configuración financiera" subtitle="Monedas, empresas y parámetros contables" actions={<Link to="/finanzas" className="btn">EFM</Link>} />
+      <Header title="Configuración financiera" subtitle="Monedas, empresas y parámetros contables" actions={<Link to="/finanzas" className="btn">Finanzas</Link>} />
       <section className="panel">
         <h3>Parámetros</h3>
         <table className="data-table">
@@ -144,7 +144,7 @@ export function EfmRulesPage() {
   useEffect(() => { reload(); }, []);
   return (
     <>
-      <Header title="Centro de reglas contables" subtitle="Motor contable configurable" actions={<Link to="/finanzas" className="btn">EFM</Link>} />
+      <Header title="Centro de reglas contables" subtitle="Motor contable configurable" actions={<Link to="/finanzas" className="btn">Finanzas</Link>} />
       <table className="data-table panel">
         <thead><tr><th>Regla</th><th>Módulo</th><th>Evento</th><th>Débito</th><th>Crédito</th><th>Prioridad</th><th>Estado</th></tr></thead>
         <tbody>
@@ -172,7 +172,7 @@ export function EfmPeriodsPage() {
   }, []);
   return (
     <>
-      <Header title="Administrador de períodos" subtitle="Ejercicios fiscales y períodos contables" actions={<Link to="/finanzas" className="btn">EFM</Link>} />
+      <Header title="Administrador de períodos" subtitle="Ejercicios fiscales y períodos contables" actions={<Link to="/finanzas" className="btn">Finanzas</Link>} />
       {years.map((fy) => (
         <section className="panel" key={String(fy.fiscalYearKey)}>
           <h3>{String(fy.fiscalYearKey)} — {String(fy.status)}</h3>
@@ -197,7 +197,7 @@ export function EfmCostCentersPage() {
   }, []);
   return (
     <>
-      <Header title="Centros de costo" subtitle="Dimensiones analíticas" actions={<Link to="/finanzas" className="btn">EFM</Link>} />
+      <Header title="Centros de costo" subtitle="Dimensiones analíticas" actions={<Link to="/finanzas" className="btn">Finanzas</Link>} />
       <table className="data-table panel">
         <thead><tr><th>Código</th><th>Nombre</th><th>Empresa</th></tr></thead>
         <tbody>{rows.map((r) => <tr key={String(r.costCenterKey)}><td>{String(r.code)}</td><td>{String(r.name)}</td><td>{String(r.companyKey ?? '')}</td></tr>)}</tbody>
@@ -212,7 +212,7 @@ export function EfmValidationPage() {
   const issues = (panel?.issues ?? []) as Array<{ severity: string; code: string; message: string }>;
   return (
     <>
-      <Header title="Panel de validaciones" subtitle="Integridad contable" actions={<Link to="/finanzas" className="btn">EFM</Link>} />
+      <Header title="Panel de validaciones" subtitle="Integridad contable" actions={<Link to="/finanzas" className="btn">Finanzas</Link>} />
       <section className="panel">
         <div><strong>Válido:</strong> {panel?.valid ? 'Sí' : 'No'}</div>
         <table className="data-table">
@@ -231,7 +231,7 @@ export function EfmJournalsPage() {
   }, []);
   return (
     <>
-      <Header title="Asientos contables" subtitle="Generados por el motor contable" actions={<Link to="/finanzas" className="btn">EFM</Link>} />
+      <Header title="Asientos contables" subtitle="Generados por el motor contable" actions={<Link to="/finanzas" className="btn">Finanzas</Link>} />
       <table className="data-table panel">
         <thead><tr><th>Asiento</th><th>Origen</th><th>Documento</th><th>Estado</th><th>Débito</th><th>Crédito</th></tr></thead>
         <tbody>
@@ -256,7 +256,7 @@ export function EfmAuditPage() {
   useEffect(() => { import('../api/efm').then(({ listEfmAudit }) => listEfmAudit().then((r) => setRows(r as Array<Record<string, unknown>>))); }, []);
   return (
     <>
-      <Header title="Auditoría financiera" subtitle="Cuentas, reglas y parámetros" actions={<Link to="/finanzas" className="btn">EFM</Link>} />
+      <Header title="Auditoría financiera" subtitle="Cuentas, reglas y parámetros" actions={<Link to="/finanzas" className="btn">Finanzas</Link>} />
       <table className="data-table panel">
         <thead><tr><th>Entidad</th><th>Clave</th><th>Acción</th><th>Versión</th><th>Fecha</th></tr></thead>
         <tbody>
@@ -297,7 +297,7 @@ export function EfmVouchersPage() {
               <option value="voided">Anulado</option>
               <option value="reversed">Reversado</option>
             </select>
-            <Link to="/finanzas" className="btn">EFM</Link>
+            <Link to="/finanzas" className="btn">Finanzas</Link>
           </div>
         }
       />
@@ -342,7 +342,7 @@ export function EfmJournalBookPage() {
                 window.open(exportEfmJournalBookUrl(periodKey ? { periodKey } : undefined), '_blank');
               });
             }}>Exportar CSV</a>
-            <Link to="/finanzas" className="btn">EFM</Link>
+            <Link to="/finanzas" className="btn">Finanzas</Link>
           </div>
         }
       />
@@ -393,7 +393,7 @@ export function EfmLedgerPage() {
           <div className="row-actions">
             <input placeholder="Período" value={periodKey} onChange={(e) => setPeriodKey(e.target.value)} />
             <input placeholder="Comparar período" value={comparePeriodKey} onChange={(e) => setComparePeriodKey(e.target.value)} />
-            <Link to="/finanzas" className="btn">EFM</Link>
+            <Link to="/finanzas" className="btn">Finanzas</Link>
           </div>
         }
       />
@@ -431,7 +431,7 @@ export function EfmVoucherTypesPage() {
         actions={
           <div className="row-actions">
             <button className="btn" onClick={() => import('../api/efm').then(({ seedEfmVoucherTypes }) => seedEfmVoucherTypes().then(reload))}>Sembrar tipos</button>
-            <Link to="/finanzas" className="btn">EFM</Link>
+            <Link to="/finanzas" className="btn">Finanzas</Link>
           </div>
         }
       />

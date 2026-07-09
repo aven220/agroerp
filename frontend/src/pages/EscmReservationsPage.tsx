@@ -15,9 +15,9 @@ export function EscmReservationsPage() {
 
   return (
     <>
-      <Header title="Gestor de reservas" subtitle="Reservas EIMS vinculadas a pedidos" actions={<Link to="/comercial/pedidos" className="btn">Pedidos</Link>} />
+      <Header title="Gestor de reservas" subtitle="Reservas de inventario vinculadas a pedidos" actions={<Link to="/comercial/pedidos" className="btn">Pedidos</Link>} />
       <section className="panel">
-        <input placeholder="Filtrar por customerKey" value={customerKey} onChange={(e) => setCustomerKey(e.target.value)} />
+        <input placeholder="Filtrar por cliente" value={customerKey} onChange={(e) => setCustomerKey(e.target.value)} />
       </section>
       <section className="panel">
         <table className="data-table">

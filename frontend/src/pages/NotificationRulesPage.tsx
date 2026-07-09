@@ -72,7 +72,7 @@ export function NotificationRulesPage() {
 
       {showForm && (
         <div className="panel form-row">
-          <input placeholder="rule_key" value={form.ruleKey} onChange={(e) => setForm({ ...form, ruleKey: e.target.value })} />
+          <input placeholder="Código de regla" value={form.ruleKey} onChange={(e) => setForm({ ...form, ruleKey: e.target.value })} />
           <input placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <select value={form.alertSeverity} onChange={(e) => setForm({ ...form, alertSeverity: e.target.value })}>
             <option value="info">Info</option>

@@ -79,7 +79,7 @@ export function FormDataCenterPage() {
             <section className="panel">
               <h3 className="ds-h4">Envíos por formulario</h3>
               {(report?.submissionsByForm?.length ?? 0) === 0 ? (
-                <p className="muted">Sin datos aún.</p>
+                <p className="muted">Aún no hay información.</p>
               ) : (
                 <ul className="form-bar-chart">
                   {report?.submissionsByForm?.map((row) => (

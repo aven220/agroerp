@@ -27,7 +27,7 @@ export function EscmPriceListsPage() {
 
   return (
     <>
-      <Header title="Listas de precios" subtitle="Precios por lista, producto y cliente" actions={<Link to="/comercial" className="btn">ESCM</Link>} />
+      <Header title="Listas de precios" subtitle="Precios por lista, producto y cliente" actions={<Link to="/comercial" className="btn">Comercial</Link>} />
       <section className="panel">
         <h3>Nueva lista</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -57,7 +57,7 @@ export function EscmPriceListsPage() {
         <section className="panel">
           <h3>Ítems — {String(detail.name)}</h3>
           <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <input placeholder="itemKey" value={itemForm.itemKey} onChange={(e) => setItemForm({ ...itemForm, itemKey: e.target.value })} />
+            <input placeholder="Código del artículo" value={itemForm.itemKey} onChange={(e) => setItemForm({ ...itemForm, itemKey: e.target.value })} />
             <input type="number" placeholder="Precio" value={itemForm.unitPrice} onChange={(e) => setItemForm({ ...itemForm, unitPrice: Number(e.target.value) })} />
             <button className="btn" onClick={() => upsertEscmPriceListItem(selected, itemForm).then(() => getEscmPriceList(selected).then(setDetail))}>Agregar</button>
           </div>
@@ -78,8 +78,8 @@ export function EscmPriceListsPage() {
       <section className="panel">
         <h3>Resolver precio</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input placeholder="itemKey" value={resolveForm.itemKey} onChange={(e) => setResolveForm({ ...resolveForm, itemKey: e.target.value })} />
-          <input placeholder="customerKey" value={resolveForm.customerKey} onChange={(e) => setResolveForm({ ...resolveForm, customerKey: e.target.value })} />
+          <input placeholder="Código del artículo" value={resolveForm.itemKey} onChange={(e) => setResolveForm({ ...resolveForm, itemKey: e.target.value })} />
+          <input placeholder="Código de cliente" value={resolveForm.customerKey} onChange={(e) => setResolveForm({ ...resolveForm, customerKey: e.target.value })} />
           <input type="number" placeholder="Cantidad" value={resolveForm.quantity} onChange={(e) => setResolveForm({ ...resolveForm, quantity: Number(e.target.value) })} />
           <button className="btn" onClick={() => resolveEscmPrice(resolveForm).then(setResolved)}>Resolver</button>
         </div>

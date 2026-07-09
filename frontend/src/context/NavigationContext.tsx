@@ -19,6 +19,7 @@ import {
 import type { DashboardRole } from '../config/navigation';
 import { DEFAULT_WIDGET_ORDER } from '../config/dashboardWidgets';
 import { resolveDashboardRole } from '../config/navigation';
+import { parseEntityFromPath, recordWorkEntityVisit } from '../lib/workEntityHistory';
 import { useAuth } from './AuthContext';
 
 export interface FavoriteItem {
@@ -212,6 +213,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     recordVisit(location.pathname);
+    const entity = parseEntityFromPath(location.pathname);
+    if (entity) recordWorkEntityVisit(userId, entity);
     const match = findNavItemByPath(location.pathname);
     if (match) {
       if (favorites.some((f) => f.id === match.id)) {
@@ -224,7 +227,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-  }, [location.pathname, recordVisit, expandGroup, favorites]);
+  }, [location.pathname, recordVisit, expandGroup, favorites, userId]);
 
   const setWidgetOrder = useCallback((order: string[]) => {
     setWidgetLayout((prev) => ({ ...prev, order }));

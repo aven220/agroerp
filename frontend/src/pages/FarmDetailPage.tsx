@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
+import { ProcessWorkspacePanel } from '../components/process/ProcessWorkspacePanel';
 import { LoadingState } from '../components/ux/LoadingState';
 import { useAuth } from '../context/AuthContext';
 import { buildRecordExplorerPath } from '../record-explorer/types';
@@ -139,6 +140,12 @@ export function FarmDetailPage() {
 
       <FlowProgress flowId="agricultural" currentStepId="farm" />
 
+      <ProcessWorkspacePanel
+        flowId="agricultural"
+        currentStepId="farm"
+        entityName={farm.farmName}
+      />
+
       {id ? (
         <FlowNextActions
           title="Continuar con…"
@@ -148,13 +155,19 @@ export function FarmDetailPage() {
               ? [
                   {
                     label: 'Registrar lote',
-                    description: 'Defina la unidad productiva en esta finca',
+                    description: 'Siguiente paso: unidad productiva en esta finca',
                     to: `/lotes/nuevo?finca=${id}`,
                     primary: true,
                     icon: '🌱',
                   },
                 ]
               : []),
+            {
+              label: 'Registrar cultivo',
+              description: 'Asocie variedades y stands productivos',
+              to: '/plataforma-agritech/cultivos',
+              icon: '☕',
+            },
             ...(hasPermission('farm:read')
               ? [
                   {
@@ -167,7 +180,7 @@ export function FarmDetailPage() {
               : []),
             {
               label: 'Indicadores de fincas',
-              description: 'Dashboard territorial FTIP',
+              description: 'Indicadores territoriales de la finca',
               to: '/fincas/dashboard',
               icon: '📊',
             },
@@ -292,7 +305,7 @@ export function FarmDetailPage() {
             ) : (
               <table className="data-table">
                 <thead>
-                  <tr><th>Código</th><th>Nombre</th><th>Área (ha)</th><th>Estado</th><th>Cultivos</th><th>FMDT</th></tr>
+                  <tr><th>Código</th><th>Nombre</th><th>Área (ha)</th><th>Estado</th><th>Cultivos</th><th>Lotes</th></tr>
                 </thead>
                 <tbody>
                   {farm.lots!.map((l) => (
@@ -310,7 +323,7 @@ export function FarmDetailPage() {
                       <td>{l.cropStands?.map((c) => c.speciesCode).join(', ') || '—'}</td>
                       <td>
                         {!l.fieldLotProfile?.id && (
-                          <Link to="/lotes/nuevo" className="btn btn-sm">Activar FMDT</Link>
+                          <Link to="/lotes/nuevo" className="btn btn-sm">Registrar lote</Link>
                         )}
                       </td>
                     </tr>

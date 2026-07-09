@@ -9,7 +9,7 @@ export function HcmTaCenterPage() {
 
   return (
     <>
-      <Header title="Centro de Asistencia — HCM" subtitle="Marcaciones, turnos, horarios y novedades" actions={
+      <Header title="Centro de asistencia" subtitle="Marcaciones, turnos, horarios y novedades" actions={
         <div className="row-actions">
           <button className="btn" onClick={() => import('../api/hcm-ta').then(({ seedHcmTa }) => seedHcmTa().then(reload))}>Sembrar TA</button>
           <Link to="/rrhh/asistencia/marcaciones" className="btn">Marcaciones</Link>
@@ -18,7 +18,7 @@ export function HcmTaCenterPage() {
           <Link to="/rrhh/asistencia/novedades" className="btn">Novedades</Link>
           <Link to="/rrhh/asistencia/correcciones" className="btn">Correcciones</Link>
           <Link to="/rrhh/asistencia/dashboard" className="btn">Dashboard</Link>
-          <Link to="/rrhh" className="btn">HCM</Link>
+          <Link to="/rrhh" className="btn">Personal</Link>
         </div>
       } />
       {center ? (

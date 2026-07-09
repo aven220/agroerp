@@ -46,7 +46,7 @@ export function LotDashboardPage() {
   return (
     <>
       <Header
-        title="Dashboard FMDT"
+        title="Indicadores de lotes"
         subtitle="KPIs de lotes y gemelo digital"
         actions={
           <Link to="/lotes" className="btn">

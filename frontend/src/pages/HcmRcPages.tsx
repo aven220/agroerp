@@ -10,7 +10,7 @@ export function HcmRcCenterPage() {
   return (
     <>
       <Header
-        title="Reclutamiento y Selección — HCM"
+        title="Reclutamiento y selección"
         subtitle="Vacantes, candidatos, pipeline y contratación"
         actions={
           <div className="row-actions">
@@ -21,7 +21,7 @@ export function HcmRcCenterPage() {
             <Link to="/rrhh/reclutamiento/entrevistas" className="btn">Entrevistas</Link>
             <Link to="/rrhh/reclutamiento/ofertas" className="btn">Ofertas</Link>
             <Link to="/rrhh/reclutamiento/onboarding" className="btn">Onboarding</Link>
-            <Link to="/rrhh" className="btn">HCM</Link>
+            <Link to="/rrhh" className="btn">Personal</Link>
           </div>
         }
       />

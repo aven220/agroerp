@@ -45,7 +45,7 @@ export function EamReliabilityCenterPage() {
         <div className="kpi-card"><span className="kpi-label">Alertas</span><span className="kpi-value">{String(indicators?.unreadAlerts ?? 0)}</span></div>
       </div>
       <section className="card">
-        <button className="btn btn-primary" onClick={() => bootstrapEamReliability().then(() => getEamReliabilityCenter().then(setCenter))}>Inicializar Confiabilidad</button>
+        <button className="btn btn-primary" onClick={() => bootstrapEamReliability().then(() => getEamReliabilityCenter().then(setCenter))}>Configurar confiabilidad</button>
       </section>
     </>
   );

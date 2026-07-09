@@ -34,7 +34,7 @@ export function EscmQuotationsPage() {
             <option value="">Cliente</option>
             {customers.map((c) => <option key={String(c.customerKey)} value={String(c.customerKey)}>{String(c.legalName)}</option>)}
           </select>
-          <input placeholder="itemKey" value={form.itemKey} onChange={(e) => setForm({ ...form, itemKey: e.target.value })} />
+          <input placeholder="Código del artículo" value={form.itemKey} onChange={(e) => setForm({ ...form, itemKey: e.target.value })} />
           <input type="number" placeholder="Cantidad" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} />
           <button
             className="btn"

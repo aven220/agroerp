@@ -34,7 +34,7 @@ export function BiDashboardViewPage() {
     <>
       <Header
         title={name || 'Dashboard'}
-        subtitle={`EBIAP — ${category}`}
+        subtitle={category}
         actions={
           <div className="row-actions">
             <Link to="/bi/dashboards" className="btn">Volver</Link>

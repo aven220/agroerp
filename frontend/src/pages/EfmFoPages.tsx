@@ -25,7 +25,7 @@ export function EfmFoCenterPage() {
             <Link to="/finanzas/foc/dashboard" className="btn">Dashboard ejecutivo</Link>
             <Link to="/finanzas/foc/alertas" className="btn">Alertas</Link>
             <Link to="/finanzas/foc/ia" className="btn">IA financiera</Link>
-            <Link to="/finanzas" className="btn">EFM</Link>
+            <Link to="/finanzas" className="btn">Finanzas</Link>
           </div>
         }
       />

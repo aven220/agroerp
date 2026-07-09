@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { getBiCenter, getBiRealtime, type BiCenter } from '../api/bi';
 import { LoadingState } from '../components/ux/LoadingState';
 
@@ -15,15 +17,15 @@ export function BiCenterPage() {
     return () => clearInterval(iv);
   }, []);
 
-  if (!center) return <LoadingState variant="dashboard" message="Cargando Centro BI..." />;
+  if (!center) return <LoadingState variant="dashboard" message="Cargando reportes e indicadores..." />;
 
   const kpis = center.executive.kpis as Record<string, number> | undefined;
 
   return (
     <>
       <Header
-        title="Centro BI — EBIAP"
-        subtitle="Business Intelligence empresarial integrado"
+        title="Reportes e indicadores"
+        subtitle="Tableros, KPIs y análisis para la toma de decisiones"
         actions={
           <div className="row-actions">
             <Link to="/bi/dashboards" className="btn">Dashboards</Link>
@@ -33,6 +35,18 @@ export function BiCenterPage() {
             <Link to="/bi/consultas" className="btn">Consultas</Link>
           </div>
         }
+      />
+
+      <FlowProgress flowId="reports" currentStepId="hub" />
+
+      <FlowNextActions
+        title="Recorrido de reportes"
+        subtitle="Del tablero ejecutivo al detalle analítico."
+        actions={[
+          { label: 'Ver tableros', description: 'Indicadores visuales por área', to: '/bi/dashboards', primary: true, icon: '📈' },
+          { label: 'Generar reporte', description: 'Exporte datos con filtros', to: '/bi/reportes', icon: '📄' },
+          { label: 'Consulta avanzada', description: 'Cruce de datos personalizado', to: '/bi/consultas', icon: '🔍' },
+        ]}
       />
 
       <div className="kpi-grid kpi-grid-lg">

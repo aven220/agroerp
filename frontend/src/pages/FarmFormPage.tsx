@@ -4,6 +4,7 @@ import { Header } from '../components/layout/Header';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { createFarm, getFarm, setFarmGeometry, updateFarm } from '../api/ftip';
 import { listProducers } from '../api/prm';
+import { markProcessMilestone } from '../lib/processWorkspace';
 
 interface FarmFormState {
   farmName: string;
@@ -112,7 +113,12 @@ export function FarmFormPage() {
           const geometry = JSON.parse(form.boundaryGeoJson);
           await setFarmGeometry(created.id, { geometryGeo: geometry });
         }
-        navigate(`/fincas/${created.id}`);
+        markProcessMilestone('agricultural', 'farm', {
+          entityId: created.id,
+          entityName: form.farmName,
+          entityType: 'farm',
+        });
+        navigate(`/fincas/${created.id}?paso=completado`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar');
@@ -142,7 +148,11 @@ export function FarmFormPage() {
     <>
       <Header
         title={isEdit ? 'Editar finca' : 'Nueva finca'}
-        subtitle="Expediente territorial FTIP"
+        subtitle={
+          isEdit
+            ? 'Actualice datos de la finca. Los cambios se guardan al confirmar.'
+            : 'Registre la finca del productor. Después podrá crear los lotes productivos.'
+        }
         actions={
           <button type="button" className="btn" onClick={() => navigate(-1)}>
             Cancelar
@@ -191,13 +201,15 @@ export function FarmFormPage() {
           <input
             value={form.municipalityCode}
             onChange={(e) => setForm({ ...form, municipalityCode: e.target.value })}
+            placeholder="Ej. Medellín o código DANE 05001"
           />
         </label>
         <label>
-          Vereda
+          Vereda o corregimiento
           <input
             value={form.veredaCode}
             onChange={(e) => setForm({ ...form, veredaCode: e.target.value })}
+            placeholder="Ej. El Progreso"
           />
         </label>
         <label>
@@ -248,15 +260,18 @@ export function FarmFormPage() {
           </div>
         </div>
 
-        <label className="form-full">
-          Polígono (GeoJSON)
-          <textarea
-            value={form.boundaryGeoJson}
-            onChange={(e) => setForm({ ...form, boundaryGeoJson: e.target.value })}
-            rows={6}
-            placeholder='{"type":"Polygon","coordinates":[[...]]}'
-          />
-        </label>
+        <details className="form-advanced-section form-full">
+          <summary>Delimitación de la finca (opcional)</summary>
+          <label style={{ display: 'block', marginTop: '0.75rem' }}>
+            Contorno del predio
+            <textarea
+              value={form.boundaryGeoJson}
+              onChange={(e) => setForm({ ...form, boundaryGeoJson: e.target.value })}
+              rows={6}
+              placeholder="Opcional. Puede registrar el perímetro más adelante desde el mapa."
+            />
+          </label>
+        </details>
 
         <label className="form-full">
           Observaciones

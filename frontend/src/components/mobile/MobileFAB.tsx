@@ -2,12 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { useMobile } from '../../context/MobileContext';
 import { getQuickActionsForRole } from '../../config/widgetRegistry';
 import { useNavigation } from '../../context/NavigationContext';
+import { useAuth } from '../../context/AuthContext';
 
 export function MobileFAB() {
   const { isMobile, setCaptureOpen } = useMobile();
   const { dashboardRole } = useNavigation();
+  const { hasPermission } = useAuth();
   const navigate = useNavigate();
-  const actions = getQuickActionsForRole(dashboardRole);
+  const actions = getQuickActionsForRole(dashboardRole, hasPermission);
   const primary = actions[0];
 
   if (!isMobile || !primary) return null;

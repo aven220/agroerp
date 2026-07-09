@@ -10,6 +10,7 @@ import {
   labelWorkflowStatus,
   labelWorkflowTransition,
 } from '../lib/userLabels';
+import { labelWorkflowStep } from '../lib/humanizeCopy';
 import {
   executeWorkflowTransition,
   getWorkflowInbox,
@@ -173,7 +174,7 @@ export function WorkflowInboxPage() {
                     {labelWorkflowStatus(task.status)}
                   </span>
                 </header>
-                <p>Paso actual: <strong>{task.stateKey}</strong></p>
+                <p>Paso actual: <strong>{labelWorkflowStep(task.stateKey)}</strong></p>
                 {transitionLabel ? <p>Acción sugerida: <strong>{transitionLabel}</strong></p> : null}
                 {task.dueAt && (
                   <p className={new Date(task.dueAt) < new Date() ? 'text-danger' : ''}>

@@ -38,7 +38,7 @@ export function BpmsCenterPage() {
 
   return (
     <>
-      <Header title="Centro BPMS" subtitle="Motor de procesos empresariales" actions={BPMS_LINKS} />
+      <Header title="Centro de procesos" subtitle="Automatización de solicitudes y aprobaciones" actions={BPMS_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Procesos</span><span className="kpi-value">{((center?.processes as unknown[]) ?? []).length}</span></div>
         <div className="kpi-card"><span className="kpi-label">Instancias activas</span><span className="kpi-value">{((center?.instances as unknown[]) ?? []).length}</span></div>
@@ -46,7 +46,7 @@ export function BpmsCenterPage() {
         <div className="kpi-card"><span className="kpi-label">SLA</span><span className="kpi-value">{String(indicators?.slaCompliancePct ?? '—')}%</span></div>
       </div>
       <section className="card">
-        <button className="btn btn-primary" onClick={() => bootstrapBpms().then(() => getBpmsCenter().then(setCenter))}>Inicializar BPMS</button>
+        <button className="btn btn-primary" onClick={() => bootstrapBpms().then(() => getBpmsCenter().then(setCenter))}>Configurar módulo de procesos</button>
       </section>
     </>
   );
@@ -93,7 +93,7 @@ export function BpmsDesignerPage() {
 
   return (
     <>
-      <Header title="Diseñador Visual" subtitle="Drag & Drop BPMN" actions={BPMS_LINKS} />
+      <Header title="Diseñador Visual" subtitle="Diseñe flujos arrastrando y soltando elementos" actions={BPMS_LINKS} />
       <section className="card row-actions">
         <button className="btn" onClick={() => addElement('start', 'Inicio')}>+ Inicio</button>
         <button className="btn" onClick={() => addElement('user_task', 'Tarea')}>+ Tarea humana</button>
@@ -193,7 +193,7 @@ export function BpmsExecutiveDashboardPage() {
   const indicators = dashboard?.indicators as Record<string, number> | undefined;
   return (
     <>
-      <Header title="Dashboard Ejecutivo BPMS" actions={BPMS_LINKS} />
+      <Header title="Panel ejecutivo de procesos" actions={BPMS_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card"><span className="kpi-label">Throughput</span><span className="kpi-value">{String(indicators?.throughputPct ?? '—')}%</span></div>
         <div className="kpi-card"><span className="kpi-label">SLA</span><span className="kpi-value">{String(indicators?.slaCompliancePct ?? '—')}%</span></div>
@@ -225,7 +225,7 @@ export function BpmsInboxPage() {
   useEffect(() => { getBpmsInbox().then(setTasks); }, []);
   return (
     <>
-      <Header title="Bandeja de Tareas BPMS" actions={BPMS_LINKS} />
+      <Header title="Bandeja de tareas" actions={BPMS_LINKS} />
       <section className="card">
         <ul>{tasks.map((t, i) => {
           const row = t as { taskKey: string; title: string; priority: string; status: string };

@@ -7,13 +7,13 @@ import { LoadingState } from '../components/ux/LoadingState';
 export function OpsCenterPage() {
   const [dash, setDash] = useState<EopDashboard | null>(null);
   useEffect(() => { getEopCenter().then(setDash); }, []);
-  if (!dash) return <LoadingState variant="dashboard" message="Cargando Operations Center..." />;
+  if (!dash) return <LoadingState variant="dashboard" message="Cargando monitoreo de operaciones..." />;
 
   return (
     <>
       <Header
-        title="Operations Center — EOP"
-        subtitle="Enterprise Observability Platform"
+        title="Monitoreo de operaciones"
+        subtitle="Estado de servicios, incidentes y salud de la plataforma"
         actions={
           <div className="row-actions">
             <Link to="/operaciones/infraestructura" className="btn">Infraestructura</Link>

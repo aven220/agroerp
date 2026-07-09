@@ -12,8 +12,8 @@ export function CoffeeCenterPage() {
   return (
     <>
       <Header
-        title="Compras de Café — CPEP"
-        subtitle="Café Procurement Enterprise Platform"
+        title="Compras de café"
+        subtitle="Recepción, pesaje, liquidación y trazabilidad del café"
         actions={
           <div className="row-actions">
             <Link to="/compras/wizard" className="btn">Wizard recepción</Link>

@@ -7,14 +7,14 @@ import { LoadingState } from '../components/ux/LoadingState';
 export function TasksCenterPage() {
   const [center, setCenter] = useState<EsdjeCenter | null>(null);
   useEffect(() => { getEsdjeCenter().then(setCenter); }, []);
-  if (!center) return <LoadingState variant="dashboard" message="Cargando Centro de Tareas..." />;
+  if (!center) return <LoadingState variant="dashboard" message="Cargando tareas programadas..." />;
 
   const d = center.dashboard;
   return (
     <>
       <Header
-        title="Centro de Tareas — ESDJE"
-        subtitle="Enterprise Scheduler & Distributed Job Engine"
+        title="Tareas programadas"
+        subtitle="Procesos automáticos, colas de trabajo e historial de ejecución"
         actions={
           <div className="row-actions">
             <Link to="/tareas/catalogo" className="btn">Catálogo</Link>

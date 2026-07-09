@@ -11,13 +11,13 @@ export function EscmCenterPage() {
   const reload = () => getEscmCenter().then(setCenter).catch((e) => setError(e.message));
   useEffect(() => { reload(); }, []);
 
-  if (!center && !error) return <LoadingState variant="page" message="Cargando ESCM..." />;
+  if (!center && !error) return <LoadingState variant="page" message="Cargando ventas y comercial..." />;
 
   return (
     <>
       <Header
-        title="Enterprise Sales & Commercial — ESCM"
-        subtitle="Clientes, precios, condiciones y CRM comercial"
+        title="Ventas y comercial"
+        subtitle="Clientes, precios, cotizaciones, pedidos y cartera"
         actions={
           <div className="row-actions">
             <button className="btn" onClick={() => seedEscm().then(reload).catch((e) => setError(e.message))}>

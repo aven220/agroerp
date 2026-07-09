@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { FormsPlatformNav } from '../components/forms/FormsPlatformNav';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
+import { ProcessWorkspacePanel } from '../components/process/ProcessWorkspacePanel';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ux/LoadingState';
 import { listForms, listSubmissions, type FormSubmission } from '../api/forms';
@@ -77,6 +80,36 @@ export function FormCollectionPage() {
         subtitle="Cada envío es un registro con trazabilidad, evidencias y estado de sincronización"
       />
       <FormsPlatformNav />
+
+      <FlowProgress flowId="forms" currentStepId="capture" />
+
+      <ProcessWorkspacePanel flowId="forms" currentStepId="capture" showChecklist={false} />
+
+      <FlowNextActions
+        title="Después de capturar"
+        subtitle="Revise envíos, consulte el expediente o envíe a aprobación."
+        actions={[
+          {
+            label: 'Llenar otro formulario',
+            description: 'Vuelva al catálogo de formularios publicados',
+            to: '/formularios',
+            primary: true,
+            icon: '📝',
+          },
+          {
+            label: 'Bandeja de aprobaciones',
+            description: 'Si el proceso requiere revisión',
+            to: '/procesos/bandeja',
+            icon: '✅',
+          },
+          {
+            label: 'Expediente 360°',
+            description: 'Consulte el registro unificado',
+            to: '/expediente',
+            icon: '📂',
+          },
+        ]}
+      />
 
       <div className="kpi-grid">
         <div className="kpi-card"><span className="kpi-label">Diligenciados</span><span className="kpi-value">{kpis.total}</span></div>

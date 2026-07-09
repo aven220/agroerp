@@ -56,7 +56,7 @@ export function EimsKardexPage() {
           <>
             <Link to="/inventario/cierres" className="btn">Cierres</Link>
             <Link to="/inventario/movimientos" className="btn">Movimientos</Link>
-            <Link to="/inventario" className="btn">EIMS</Link>
+            <Link to="/inventario" className="btn">Inventario</Link>
           </>
         }
       />
@@ -81,7 +81,7 @@ export function EimsKardexPage() {
             <option value="">Bodega...</option>
             {warehouses.map((w) => <option key={String(w.warehouseKey)} value={String(w.warehouseKey)}>{String(w.warehouseKey)}</option>)}
           </select>
-          <input placeholder="lotKey" value={lotKey} onChange={(e) => setLotKey(e.target.value)} />
+          <input placeholder="Código de lote" value={lotKey} onChange={(e) => setLotKey(e.target.value)} />
           <button className="btn" onClick={() => reload()}>Consultar Kardex</button>
           <button
             className="btn"

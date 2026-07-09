@@ -44,7 +44,7 @@ export function EaccCenterPage() {
 
   return (
     <>
-      <Header title="Centro de Certificaciones" subtitle="Sprint 6 — EACC" actions={EACC_LINKS} />
+      <Header title="Centro de Certificaciones" subtitle="Certificaciones, auditorías y cumplimiento normativo" actions={EACC_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Certificaciones</span><span className="kpi-value">{String(indicators?.activeCertifications ?? '—')}</span></div>
         <div className="kpi-card"><span className="kpi-label">Cumplimiento</span><span className="kpi-value">{String(indicators?.complianceRate ?? '—')}%</span></div>
@@ -52,7 +52,7 @@ export function EaccCenterPage() {
         <div className="kpi-card"><span className="kpi-label">Compliance Score</span><span className="kpi-value">{String(indicators?.complianceScore ?? '—')}</span></div>
       </div>
       <section className="card">
-        <button className="btn btn-primary" onClick={() => bootstrapEacc().then(setCenter)}>Inicializar Cumplimiento</button>
+        <button className="btn btn-primary" onClick={() => bootstrapEacc().then(setCenter)}>Configurar cumplimiento</button>
       </section>
       <section className="card">
         <p>Marcos: {center?.frameworks.length ?? 0} · Certificaciones: {center?.certifications.length ?? 0} · Alertas: {center?.activeAlerts.length ?? 0}</p>

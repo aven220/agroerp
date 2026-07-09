@@ -1277,11 +1277,68 @@ a:hover {
   gap: 0.5rem;
 }
 
-.ws-quick-actions-lead {
+/* EPA-02 — Page header experience */
+.page-header-experience {
+  margin-top: 0.65rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: var(--ds-surface-sunken, #f8fafc);
+  border-left: 3px solid var(--ds-primary, #059669);
+}
+
+.page-header-desc {
+  margin: 0 0 0.35rem;
+  font-size: 0.88rem;
+  color: var(--ds-text);
+  line-height: 1.45;
+}
+
+.page-header-help {
   margin: 0;
   font-size: 0.82rem;
-  color: var(--text-muted, #64748b);
+  color: var(--ds-text-muted, #64748b);
+  line-height: 1.45;
 }
+
+.page-header-next {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--ds-text-muted);
+}
+
+.page-header-next a {
+  font-weight: 600;
+  color: var(--ds-primary);
+}
+
+.page-experience-panel {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  background: var(--ds-surface-sunken, #f8fafc);
+  border: 1px solid var(--ds-border);
+}
+
+.page-experience-desc {
+  margin: 0 0 0.35rem;
+  font-size: 0.88rem;
+}
+
+.page-experience-help {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ds-text-muted);
+}
+
+.page-experience-next {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+}
+
+.page-experience-next-link {
+  font-weight: 600;
+}
+
 
 .nav-item-row {
   display: flex;
@@ -2758,6 +2815,7 @@ a:hover {
 @import './design-system/enterprise-ui-phase4.css';
 @import './design-system/admin-experience.css';
 @import './design-system/flow-experience.css';
+@import './design-system/process-workspace.css';
 @import './design-system/form-studio-enterprise.css';
 
 

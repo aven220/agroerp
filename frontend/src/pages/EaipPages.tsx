@@ -46,7 +46,7 @@ export function EaipCenterPage() {
 
   return (
     <>
-      <Header title="Centro de Inteligencia Agrícola" subtitle="Sprint 8 — EAIP" actions={EAIP_LINKS} />
+      <Header title="Centro de Inteligencia Agrícola" subtitle="Recomendaciones, modelos y asistencia agronómica" actions={EAIP_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Modelos activos</span><span className="kpi-value">{String(indicators?.activeModels ?? '—')}</span></div>
         <div className="kpi-card"><span className="kpi-label">Predicciones 30d</span><span className="kpi-value">{String(indicators?.predictions30d ?? '—')}</span></div>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { getEimsCenter, seedEims } from '../api/eims';
 import { LoadingState } from '../components/ux/LoadingState';
 
@@ -16,7 +18,7 @@ export function EimsCenterPage() {
   return (
     <>
       <Header
-        title="Enterprise Inventory — EIMS"
+        title="Centro de inventario"
         subtitle="Fundamentos, catálogos, bodegas y artículos"
         actions={
           <div className="row-actions">
@@ -49,6 +51,20 @@ export function EimsCenterPage() {
           </div>
         }
       />
+
+      <FlowProgress flowId="inventory" currentStepId="hub" />
+
+      <FlowNextActions
+        title="Operación de inventario"
+        subtitle="Siga el ciclo recomendado para mantener stock actualizado."
+        actions={[
+          { label: 'Registrar artículos', description: 'Primero defina qué productos controla', to: '/inventario/articulos', primary: true, icon: '📦' },
+          { label: 'Configurar bodegas', description: 'Ubicaciones físicas de almacenamiento', to: '/inventario/bodegas', icon: '🏭' },
+          { label: 'Registrar movimiento', description: 'Entradas, salidas y transferencias', to: '/inventario/movimientos', icon: '🔄' },
+          { label: 'Consultar kardex', description: 'Historial de movimientos por artículo', to: '/inventario/kardex', icon: '📊' },
+        ]}
+      />
+
       {error ? <section className="panel error-panel">{error}</section> : null}
       {center ? (
         <>

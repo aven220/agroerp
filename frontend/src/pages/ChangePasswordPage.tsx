@@ -37,7 +37,7 @@ export function ChangePasswordPage() {
 
   return (
     <>
-      <Header title="Cambio de contraseña" subtitle="Política de seguridad EIAMP" />
+      <Header title="Cambio de contraseña" subtitle="Política de seguridad de la organización" />
       <section className="panel panel-narrow">
         <form onSubmit={handleSubmit} className="stack-form">
           <label>

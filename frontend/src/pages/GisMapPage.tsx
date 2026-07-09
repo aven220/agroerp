@@ -119,7 +119,7 @@ export function GisMapPage() {
     <>
       <Header
         title="Centro de mapas"
-        subtitle="EGSIP — Inteligencia espacial territorial"
+        subtitle="Visualización geográfica de predios y lotes"
         actions={
           <>
             <Link to="/gis/dashboard" className="btn">Dashboard</Link>

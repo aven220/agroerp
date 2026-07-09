@@ -7,13 +7,13 @@ import { LoadingState } from '../components/ux/LoadingState';
 export function RulesCenterPage() {
   const [center, setCenter] = useState<BreCenter | null>(null);
   useEffect(() => { getBreCenter().then(setCenter); }, []);
-  if (!center) return <LoadingState variant="dashboard" message="Cargando Centro de Reglas..." />;
+  if (!center) return <LoadingState variant="dashboard" message="Cargando reglas de negocio..." />;
 
   return (
     <>
       <Header
-        title="Centro de Reglas — EBRE"
-        subtitle="Enterprise Business Rules Engine"
+        title="Reglas de negocio"
+        subtitle="Automatice validaciones y decisiones según políticas de la organización"
         actions={
           <div className="row-actions">
             <Link to="/reglas/catalogo" className="btn">Catálogo</Link>

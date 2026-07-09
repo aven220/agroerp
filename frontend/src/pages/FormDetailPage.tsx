@@ -67,9 +67,9 @@ export function FormDetailPage() {
       setInBootstrap(found);
       toast.info(
         found
-          ? 'Este formulario está en el paquete de sincronización móvil. Los dispositivos lo recibirán en el próximo sync.'
-          : 'No está en el bootstrap móvil. Verifique que esté publicado y con soporte offline.',
-        found ? 'Disponible para Android' : 'Pendiente de sync',
+          ? 'Este formulario está listo para descargarse en celulares. Los equipos de campo lo recibirán en la próxima sincronización.'
+          : 'Aún no está disponible en celular. Verifique que esté publicado y habilitado para uso sin conexión.',
+        found ? 'Disponible en celular' : 'Pendiente en celular',
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'No se pudo verificar sync');
@@ -116,7 +116,7 @@ export function FormDetailPage() {
 
   async function handleDuplicate() {
     if (!form) return;
-    const newKey = prompt('Nueva clave de formulario:', `${form.formKey}-copia`);
+    const newKey = prompt('Nombre interno para la copia (solo letras minúsculas y guiones bajos):', `${form.formKey}-copia`);
     if (!newKey) return;
     const created = await duplicateForm(form.id, newKey);
     navigate(`/formularios/${created.id}/disenar`);
@@ -205,7 +205,7 @@ export function FormDetailPage() {
     <>
       <Header
         title={form.name}
-        subtitle={`${form.formKey} · v${form.version}`}
+        subtitle={`${FORM_STATUS_LABELS[form.status] ?? form.status} · versión ${form.version}`}
         actions={
           <div className="row-actions">
             <Link to="/formularios" className="btn">← Mis Formularios</Link>
@@ -214,7 +214,7 @@ export function FormDetailPage() {
             </button>
             {form.status === 'published' && (
               <button type="button" className="btn" onClick={() => navigate(`/formularios/${form.id}/ejecutar`)}>
-                Ejecutar Web
+                Llenar en web
               </button>
             )}
             {(form.status === 'draft' || form.status === 'approved') && (
@@ -244,7 +244,6 @@ export function FormDetailPage() {
           <p className="form-lifecycle-hint">{getNextLifecycleHint(form.status)}</p>
 
           <dl className="form-detail-dl">
-            <div><dt>Clave</dt><dd><code>{form.formKey}</code></dd></div>
             <div><dt>Versión</dt><dd>v{form.version}</dd></div>
             <div><dt>Última modificación</dt><dd>{formatFormDate(form.updatedAt)}</dd></div>
             <div><dt>Creado</dt><dd>{formatFormDate(form.createdAt)}</dd></div>
@@ -253,8 +252,15 @@ export function FormDetailPage() {
               <div><dt>Publicado</dt><dd>{formatFormDate(form.publishedAt)}</dd></div>
             ) : null}
             <div><dt>Campos</dt><dd>{form.schema?.fields?.length ?? 0}</dd></div>
-            <div><dt>Offline Android</dt><dd>{form.schema?.settings?.offlineCapable !== false ? 'Sí' : 'No'}</dd></div>
+            <div><dt>Uso sin conexión</dt><dd>{form.schema?.settings?.offlineCapable !== false ? 'Sí' : 'No'}</dd></div>
           </dl>
+
+          <details className="form-advanced-section">
+            <summary>Detalles técnicos</summary>
+            <dl className="form-detail-dl" style={{ marginTop: '0.75rem' }}>
+              <div><dt>Identificador interno</dt><dd><code>{form.formKey}</code></dd></div>
+            </dl>
+          </details>
 
           {form.description ? <p className="muted">{form.description}</p> : null}
         </section>
@@ -276,7 +282,7 @@ export function FormDetailPage() {
             {form.status === 'published' && (
               <>
                 <button type="button" className="btn btn-block" onClick={() => navigate(`/formularios/${form.id}/ejecutar`)}>
-                  Ejecutar en Web
+                  Llenar en web
                 </button>
                 <button type="button" className="btn btn-block" onClick={handleUnpublish}>Despublicar</button>
                 <button
@@ -285,7 +291,7 @@ export function FormDetailPage() {
                   disabled={syncChecking}
                   onClick={checkMobileSync}
                 >
-                  {syncChecking ? 'Verificando…' : 'Verificar sync Android'}
+                  {syncChecking ? 'Verificando…' : 'Verificar disponibilidad en celular'}
                 </button>
               </>
             )}

@@ -36,13 +36,12 @@ export function IamRolesPage() {
         />
       ) : (
       <table className="data-table">
-        <thead><tr><th>Nombre</th><th>Identificador interno</th><th>Rol del sistema</th><th></th></tr></thead>
+        <thead><tr><th>Nombre del rol</th><th>Tipo</th><th></th></tr></thead>
         <tbody>
           {roles.map((r) => (
             <tr key={r.id}>
               <td>{r.name}</td>
-              <td><code>{r.slug}</code></td>
-              <td>{r.isSystem ? 'Sí' : 'No'}</td>
+              <td>{r.isSystem ? 'Rol del sistema' : 'Rol personalizado'}</td>
               <td>
                 <button
                   type="button"
@@ -55,7 +54,7 @@ export function IamRolesPage() {
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = `rol-${r.slug}.json`;
+                        a.download = `rol-${r.name.replace(/\s+/g, '-').toLowerCase()}.json`;
                         a.click();
                         URL.revokeObjectURL(url);
                       })

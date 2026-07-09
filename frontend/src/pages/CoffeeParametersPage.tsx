@@ -17,7 +17,7 @@ export function CoffeeParametersPage() {
       <Header title="Administrador de parámetros" subtitle="Bonos, castigos, rangos, límites" actions={<Link to="/compras/config" className="btn">Config</Link>} />
       <section className="panel">
         <div className="row-actions">
-          <input value={parameterKey} onChange={(e) => setParameterKey(e.target.value)} placeholder="parameterKey" />
+          <input value={parameterKey} onChange={(e) => setParameterKey(e.target.value)} placeholder="Nombre del parámetro" />
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" />
         </div>
         <textarea style={{ width: '100%', minHeight: 80, marginTop: 8 }} value={valueJson} onChange={(e) => setValueJson(e.target.value)} />

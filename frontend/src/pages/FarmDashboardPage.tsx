@@ -44,7 +44,7 @@ export function FarmDashboardPage() {
   return (
     <>
       <Header
-        title="Dashboard FTIP"
+        title="Indicadores de fincas"
         subtitle="KPIs territoriales y gemelo digital"
         actions={
           <Link to="/fincas" className="btn">

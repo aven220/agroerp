@@ -56,7 +56,7 @@ export function EintCenterPage() {
 
   return (
     <>
-      <Header title="Centro de Inteligencia Empresarial" subtitle="Plataforma Enterprise — Sprint 3 EINT" actions={EINT_LINKS} />
+      <Header title="Centro de Inteligencia Empresarial" subtitle="Indicadores consolidados de toda la organización" actions={EINT_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Llamadas IA 24h</span><span className="kpi-value">{String(dashboard?.aiCalls24h ?? indicators?.aiCalls24h ?? '—')}</span></div>
         <div className="kpi-card"><span className="kpi-label">Consultas BI 24h</span><span className="kpi-value">{String(dashboard?.queries24h ?? '—')}</span></div>
@@ -64,7 +64,7 @@ export function EintCenterPage() {
         <div className="kpi-card"><span className="kpi-label">Fiabilidad</span><span className="kpi-value">{String(dashboard?.reliabilityPct ?? indicators?.reliabilityPct ?? '—')}%</span></div>
       </div>
       <section className="card">
-        <button className="btn btn-primary" onClick={() => bootstrapEint().then(setCenter)}>Inicializar EINT</button>
+        <button className="btn btn-primary" onClick={() => bootstrapEint().then(setCenter)}>Configurar inteligencia empresarial</button>
       </section>
       <section className="card">
         <h3>Componentes activos</h3>

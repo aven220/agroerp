@@ -7,7 +7,11 @@ export type FlowId =
   | 'forms'
   | 'agricultural'
   | 'workflow'
-  | 'administration';
+  | 'administration'
+  | 'purchases'
+  | 'inventory'
+  | 'reports'
+  | 'integrations';
 
 export interface FlowStep {
   id: string;
@@ -114,8 +118,8 @@ export const BUSINESS_FLOWS: Record<FlowId, BusinessFlow> = {
 
   agricultural: {
     id: 'agricultural',
-    title: 'Registro agrícola',
-    description: 'Productor → finca → lote → expediente e indicadores.',
+    title: 'Registro agrícola completo',
+    description: 'Del productor al indicador: un solo recorrido guiado.',
     steps: [
       {
         id: 'producer',
@@ -134,6 +138,26 @@ export const BUSINESS_FLOWS: Record<FlowId, BusinessFlow> = {
         label: 'Lote',
         route: '/lotes/nuevo',
         match: (p) => starts(p, '/lotes'),
+      },
+      {
+        id: 'crop',
+        label: 'Cultivo',
+        route: '/plataforma-agritech/cultivos',
+        match: (p) => starts(p, '/plataforma-agritech/cultivos'),
+      },
+      {
+        id: 'activity',
+        label: 'Captura',
+        route: '/formularios/recoleccion',
+        match: (p) =>
+          starts(p, '/formularios/recoleccion') ||
+          /\/formularios\/[^/]+\/ejecutar/.test(p),
+      },
+      {
+        id: 'approval',
+        label: 'Aprobación',
+        route: '/procesos/bandeja',
+        match: (p) => starts(p, '/procesos/bandeja') || starts(p, '/procesos/instancias'),
       },
       {
         id: 'record',
@@ -218,6 +242,158 @@ export const BUSINESS_FLOWS: Record<FlowId, BusinessFlow> = {
         label: 'Auditoría',
         route: '/iam/auditoria',
         match: (p) => starts(p, '/iam/auditoria'),
+      },
+    ],
+  },
+
+  purchases: {
+    id: 'purchases',
+    title: 'Compra de café',
+    description: 'Recepción, pesaje, calidad, liquidación y trazabilidad.',
+    steps: [
+      {
+        id: 'wizard',
+        label: 'Recepción',
+        route: '/compras/wizard',
+        match: (p) => starts(p, '/compras/wizard') || starts(p, '/compras/recepcion'),
+      },
+      {
+        id: 'weighing',
+        label: 'Pesaje',
+        route: '/compras/pesaje',
+        match: (p) => starts(p, '/compras/pesaje'),
+      },
+      {
+        id: 'quality',
+        label: 'Calidad',
+        route: '/compras/calidad',
+        match: (p) => starts(p, '/compras/calidad'),
+      },
+      {
+        id: 'settlement',
+        label: 'Liquidación',
+        route: '/compras/liquidaciones',
+        match: (p) => starts(p, '/compras/liquidaciones'),
+      },
+      {
+        id: 'traceability',
+        label: 'Trazabilidad',
+        route: '/compras/trazabilidad',
+        match: (p) => starts(p, '/compras/trazabilidad'),
+      },
+    ],
+  },
+
+  inventory: {
+    id: 'inventory',
+    title: 'Gestión de inventario',
+    description: 'Artículos, bodegas, movimientos y control de stock.',
+    steps: [
+      {
+        id: 'hub',
+        label: 'Centro',
+        route: '/inventario',
+        match: (p) => p === '/inventario',
+      },
+      {
+        id: 'items',
+        label: 'Artículos',
+        route: '/inventario/articulos',
+        match: (p) => starts(p, '/inventario/articulos'),
+      },
+      {
+        id: 'warehouses',
+        label: 'Bodegas',
+        route: '/inventario/bodegas',
+        match: (p) => starts(p, '/inventario/bodegas'),
+      },
+      {
+        id: 'movements',
+        label: 'Movimientos',
+        route: '/inventario/movimientos',
+        match: (p) => starts(p, '/inventario/movimientos'),
+      },
+      {
+        id: 'kardex',
+        label: 'Kardex',
+        route: '/inventario/kardex',
+        match: (p) => starts(p, '/inventario/kardex'),
+      },
+      {
+        id: 'counts',
+        label: 'Conteos',
+        route: '/inventario/conteos',
+        match: (p) => starts(p, '/inventario/conteos'),
+      },
+    ],
+  },
+
+  reports: {
+    id: 'reports',
+    title: 'Reportes e indicadores',
+    description: 'Tableros, reportes y consultas para decidir.',
+    steps: [
+      {
+        id: 'hub',
+        label: 'Centro BI',
+        route: '/bi',
+        match: (p) => p === '/bi',
+      },
+      {
+        id: 'dashboards',
+        label: 'Tableros',
+        route: '/bi/dashboards',
+        match: (p) => starts(p, '/bi/dashboards'),
+      },
+      {
+        id: 'reports',
+        label: 'Reportes',
+        route: '/bi/reportes',
+        match: (p) => starts(p, '/bi/reportes'),
+      },
+      {
+        id: 'query',
+        label: 'Consultas',
+        route: '/bi/consultas',
+        match: (p) => starts(p, '/bi/consultas'),
+      },
+    ],
+  },
+
+  integrations: {
+    id: 'integrations',
+    title: 'Integraciones',
+    description: 'Conectores, flujos de datos y monitoreo de errores.',
+    steps: [
+      {
+        id: 'hub',
+        label: 'Centro',
+        route: '/integraciones',
+        match: (p) => p === '/integraciones',
+      },
+      {
+        id: 'connectors',
+        label: 'Conectores',
+        route: '/integraciones/conectores',
+        match: (p) => starts(p, '/integraciones/conectores'),
+      },
+      {
+        id: 'flows',
+        label: 'Flujos',
+        route: '/integraciones/flujos',
+        match: (p) => starts(p, '/integraciones/flujos'),
+      },
+      {
+        id: 'history',
+        label: 'Historial',
+        route: '/integraciones/historial',
+        match: (p) => starts(p, '/integraciones/historial'),
+      },
+      {
+        id: 'errors',
+        label: 'Errores',
+        route: '/integraciones/errores',
+        match: (p) => starts(p, '/integraciones/errores'),
       },
     ],
   },

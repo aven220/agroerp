@@ -43,7 +43,7 @@ export function EscmOpsCenterPage() {
             <Link to="/comercial/ops/comercial" className="btn">Comercial</Link>
             <Link to="/comercial/ops/analitica" className="btn">Analítica</Link>
             <Link to="/comercial/ops/reportes" className="btn">Reportes</Link>
-            <Link to="/comercial" className="btn">ESCM</Link>
+            <Link to="/comercial" className="btn">Comercial</Link>
           </>
         }
       />
@@ -338,7 +338,7 @@ export function EscmOpsReportsPage() {
               ))}
             </tbody>
           </table>
-        ) : <p>Sin datos — genere un reporte.</p>}
+        ) : <p>Aún no hay información — genere un reporte.</p>}
       </section>
       <section className="panel">
         <h3>Historial de exportaciones</h3>

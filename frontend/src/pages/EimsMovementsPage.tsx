@@ -100,11 +100,11 @@ export function EimsMovementsPage() {
   return (
     <>
       <Header
-        title="Centro de movimientos EIMS"
+        title="Centro de movimientos de inventario"
         subtitle="Motor de transacciones basado en eventos"
         actions={
           <>
-            <Link to="/inventario" className="btn">EIMS</Link>
+            <Link to="/inventario" className="btn">Inventario</Link>
             <Link to="/inventario/articulos" className="btn">Artículos</Link>
             <Link to="/inventario/bodegas" className="btn">Bodegas</Link>
           </>
@@ -188,9 +188,9 @@ export function EimsMovementsPage() {
       <section className="panel">
         <h3>Filtros / historial</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input placeholder="itemKey" value={filters.itemKey} onChange={(e) => setFilters({ ...filters, itemKey: e.target.value })} />
-          <input placeholder="warehouseKey" value={filters.warehouseKey} onChange={(e) => setFilters({ ...filters, warehouseKey: e.target.value })} />
-          <input placeholder="lotKey" value={filters.lotKey} onChange={(e) => setFilters({ ...filters, lotKey: e.target.value })} />
+          <input placeholder="Código del artículo" value={filters.itemKey} onChange={(e) => setFilters({ ...filters, itemKey: e.target.value })} />
+          <input placeholder="Código de bodega" value={filters.warehouseKey} onChange={(e) => setFilters({ ...filters, warehouseKey: e.target.value })} />
+          <input placeholder="Código de lote" value={filters.lotKey} onChange={(e) => setFilters({ ...filters, lotKey: e.target.value })} />
           <select value={filters.movementType} onChange={(e) => setFilters({ ...filters, movementType: e.target.value })}>
             <option value="">Tipo...</option>
             {MOVEMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}

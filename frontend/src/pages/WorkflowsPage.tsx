@@ -64,7 +64,7 @@ export function WorkflowsPage() {
   }
 
   async function handleClone(row: WorkflowDefinition) {
-    const key = prompt('Clave del nuevo proceso:', `${row.workflowKey}-copy`);
+    const key = prompt('Código interno del nuevo proceso (solo letras, números y guiones):', `${row.name.toLowerCase().replace(/\s+/g, '-')}-copia`);
     if (!key) return;
     const cloned = await cloneWorkflowDefinition(row.id, key);
     navigate(`/procesos/${cloned.id}/disenar`);
@@ -76,7 +76,7 @@ export function WorkflowsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${row.workflowKey}.json`;
+    a.download = `${row.name.replace(/\s+/g, '-').toLowerCase()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -96,8 +96,8 @@ export function WorkflowsPage() {
   return (
     <>
       <Header
-        title="Procesos BPM"
-        subtitle="Motor de orquestación empresarial"
+        title="Procesos y aprobaciones"
+        subtitle="Configure solicitudes, revise la bandeja y dé seguimiento a instancias activas"
         actions={
           <div className="row-actions">
             <Link to="/procesos/dashboard" className="btn">Dashboard</Link>
@@ -154,7 +154,6 @@ export function WorkflowsPage() {
                   <tr key={row.id}>
                     <td>
                       <strong>{row.name}</strong>
-                      <div className="text-muted">{row.workflowKey}</div>
                     </td>
                     <td>{category}</td>
                     <td>v{latest?.version ?? '—'}</td>

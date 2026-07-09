@@ -213,7 +213,7 @@ export function EmfgMesTraceabilityPage() {
     <>
       <Header title="Panel de Trazabilidad" subtitle="Lotes, series e historial del proceso" actions={MES_LINKS} />
       <div className="form-row">
-        <input placeholder="Order Key" value={orderKey} onChange={(e) => setOrderKey(e.target.value)} />
+        <input placeholder="Número de orden" value={orderKey} onChange={(e) => setOrderKey(e.target.value)} />
         <input type="number" value={qty} onChange={(e) => setQty(e.target.value)} />
         <button className="btn" onClick={recordGood}>Registrar producción</button>
       </div>

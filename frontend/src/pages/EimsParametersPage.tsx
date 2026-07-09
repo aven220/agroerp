@@ -24,7 +24,7 @@ export function EimsParametersPage() {
       <Header
         title="Parámetros de inventario"
         subtitle="Lote, serie, negativo, FIFO/LIFO y valoración"
-        actions={<Link to="/inventario" className="btn">EIMS</Link>}
+        actions={<Link to="/inventario" className="btn">Inventario</Link>}
       />
       <section className="panel">
         <table className="data-table">

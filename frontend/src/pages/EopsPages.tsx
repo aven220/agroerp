@@ -51,7 +51,7 @@ export function EopsCenterPage() {
 
   return (
     <>
-      <Header title="Centro de Operaciones" subtitle="Enterprise Operations Platform" actions={EOPS_LINKS} />
+      <Header title="Centro de Operaciones" subtitle="Supervisión de operaciones y servicios en tiempo real" actions={EOPS_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Ops Score</span><span className="kpi-value">{String(indicators?.opsScore ?? '—')}</span></div>
         <div className="kpi-card"><span className="kpi-label">Health Score</span><span className="kpi-value">{String(indicators?.healthScore ?? '—')}</span></div>
@@ -59,7 +59,7 @@ export function EopsCenterPage() {
         <div className="kpi-card"><span className="kpi-label">Producción lista</span><span className="kpi-value">{indicators?.productionReady ? 'Sí' : 'No'}</span></div>
       </div>
       <section className="card">
-        <button className="btn btn-primary" onClick={() => bootstrapEops().then(setCenter)}>Inicializar EOPS</button>
+        <button className="btn btn-primary" onClick={() => bootstrapEops().then(setCenter)}>Configurar operaciones</button>
       </section>
       <section className="card">
         <h3>Componentes</h3>

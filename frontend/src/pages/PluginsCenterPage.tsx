@@ -7,14 +7,14 @@ import { LoadingState } from '../components/ux/LoadingState';
 export function PluginsCenterPage() {
   const [center, setCenter] = useState<EppmCenter | null>(null);
   useEffect(() => { getEppmCenter().then(setCenter); }, []);
-  if (!center) return <LoadingState variant="dashboard" message="Cargando Centro de Plugins..." />;
+  if (!center) return <LoadingState variant="dashboard" message="Cargando extensiones..." />;
 
   const d = center.dashboard;
   return (
     <>
       <Header
-        title="Centro de Plugins — EPPM"
-        subtitle="Enterprise Plugin Platform & Marketplace"
+        title="Extensiones y marketplace"
+        subtitle="Instale, actualice y administre complementos de la plataforma"
         actions={
           <div className="row-actions">
             <Link to="/plugins/marketplace" className="btn btn-primary">Marketplace</Link>

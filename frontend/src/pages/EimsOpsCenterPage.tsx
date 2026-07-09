@@ -48,7 +48,7 @@ export function EimsOpsCenterPage() {
             <Link to="/inventario/ops/reportes" className="btn">Reportes</Link>
             <Link to="/inventario/ops/analitica" className="btn">Analítica</Link>
             <Link to="/inventario/ops/mapa" className="btn">Mapa ocupación</Link>
-            <Link to="/inventario" className="btn">EIMS</Link>
+            <Link to="/inventario" className="btn">Inventario</Link>
           </>
         }
       />

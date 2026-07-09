@@ -5,6 +5,7 @@ import { FlowProgress } from '../components/flow/FlowProgress';
 import { createLot, getEligibleFtipLots, getLot, setLotGeometry, updateLot } from '../api/fmdt';
 import { listFarms } from '../api/ftip';
 import { listProducers } from '../api/prm';
+import { markProcessMilestone } from '../lib/processWorkspace';
 
 interface LotFormState {
   ftipLotUnitId: string;
@@ -145,9 +146,14 @@ export function LotFormPage() {
         }
         navigate(`/lotes/${id}`);
       } else {
-        if (!form.ftipLotUnitId) throw new Error('Seleccione un lote FTIP');
+        if (!form.ftipLotUnitId) throw new Error('Seleccione la finca y la parcela donde registrará el lote');
         const created = await createLot({ ...payload, ftipLotUnitId: form.ftipLotUnitId });
-        navigate(`/lotes/${created.id}`);
+        markProcessMilestone('agricultural', 'lot', {
+          entityId: created.id,
+          entityName: form.lotName,
+          entityType: 'lot',
+        });
+        navigate(`/lotes/${created.id}?paso=completado`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar');
@@ -160,7 +166,11 @@ export function LotFormPage() {
     <>
       <Header
         title={isEdit ? 'Editar lote' : 'Nuevo lote'}
-        subtitle="Perfil FMDT vinculado a unidad FTIP"
+        subtitle={
+          isEdit
+            ? 'Actualice cultivo, áreas y ubicación del lote.'
+            : 'Seleccione la finca y el espacio productivo; luego complete cultivo y áreas.'
+        }
         actions={
           <button type="button" className="btn" onClick={() => navigate(-1)}>
             Cancelar
@@ -172,23 +182,38 @@ export function LotFormPage() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
+      {!isEdit ? (
+        <div className="admin-help-card" style={{ marginBottom: '1rem' }}>
+          <strong>¿Cómo registrar un lote?</strong>
+          <p className="muted" style={{ margin: '0.35rem 0 0' }}>
+            Primero elija la finca. Luego seleccione el espacio o parcela dentro de esa finca.
+            Si no aparece ninguna opción, registre primero la finca en el módulo de Fincas.
+          </p>
+        </div>
+      ) : null}
+
       <form className="form-panel" onSubmit={handleSubmit}>
         {!isEdit && (
           <>
             <div className="form-group">
-              <label>Filtrar por finca</label>
-              <select value={farmFilter} onChange={(e) => setFarmFilter(e.target.value)}>
-                <option value="">Todas las fincas</option>
+              <label>Finca *</label>
+              <select
+                value={farmFilter}
+                onChange={(e) => setFarmFilter(e.target.value)}
+                required
+              >
+                <option value="">Seleccione la finca…</option>
                 {farms.map((f) => (
                   <option key={f.id} value={f.id}>{f.farmName}</option>
                 ))}
               </select>
             </div>
             <div className="form-group">
-              <label>Lote FTIP *</label>
+              <label>Parcela o espacio en la finca *</label>
               <select
                 required
                 value={form.ftipLotUnitId}
+                disabled={!farmFilter}
                 onChange={(e) => {
                   const lot = eligibleLots.find((l) => l.id === e.target.value);
                   setForm((f) => ({
@@ -199,13 +224,20 @@ export function LotFormPage() {
                   }));
                 }}
               >
-                <option value="">Seleccione...</option>
+                <option value="">
+                  {farmFilter ? 'Seleccione la parcela…' : 'Primero elija una finca'}
+                </option>
                 {eligibleLots.map((l) => (
                   <option key={l.id} value={l.id}>
-                    {l.lotCode} — {l.lotName ?? 'Sin nombre'}
+                    {l.lotName ?? l.lotCode}{l.lotName ? ` (${l.lotCode})` : ''}
                   </option>
                 ))}
               </select>
+              {farmFilter && eligibleLots.length === 0 ? (
+                <small className="muted">
+                  No hay parcelas disponibles en esta finca. Verifique el registro de la finca o contacte al administrador.
+                </small>
+              ) : null}
             </div>
           </>
         )}
@@ -343,15 +375,21 @@ export function LotFormPage() {
           </div>
         </div>
 
-        <div className="form-group">
-          <label>Polígono GeoJSON</label>
-          <textarea
-            rows={6}
-            value={form.boundaryGeoJson}
-            onChange={(e) => setForm((f) => ({ ...f, boundaryGeoJson: e.target.value }))}
-            placeholder='{"type":"Polygon","coordinates":[[...]]}'
-          />
-        </div>
+        <details className="form-advanced-section">
+          <summary>Delimitación del lote (opcional, uso avanzado)</summary>
+          <div className="form-group" style={{ marginTop: '0.75rem' }}>
+            <label>Contorno del lote</label>
+            <textarea
+              rows={6}
+              value={form.boundaryGeoJson}
+              onChange={(e) => setForm((f) => ({ ...f, boundaryGeoJson: e.target.value }))}
+              placeholder="Pegue aquí el contorno si lo tiene en formato técnico, o use el mapa más adelante."
+            />
+            <small className="muted">
+              Solo necesario si desea registrar el perímetro exacto. Puede omitirlo y usar «Capturar GPS».
+            </small>
+          </div>
+        </details>
 
         <div className="form-group">
           <label>Observaciones</label>

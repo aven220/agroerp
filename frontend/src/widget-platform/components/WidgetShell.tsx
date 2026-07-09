@@ -18,7 +18,7 @@ export function WidgetShell({
   id,
   children,
   empty,
-  emptyMessage = 'Sin datos',
+  emptyMessage = 'Aún no hay información para mostrar',
   className = 'widget-platform-shell card',
 }: WidgetShellProps) {
   return (

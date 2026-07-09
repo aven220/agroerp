@@ -93,12 +93,12 @@ export function FormStudioCanvas({
             <label className="fs-meta-field">
               <span>Identificador interno</span>
               <input
-                placeholder="ej. registro_productor"
+                placeholder="ej. registro_productores"
                 value={formKey}
                 onChange={(e) => onFormKeyChange(e.target.value)}
                 aria-describedby="fs-meta-key-hint"
               />
-              <small id="fs-meta-key-hint" className="muted">Solo letras minúsculas y guiones bajos</small>
+              <small id="fs-meta-key-hint" className="muted">Identificador interno del sistema. Use solo letras minúsculas y guiones bajos.</small>
             </label>
             <label className="fs-meta-field">
               <span>Nombre visible</span>

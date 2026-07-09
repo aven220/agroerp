@@ -26,8 +26,8 @@ export function EimsItemsPage() {
     <>
       <Header
         title="Artículos de inventario"
-        subtitle="Código, QR, barcode, controles y fotos"
-        actions={<Link to="/inventario" className="btn">EIMS</Link>}
+        subtitle="Registre productos, unidades de medida y códigos de barras"
+        actions={<Link to="/inventario" className="btn">Inventario</Link>}
       />
       {error ? <section className="panel error-panel">{error}</section> : null}
 
@@ -35,7 +35,7 @@ export function EimsItemsPage() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input placeholder="Buscar" value={q} onChange={(e) => setQ(e.target.value)} />
           <button className="btn" onClick={reload}>Buscar</button>
-          <input placeholder="QR / barcode" value={scan} onChange={(e) => setScan(e.target.value)} />
+          <input placeholder="Código de barras o QR" value={scan} onChange={(e) => setScan(e.target.value)} />
           <button
             className="btn"
             onClick={() =>
@@ -52,8 +52,8 @@ export function EimsItemsPage() {
       <section className="panel">
         <h3>Registrar / actualizar artículo</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-          <input placeholder="itemKey" value={form.itemKey} onChange={(e) => setForm({ ...form, itemKey: e.target.value })} />
-          <input placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <input placeholder="Código del artículo" value={form.itemKey} onChange={(e) => setForm({ ...form, itemKey: e.target.value })} />
+          <input placeholder="Nombre del artículo" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <select value={form.itemTypeKey} onChange={(e) => setForm({ ...form, itemTypeKey: e.target.value })}>
             <option value="coffee_parchment">Café pergamino</option>
             <option value="coffee_green">Café verde</option>
@@ -69,10 +69,10 @@ export function EimsItemsPage() {
             <option value="raw_material">Materias primas</option>
             <option value="other">Otros</option>
           </select>
-          <input placeholder="UOM" value={form.uomKey} onChange={(e) => setForm({ ...form, uomKey: e.target.value })} />
-          <label><input type="checkbox" checked={form.trackLot} onChange={(e) => setForm({ ...form, trackLot: e.target.checked })} /> Lote</label>
-          <label><input type="checkbox" checked={form.trackSerial} onChange={(e) => setForm({ ...form, trackSerial: e.target.checked })} /> Serie</label>
-          <label><input type="checkbox" checked={form.trackExpiry} onChange={(e) => setForm({ ...form, trackExpiry: e.target.checked })} /> Vencimiento</label>
+          <input placeholder="Unidad (ej. kg, litro, unidad)" value={form.uomKey} onChange={(e) => setForm({ ...form, uomKey: e.target.value })} />
+          <label><input type="checkbox" checked={form.trackLot} onChange={(e) => setForm({ ...form, trackLot: e.target.checked })} /> Control por lote</label>
+          <label><input type="checkbox" checked={form.trackSerial} onChange={(e) => setForm({ ...form, trackSerial: e.target.checked })} /> Control por serie</label>
+          <label><input type="checkbox" checked={form.trackExpiry} onChange={(e) => setForm({ ...form, trackExpiry: e.target.checked })} /> Control de vencimiento</label>
         </div>
         <button
           className="btn"

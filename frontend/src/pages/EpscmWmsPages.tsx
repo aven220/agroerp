@@ -49,7 +49,7 @@ export function EpscmWmsCenterPage() {
 
   return (
     <>
-      <Header title="Centro WMS" subtitle="Warehouse Management System" actions={WMS_LINKS} />
+      <Header title="Centro WMS" subtitle="Gestión de bodegas y ubicaciones" actions={WMS_LINKS} />
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Ubicaciones</span><span className="kpi-value">{ind?.locationCount ?? '—'}</span></div>
         <div className="kpi-card"><span className="kpi-label">Picking abierto</span><span className="kpi-value">{ind?.openPickTasks ?? '—'}</span></div>

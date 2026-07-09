@@ -66,15 +66,15 @@ export function getWebAvailability(form: FormDefinition): WebAvailability {
 }
 
 export const ANDROID_AVAILABILITY_LABELS: Record<AndroidAvailability, string> = {
-  ready: 'Listo para Android',
+  ready: 'Disponible en celular',
   'requires-publish': 'Requiere publicar',
-  'web-only': 'Solo Web',
+  'web-only': 'Solo en oficina (web)',
   deprecated: 'Versión obsoleta',
   archived: 'Archivado',
 };
 
 export const WEB_AVAILABILITY_LABELS: Record<WebAvailability, string> = {
-  execute: 'Ejecutable en Web',
+  execute: 'Listo para llenar en web',
   'design-only': 'Solo diseño / vista previa',
   unavailable: 'No disponible',
 };

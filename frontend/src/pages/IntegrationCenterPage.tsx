@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { FlowNextActions } from '../components/flow/FlowNextActions';
+import { FlowProgress } from '../components/flow/FlowProgress';
 import { getEihCenter, type EihCenter } from '../api/integration';
 import { LoadingState } from '../components/ux/LoadingState';
 
 export function IntegrationCenterPage() {
   const [center, setCenter] = useState<EihCenter | null>(null);
   useEffect(() => { getEihCenter().then(setCenter); }, []);
-  if (!center) return <LoadingState variant="dashboard" message="Cargando Centro de Integraciones..." />;
+  if (!center) return <LoadingState variant="dashboard" message="Cargando integraciones..." />;
 
   const d = center.dashboard;
   return (
     <>
       <Header
-        title="Centro de Integraciones — EIH"
-        subtitle="Enterprise Integration Hub"
+        title="Integraciones"
+        subtitle="Conectores, flujos de datos e historial de sincronización"
         actions={
           <div className="row-actions">
             <Link to="/integraciones/conectores" className="btn">Conectores</Link>
@@ -25,6 +27,19 @@ export function IntegrationCenterPage() {
           </div>
         }
       />
+
+      <FlowProgress flowId="integrations" currentStepId="hub" />
+
+      <FlowNextActions
+        title="Configurar integraciones"
+        subtitle="Conecte sistemas externos y supervise la sincronización."
+        actions={[
+          { label: 'Conectores', description: 'Registre sistemas origen y destino', to: '/integraciones/conectores', primary: true, icon: '🔌' },
+          { label: 'Flujos de datos', description: 'Defina qué información se sincroniza', to: '/integraciones/flujos', icon: '↔️' },
+          { label: 'Revisar errores', description: 'Corrija fallos de sincronización', to: '/integraciones/errores', icon: '⚠️' },
+        ]}
+      />
+
       <div className="kpi-grid kpi-grid-lg">
         <div className="kpi-card kpi-card-primary"><span className="kpi-label">Conectores</span><span className="kpi-value">{d.totalConnectors}</span></div>
         <div className="kpi-card"><span className="kpi-label">Activos</span><span className="kpi-value">{d.activeConnectors}</span></div>

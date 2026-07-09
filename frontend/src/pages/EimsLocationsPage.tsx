@@ -24,7 +24,7 @@ export function EimsLocationsPage() {
 
   return (
     <>
-      <Header title="Ubicaciones" subtitle="Pasillos, estanterías, niveles y posiciones" actions={<Link to="/inventario" className="btn">EIMS</Link>} />
+      <Header title="Ubicaciones" subtitle="Pasillos, estanterías, niveles y posiciones" actions={<Link to="/inventario" className="btn">Inventario</Link>} />
       <section className="panel">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           <select value={form.warehouseKey} onChange={(e) => setForm({ ...form, warehouseKey: e.target.value })}>

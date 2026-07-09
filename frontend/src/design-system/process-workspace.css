@@ -1,0 +1,158 @@
+/* PM-02 — Enterprise Process Workspace */
+
+.process-workspace-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3, 0.75rem);
+  margin-bottom: var(--ds-space-4, 1rem);
+}
+
+.process-milestone-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--ds-space-3, 0.75rem);
+  padding: var(--ds-space-4, 1rem) var(--ds-space-5, 1.25rem);
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+  border: 1px solid #86efac;
+  border-radius: var(--ds-radius-lg, 12px);
+}
+
+.process-milestone-icon {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ds-success, #15803d);
+  color: #fff;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.process-milestone-body {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.process-milestone-title {
+  display: block;
+  font-size: var(--ds-text-sm, 0.875rem);
+  color: var(--ds-text, #1a1a1a);
+}
+
+.process-milestone-next {
+  margin: 0.35rem 0 0;
+  font-size: var(--ds-text-xs, 0.75rem);
+}
+
+.process-milestone-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.process-checklist {
+  padding: var(--ds-space-4, 1rem);
+  background: var(--ds-surface, #fff);
+  border: 1px solid var(--ds-border, #e2e8f0);
+  border-radius: var(--ds-radius-lg, 12px);
+}
+
+.process-checklist-compact {
+  padding: var(--ds-space-3, 0.75rem);
+}
+
+.process-checklist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--ds-space-3, 0.75rem);
+}
+
+.process-checklist-title {
+  font-size: var(--ds-text-sm, 0.875rem);
+  font-weight: 600;
+}
+
+.process-checklist-count {
+  font-size: var(--ds-text-xs, 0.75rem);
+}
+
+.process-checklist-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.process-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: var(--ds-text-xs, 0.75rem);
+}
+
+.process-checklist-marker {
+  flex-shrink: 0;
+  width: 1.25rem;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.process-checklist-done .process-checklist-marker {
+  color: var(--ds-success, #15803d);
+  font-weight: 700;
+}
+
+.process-checklist-current .process-checklist-marker {
+  color: var(--ds-primary, #1b5e3b);
+}
+
+.process-checklist-pending {
+  opacity: 0.55;
+}
+
+.process-checklist-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.process-checklist-link {
+  color: var(--ds-primary, #1b5e3b);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.process-checklist-link:hover {
+  text-decoration: underline;
+}
+
+.process-checklist-label {
+  color: var(--ds-text-muted, #64748b);
+}
+
+.process-checklist-hint,
+.process-checklist-entity {
+  font-size: 0.7rem;
+}
+
+@media (min-width: 900px) {
+  .process-workspace-panel--split {
+    display: grid;
+    grid-template-columns: 1fr minmax(220px, 280px);
+    gap: var(--ds-space-4, 1rem);
+    align-items: start;
+  }
+
+  .process-workspace-panel--split .process-checklist {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}

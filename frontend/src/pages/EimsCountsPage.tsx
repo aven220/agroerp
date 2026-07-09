@@ -69,7 +69,7 @@ export function EimsCountsPage() {
           <>
             <Link to="/inventario/conteos/historial" className="btn">Historial</Link>
             <Link to="/inventario/conteos/actas" className="btn">Actas</Link>
-            <Link to="/inventario" className="btn">EIMS</Link>
+            <Link to="/inventario" className="btn">Inventario</Link>
           </>
         }
       />

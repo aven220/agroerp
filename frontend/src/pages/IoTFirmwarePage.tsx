@@ -25,7 +25,7 @@ export function IoTFirmwarePage() {
       <Header title="Firmware Manager" subtitle="Versiones y despliegue OTA" actions={<Link to="/iot" className="btn">Centro</Link>} />
       <section className="panel">
         <div className="form-row">
-          <input placeholder="Release key" value={form.releaseKey} onChange={(e) => setForm({ ...form, releaseKey: e.target.value })} />
+          <input placeholder="Versión de firmware" value={form.releaseKey} onChange={(e) => setForm({ ...form, releaseKey: e.target.value })} />
           <input placeholder="Versión" value={form.version} onChange={(e) => setForm({ ...form, version: e.target.value })} />
           <input placeholder="Checksum SHA256" value={form.checksum} onChange={(e) => setForm({ ...form, checksum: e.target.value })} />
           <button type="button" className="btn btn-primary" onClick={create}>Publicar firmware</button>

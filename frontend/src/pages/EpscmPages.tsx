@@ -29,7 +29,7 @@ const SCM_LINKS = (
     <Link to="/cadena-suministro/reabastecimiento" className="btn">Reabastecimiento</Link>
     <Link to="/cadena-suministro/inventarios" className="btn">Inventarios</Link>
     <Link to="/cadena-suministro/planificacion" className="btn">Planificación</Link>
-    <Link to="/cadena-suministro/wms" className="btn">WMS</Link>
+    <Link to="/cadena-suministro/wms" className="btn">Almacén</Link>
     <Link to="/cadena-suministro/tms" className="btn">TMS</Link>
     <Link to="/cadena-suministro/colaboracion" className="btn">Colaboración</Link>
   </div>

@@ -74,7 +74,7 @@ export function EimsLotsPage() {
             <Link to="/inventario/lotes/vencimientos" className="btn">Vencimientos</Link>
             <Link to="/inventario/lotes/alertas" className="btn">Alertas</Link>
             <Link to="/inventario/lotes/transformaciones" className="btn">Transformaciones</Link>
-            <Link to="/inventario" className="btn">EIMS</Link>
+            <Link to="/inventario" className="btn">Inventario</Link>
           </>
         }
       />
@@ -107,7 +107,7 @@ export function EimsLotsPage() {
             <option value="">Bodega</option>
             {warehouses.map((w) => <option key={String(w.warehouseKey)} value={String(w.warehouseKey)}>{String(w.warehouseKey)}</option>)}
           </select>
-          <input placeholder="Lot key (auto)" value={form.lotKey} onChange={(e) => setForm({ ...form, lotKey: e.target.value })} />
+          <input placeholder="Código de lote (automático)" value={form.lotKey} onChange={(e) => setForm({ ...form, lotKey: e.target.value })} />
           <input placeholder="Cantidad" value={form.initialQty} onChange={(e) => setForm({ ...form, initialQty: e.target.value })} />
           <input placeholder="Costo" value={form.unitCost} onChange={(e) => setForm({ ...form, unitCost: e.target.value })} />
           <input type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />

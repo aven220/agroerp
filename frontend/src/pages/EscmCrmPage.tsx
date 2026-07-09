@@ -32,7 +32,7 @@ export function EscmCrmPage() {
 
   return (
     <>
-      <Header title="Panel CRM" subtitle="Contactos, direcciones, visitas y clasificación" actions={<Link to="/comercial" className="btn">ESCM</Link>} />
+      <Header title="Panel CRM" subtitle="Contactos, direcciones, visitas y clasificación" actions={<Link to="/comercial" className="btn">Comercial</Link>} />
       <section className="panel">
         <select
           value={customerKey}

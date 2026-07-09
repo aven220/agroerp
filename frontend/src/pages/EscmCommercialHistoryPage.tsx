@@ -18,7 +18,7 @@ export function EscmCommercialHistoryPage() {
 
   return (
     <>
-      <Header title="Historial comercial" subtitle="Compras y transacciones por cliente" actions={<Link to="/comercial" className="btn">ESCM</Link>} />
+      <Header title="Historial comercial" subtitle="Compras y transacciones por cliente" actions={<Link to="/comercial" className="btn">Comercial</Link>} />
       <section className="panel">
         <select value={customerKey} onChange={(e) => setCustomerKey(e.target.value)}>
           <option value="">Todos los clientes</option>
