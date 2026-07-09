@@ -37,9 +37,7 @@ RUN pnpm db:generate
 RUN pnpm build
 
 # ─── Production ──────────────────────────────────────────────────────────────
-FROM node:20-alpine AS production
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
-WORKDIR /app
+FROM base AS production
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY shared/package.json ./shared/
