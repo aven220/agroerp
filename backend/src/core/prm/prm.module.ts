@@ -22,6 +22,6 @@ import { PrmReportsController } from './presentation/prm-reports.controller';
     SegmentsService,
     PrmReportsService,
   ],
-  exports: [ProducersService, ProducerSyncService],
+  exports: [ProducersService, ProducerSyncService, ProducerLifecycleService],
 })
 export class PrmModule {}

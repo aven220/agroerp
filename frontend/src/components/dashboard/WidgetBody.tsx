@@ -24,6 +24,8 @@ import { getQuickActionsForRole } from '../../config/widgetRegistry';
 import type { WidgetDefinition, WidgetKind } from '../../config/widgetRegistry';
 import type { AuditLog } from '../../types';
 import { formatActivityMessage } from '../../lib/activityLabels';
+import { useOnEntityUpdated } from '../../lib/entitySync';
+import { canAccessPath } from '../../config/routePermissions';
 import { getContinueWorkItems, kindIcon, type WorkEntityVisit } from '../../lib/workEntityHistory';
 import { EmptyState } from '../ui/EmptyState';
 import { WidgetLoading } from './WidgetShell';
@@ -161,8 +163,8 @@ function QuickActionsWidget() {
 }
 
 function ContinueWorkWidget() {
-  const { user } = useAuth();
-  const items = getContinueWorkItems(user?.id, 6);
+  const { user, hasPermission } = useAuth();
+  const items = getContinueWorkItems(user?.id, 6).filter((item) => canAccessPath(item.to, hasPermission));
 
   if (!items.length) {
     return (
@@ -170,8 +172,8 @@ function ContinueWorkWidget() {
         illustration="folder"
         title="Aún no hay historial reciente"
         description="Cuando visite productores, fincas, formularios u otros registros, aparecerán aquí para retomar con un clic."
-        action={{ label: 'Registrar primer productor', to: '/productores/nuevo', variant: 'primary' }}
-        secondaryAction={{ label: 'Explorar formularios', to: '/formularios' }}
+        action={hasPermission('producer:create') ? { label: 'Registrar primer productor', to: '/productores/nuevo', variant: 'primary' } : undefined}
+        secondaryAction={hasPermission('form:read') ? { label: 'Explorar formularios', to: '/formularios' } : undefined}
       />
     );
   }
@@ -221,6 +223,7 @@ function PendingWorkWidget() {
   const [items, setItems] = useState<PendingWorkItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { ref, visible } = useInView();
+  const { hasPermission } = useAuth();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -294,14 +297,15 @@ function PendingWorkWidget() {
         });
       }
 
-      setItems(pending.slice(0, 8));
+      setItems(pending.slice(0, 8).filter((item) => canAccessPath(item.to, hasPermission)));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [hasPermission]);
 
   useEffect(() => { if (visible) load(); }, [visible, load]);
   useAutoRefresh(load, 45000, visible);
+  useOnEntityUpdated(load, ['workflow', 'form', 'producer', 'purchase']);
 
   if (!visible) return <div ref={ref} className="ws-lazy-placeholder" />;
   if (loading) return <WidgetLoading />;
@@ -336,7 +340,10 @@ function PendingWorkWidget() {
 
 function FavoritesWidget() {
   const { favorites } = useNavigation();
-  const sorted = [...favorites].sort((a, b) => a.order - b.order);
+  const { hasPermission } = useAuth();
+  const sorted = [...favorites]
+    .filter((f) => canAccessPath(f.to, hasPermission))
+    .sort((a, b) => a.order - b.order);
   if (!sorted.length) {
     return (
       <EmptyState
@@ -439,6 +446,7 @@ function PendingWidget() {
   }, []);
   useEffect(() => { if (visible) load(); }, [visible, load]);
   useAutoRefresh(load, 45000, visible);
+  useOnEntityUpdated(load, 'workflow');
 
   const total = wf.length + bpms.length;
   if (!visible) return <div ref={ref} className="ws-lazy-placeholder" />;
@@ -569,7 +577,9 @@ function AiWidget() {
 }
 
 function LinksWidget({ links }: { links?: { to: string; label: string }[] }) {
-  if (!links?.length) {
+  const { hasPermission } = useAuth();
+  const visible = (links ?? []).filter((l) => canAccessPath(l.to, hasPermission));
+  if (!visible.length) {
     return (
       <EmptyState
         illustration="folder"
@@ -580,7 +590,7 @@ function LinksWidget({ links }: { links?: { to: string; label: string }[] }) {
   }
   return (
     <div className="quick-links">
-      {links.map((l) => <Link key={l.to} to={l.to} className="quick-link">{l.label}</Link>)}
+      {visible.map((l) => <Link key={l.to} to={l.to} className="quick-link">{l.label}</Link>)}
     </div>
   );
 }

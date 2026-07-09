@@ -5,9 +5,10 @@ import { DataTable } from '../components/ui/DataTable';
 import { Modal } from '../components/ui/Modal';
 import { listProducers, type Producer } from '../api/prm';
 import { listCoffeeDocuments } from '../api/coffee';
-import { uploadDocument } from '../api/files';
+import { addProducerDocument } from '../api/prm';
+import { storeDocumentFile } from '../lib/documentStorage';
 import { useAuth } from '../context/AuthContext';
-import { notifyEntityUpdated } from '../lib/entitySync';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
 interface DocumentRow {
   id: string;
@@ -33,7 +34,8 @@ function mapDocument(raw: Record<string, unknown>): DocumentRow {
 }
 
 export function DocumentsPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const canUpload = hasPermission('document:upload');
   const [refresh, setRefresh] = useState(0);
   const [files, setFiles] = useState<DocumentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,6 +63,8 @@ export function DocumentsPage() {
     load();
   }, [load, refresh]);
 
+  useOnEntityUpdated(() => setRefresh((r) => r + 1), ['document', 'producer']);
+
   useEffect(() => {
     listProducers({ limit: 200 })
       .then((res) => setProducers(res.items))
@@ -75,15 +79,24 @@ export function DocumentsPage() {
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
-    if (!file || !user) return;
+    if (!file || !user || uploading) return;
+    if (!producerId) {
+      setError('Seleccione un productor para asociar el documento');
+      return;
+    }
     setUploading(true);
     setError(null);
     try {
-      await uploadDocument(file, user.organizationId, producerId || undefined);
+      const stored = await storeDocumentFile(file, user.organizationId);
+      await addProducerDocument(producerId, {
+        title: file.name,
+        documentTypeCode: file.type.startsWith('image/') ? 'foto' : 'documento',
+        contentId: stored.contentId,
+      });
+      notifyEntityUpdated('document', stored.contentId);
+      notifyEntityUpdated('producer', producerId);
       setModalOpen(false);
       setFile(null);
-      setRefresh((r) => r + 1);
-      if (producerId) notifyEntityUpdated('producer', producerId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al subir');
     } finally {
@@ -97,9 +110,11 @@ export function DocumentsPage() {
         title="Documentos"
         subtitle="Documentos operativos CPEP y archivos asociados a productores PRM"
         actions={
-          <button type="button" className="btn btn-primary" onClick={() => setModalOpen(true)}>
-            + Subir documento
-          </button>
+          canUpload ? (
+            <button type="button" className="btn btn-primary" onClick={() => setModalOpen(true)}>
+              + Subir documento
+            </button>
+          ) : undefined
         }
       />
 

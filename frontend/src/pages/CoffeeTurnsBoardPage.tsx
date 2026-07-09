@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getPublicCoffeeTurns } from '../api/coffee';
+import { useIsMounted } from '../hooks/useIsMounted';
 
 export function CoffeeTurnsBoardPage() {
+  const mounted = useIsMounted();
   const { organizationId } = useParams();
   const [board, setBoard] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     if (!organizationId) return;
-    const load = () => getPublicCoffeeTurns(organizationId).then(setBoard);
-    load();
-    const timer = setInterval(load, 5000);
+    const load = () =>
+      getPublicCoffeeTurns(organizationId).then((data) => {
+        if (mounted.current) setBoard(data);
+      });
+    load().catch(() => undefined);
+    const timer = setInterval(() => load().catch(() => undefined), 5000);
     return () => clearInterval(timer);
-  }, [organizationId]);
+  }, [organizationId, mounted]);
 
   const current = board?.current as Record<string, unknown> | null;
   const waiting = (board?.waiting as Array<Record<string, unknown>>) ?? [];

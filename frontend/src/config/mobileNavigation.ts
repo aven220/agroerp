@@ -1,4 +1,5 @@
 import type { DashboardRole } from './navigation';
+import { canAccessPath } from './routePermissions';
 import { ROLE_LABELS } from './widgetRegistry';
 
 export interface MobileTab {
@@ -45,10 +46,10 @@ export const MOBILE_TABS_BY_ROLE: Record<DashboardRole, MobileTab[]> = {
 };
 
 export const MOBILE_QUICK_TILES: MobileQuickTile[] = [
-  { id: 'mq-producer', label: 'Productor', icon: '👤', to: '/productores/nuevo', roles: ['agricultural', 'purchasing', 'admin', 'default'] },
-  { id: 'mq-purchase', label: 'Compra', icon: '☕', to: '/compras/wizard', roles: ['purchasing', 'agricultural'] },
-  { id: 'mq-form', label: 'Formulario', icon: '📝', to: '/formularios', roles: ['agricultural', 'quality', 'default'] },
-  { id: 'mq-lot', label: 'Lote', icon: '📍', to: '/lotes/nuevo', roles: ['agricultural'] },
+  { id: 'mq-producer', label: 'Productor', icon: '👤', to: '/productores/nuevo', roles: ['agricultural', 'purchasing', 'admin', 'default'], permission: 'producer:create' },
+  { id: 'mq-purchase', label: 'Compra', icon: '☕', to: '/compras/wizard', roles: ['purchasing', 'agricultural'], permission: 'coffee:receive' },
+  { id: 'mq-form', label: 'Formulario', icon: '📝', to: '/formularios', roles: ['agricultural', 'quality', 'default'], permission: 'form:read' },
+  { id: 'mq-lot', label: 'Lote', icon: '📍', to: '/lotes/nuevo', roles: ['agricultural'], permission: 'lot:create' },
   { id: 'mq-inbox', label: 'Bandeja', icon: '📥', to: '/procesos/bandeja', permission: 'workflow:read' },
   { id: 'mq-notify', label: 'Alertas', icon: '🔔', to: '/notificaciones' },
   { id: 'mq-scan', label: 'Escanear', icon: '📷', to: '#scan' },
@@ -57,14 +58,16 @@ export const MOBILE_QUICK_TILES: MobileQuickTile[] = [
 
 export function getMobileTabsForRole(role: DashboardRole, hasPermission: (p: string) => boolean): MobileTab[] {
   const tabs = MOBILE_TABS_BY_ROLE[role] ?? MOBILE_TABS_BY_ROLE.default;
-  return tabs.filter((t) => !t.permission || hasPermission(t.permission)).slice(0, 5);
+  return tabs
+    .filter((t) => (!t.permission || hasPermission(t.permission)) && (t.to.startsWith('#') || canAccessPath(t.to, hasPermission)))
+    .slice(0, 5);
 }
 
 export function getMobileQuickTiles(role: DashboardRole, hasPermission: (p: string) => boolean) {
   return MOBILE_QUICK_TILES.filter((t) => {
     if (t.roles && !t.roles.includes(role)) return false;
     if (t.permission && !hasPermission(t.permission)) return false;
-    return true;
+    return canAccessPath(t.to, hasPermission);
   });
 }
 

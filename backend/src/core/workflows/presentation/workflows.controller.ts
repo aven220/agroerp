@@ -234,7 +234,7 @@ export class WorkflowInstancesController {
   }
 
   @Get('inbox')
-  @RequirePermissions('workflow:execute')
+  @RequirePermissions('workflow:read')
   @ApiOperation({ summary: 'Pending tasks for current user' })
   inbox(@CurrentUser() user: { id: string; organizationId: string }) {
     return this.instances.getInbox(user.organizationId, user.id);

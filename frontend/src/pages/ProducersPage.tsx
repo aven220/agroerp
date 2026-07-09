@@ -16,6 +16,7 @@ import {
   type ProducerDashboard,
   type ProducerFilters,
 } from '../api/prm';
+import { useOnEntityUpdated, notifyEntityUpdated } from '../lib/entitySync';
 
 const LIFECYCLE_LABELS: Record<string, string> = {
   draft: 'Borrador',
@@ -40,6 +41,7 @@ export function ProducersPage() {
   const canCreate = hasPermission('producer:create');
   const canUpdate = hasPermission('producer:update');
   const canDelete = hasPermission('producer:delete');
+  const canExport = hasPermission('producer:export');
   const [filters, setFilters] = useState<ProducerFilters>({ page: 1, limit: 25 });
   const [items, setItems] = useState<Producer[]>([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
@@ -90,6 +92,11 @@ export function ProducersPage() {
     loadMeta();
   }, [loadMeta]);
 
+  useOnEntityUpdated(() => {
+    loadList();
+    loadMeta();
+  }, 'producer');
+
   useEffect(() => {
     const raw = sessionStorage.getItem('agroerp_cmd_filter_producers');
     if (!raw) return;
@@ -114,6 +121,7 @@ export function ProducersPage() {
     if (!confirm(`¿Archivar productor "${row.legalName}"?`)) return;
     try {
       await deleteProducer(row.id);
+      notifyEntityUpdated('producer', row.id);
       loadList();
       getProducerDashboard().then(setDashboard).catch(() => {});
     } catch (err) {
@@ -147,8 +155,9 @@ export function ProducersPage() {
   ], []);
 
   const bulkActions = useMemo(
-    () => createStandardBulkActions(exportColumns, 'productores', (r) => `/productores/${r.id}`),
-    [exportColumns],
+    () => createStandardBulkActions(exportColumns, 'productores', (r) => `/productores/${r.id}`)
+      .filter((a) => a.id !== 'bulk-export' || canExport),
+    [exportColumns, canExport],
   );
 
   const rowActions = useMemo((): RowAction<Producer>[] => {
@@ -336,7 +345,7 @@ export function ProducersPage() {
         onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}
         onQuickSearchChange={handleQuickSearchChange}
-        onExport={handleExport}
+        onExport={canExport ? handleExport : undefined}
         onRowClick={handleRowClick}
         toolbar={serverFilters}
         bulkActions={bulkActions}

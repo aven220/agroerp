@@ -15,14 +15,61 @@ export class CoffeeDocumentsService {
   ) {}
 
   list(organizationId: string, ticketKey?: string) {
-    return this.prisma.cpepDocument.findMany({
-      where: {
-        organizationId,
-        voided: false,
-        ...(ticketKey ? { ticket: { ticketKey } } : {}),
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 200,
+    return Promise.all([
+      this.prisma.cpepDocument.findMany({
+        where: {
+          organizationId,
+          voided: false,
+          ...(ticketKey ? { ticket: { ticketKey } } : {}),
+        },
+        include: { ticket: { select: { ticketKey: true, producerId: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      }),
+      ticketKey
+        ? Promise.resolve([])
+        : this.prisma.producerDocument.findMany({
+            where: { organizationId, deletedAt: null },
+            orderBy: { createdAt: 'desc' },
+            take: 200,
+            select: {
+              id: true,
+              title: true,
+              documentTypeCode: true,
+              contentId: true,
+              producerId: true,
+              createdAt: true,
+            },
+          }),
+    ]).then(([cpepDocs, prmDocs]) => {
+      const unified = [
+        ...cpepDocs.map((doc) => ({
+          id: doc.id,
+          documentKey: doc.documentKey,
+          title: doc.title,
+          documentType: doc.documentType,
+          ticketKey: doc.ticket?.ticketKey,
+          producerId: doc.ticket?.producerId ?? undefined,
+          source: 'cpep' as const,
+          qrPayload: doc.qrPayload,
+          pdfUrl: doc.pdfUrl,
+          reprintCount: doc.reprintCount,
+          createdAt: doc.createdAt.toISOString(),
+        })),
+        ...prmDocs.map((doc) => ({
+          id: doc.id,
+          documentKey: doc.id,
+          title: doc.title,
+          documentType: doc.documentTypeCode,
+          ticketKey: undefined,
+          producerId: doc.producerId,
+          source: 'prm' as const,
+          createdAt: doc.createdAt.toISOString(),
+        })),
+      ];
+      return unified.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
     });
   }
 

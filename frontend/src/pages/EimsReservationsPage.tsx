@@ -9,6 +9,7 @@ import {
   listEimsWarehouses,
   releaseEimsReservation,
 } from '../api/eims';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
 export function EimsReservationsPage() {
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
@@ -35,12 +36,17 @@ export function EimsReservationsPage() {
 
   useEffect(() => { reload().catch((e) => setError(e.message)); }, []);
 
+  useOnEntityUpdated(() => {
+    reload().catch((e) => setError(e instanceof Error ? e.message : 'Error al recargar'));
+  }, ['inventory']);
+
   const create = async () => {
     await createEimsReservation({
       ...form,
       quantity: Number(form.quantity),
       expiresAt: form.expiresAt || undefined,
     });
+    notifyEntityUpdated('inventory', '*');
     await reload();
   };
 

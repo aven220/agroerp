@@ -17,6 +17,7 @@ import {
 } from './processWorkspace';
 import { getContinueWorkItems, loadWorkEntityHistory } from './workEntityHistory';
 import { scanFormDrafts, type ModuleVisitRecord } from './smartAssistant';
+import { canAccessPath } from '../config/routePermissions';
 
 export type SuggestionKind =
   | 'continue'
@@ -45,9 +46,9 @@ const DISCOVERY_MODULES: Array<{ prefix: string; label: string; to: string; icon
   { prefix: '/productores', label: 'Operación agrícola', to: '/productores', icon: '🌱', permission: 'producer:read' },
   { prefix: '/formularios', label: 'Formularios de campo', to: '/formularios', icon: '📝', permission: 'form:read' },
   { prefix: '/procesos', label: 'Procesos y aprobaciones', to: '/procesos/bandeja', icon: '⚙', permission: 'workflow:read' },
-  { prefix: '/compras', label: 'Compras de café', to: '/compras', icon: '☕' },
-  { prefix: '/inventario', label: 'Inventario', to: '/inventario', icon: '📦' },
-  { prefix: '/bi', label: 'Reportes', to: '/bi', icon: '📊' },
+  { prefix: '/compras', label: 'Compras de café', to: '/compras', icon: '☕', permission: 'coffee:read' },
+  { prefix: '/inventario', label: 'Inventario', to: '/inventario', icon: '📦', permission: 'inventory:read' },
+  { prefix: '/bi', label: 'Reportes', to: '/bi', icon: '📊', permission: 'analytics:read' },
 ];
 
 const GRID_ROUTES: Record<string, string> = {
@@ -58,14 +59,13 @@ const GRID_ROUTES: Record<string, string> = {
   purchases: '/compras',
 };
 
-const COMMAND_LABELS: Record<string, string> = {
-  'action-create-producer': 'Crear productor',
-  'action-create-farm': 'Crear finca',
-  'action-create-lot': 'Crear lote',
-  'action-create-form': 'Diseñar formulario',
-  'action-new-purchase': 'Registrar compra',
-  'action-workflow-inbox': 'Bandeja de tareas',
-  'workspace-open': 'Abrir Mi jornada',
+const COMMAND_PERMISSIONS: Record<string, string | undefined> = {
+  'action-create-producer': 'producer:create',
+  'action-create-farm': 'farm:create',
+  'action-create-lot': 'lot:create',
+  'action-create-form': 'form:create',
+  'action-new-purchase': 'coffee:receive',
+  'action-workflow-inbox': 'workflow:read',
 };
 
 export interface ComputeSuggestionsInput {
@@ -77,11 +77,23 @@ export interface ComputeSuggestionsInput {
   navHistoryCount: number;
 }
 
+function canSuggest(
+  to: string,
+  hasPermission: (p: string) => boolean,
+  extraPermission?: string,
+): boolean {
+  if (extraPermission && !hasPermission(extraPermission)) return false;
+  return canAccessPath(to, hasPermission);
+}
+
 function add(
   list: SmartSuggestion[],
   dismissed: Set<string>,
   suggestion: SmartSuggestion,
+  hasPermission: (p: string) => boolean,
+  extraPermission?: string,
 ) {
+  if (!canSuggest(suggestion.to, hasPermission, extraPermission)) return;
   if (dismissed.has(suggestion.id)) return;
   if (list.some((s) => s.id === suggestion.id)) return;
   list.push(suggestion);
@@ -93,6 +105,7 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
 
   const tasks = loadPersonalTasks(userId).filter((t) => !t.done);
   for (const task of tasks.slice(0, 3)) {
+    if (!task.to || !canSuggest(task.to, hasPermission)) continue;
     add(suggestions, dismissedIds, {
       id: `task-${task.id}`,
       kind: 'task',
@@ -100,9 +113,9 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
       title: task.label,
       description: 'Pendiente personal en Mi jornada',
       icon: '☐',
-      to: task.to ?? '/',
+      to: task.to,
       actionLabel: 'Ir al pendiente',
-    });
+    }, hasPermission);
   }
 
   const openProcs = loadOpenProcesses(userId);
@@ -116,7 +129,7 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
       icon: '⚙',
       to: proc.to,
       actionLabel: 'Continuar proceso',
-    });
+    }, hasPermission);
   }
 
   for (const flowId of ACTIVE_FLOWS) {
@@ -125,6 +138,7 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
     const next = getProcessNextStep(flowId, latest.stepId);
     if (!next) continue;
     if (pathname === next.route || pathname.startsWith(`${next.route}/`)) continue;
+    if (!canSuggest(next.route, hasPermission)) continue;
     add(suggestions, dismissedIds, {
       id: `flow-next-${flowId}-${latest.stepId}`,
       kind: 'process',
@@ -134,7 +148,7 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
       icon: '→',
       to: next.route,
       actionLabel: 'Siguiente paso',
-    });
+    }, hasPermission);
   }
 
   if (isStepCompleted('agricultural', 'producer') && !isStepCompleted('agricultural', 'farm')) {
@@ -148,7 +162,7 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
         icon: '🌿',
         to: '/fincas/nueva',
         actionLabel: 'Crear finca',
-      });
+      }, hasPermission);
     }
   }
 
@@ -163,21 +177,23 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
         icon: '📍',
         to: '/lotes/nuevo',
         actionLabel: 'Crear lote',
-      });
+      }, hasPermission);
     }
   }
 
   if (isStepCompleted('forms', 'publish') && !isStepCompleted('forms', 'capture')) {
-    add(suggestions, dismissedIds, {
-      id: 'rel-form-not-captured',
-      kind: 'relationship',
-      priority: 78,
-      title: 'Revisar capturas del formulario',
-      description: 'Publicó un formulario pero aún no revisó envíos de campo',
-      icon: '📥',
-      to: '/formularios/recoleccion',
-      actionLabel: 'Ir a recolección',
-    });
+    if (hasPermission('form:read')) {
+      add(suggestions, dismissedIds, {
+        id: 'rel-form-not-captured',
+        kind: 'relationship',
+        priority: 78,
+        title: 'Revisar capturas del formulario',
+        description: 'Publicó un formulario pero aún no revisó envíos de campo',
+        icon: '📥',
+        to: '/formularios/recoleccion',
+        actionLabel: 'Ir a recolección',
+      }, hasPermission);
+    }
   }
 
   for (const draft of scanFormDrafts().slice(0, 2)) {
@@ -192,7 +208,7 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
       icon: '📝',
       to,
       actionLabel: 'Continuar llenado',
-    });
+    }, hasPermission);
   }
 
   for (const item of getContinueWorkItems(userId, 4)) {
@@ -206,12 +222,22 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
       icon: '↩',
       to: item.to,
       actionLabel: 'Continuar',
-    });
+    }, hasPermission);
   }
 
   const recentCmds = loadRecentCommandIds(userId, 5);
   for (const cmdId of recentCmds) {
-    const label = COMMAND_LABELS[cmdId];
+    const required = COMMAND_PERMISSIONS[cmdId];
+    if (required && !hasPermission(required)) continue;
+    const label = {
+      'action-create-producer': 'Crear productor',
+      'action-create-farm': 'Crear finca',
+      'action-create-lot': 'Crear lote',
+      'action-create-form': 'Diseñar formulario',
+      'action-new-purchase': 'Registrar compra',
+      'action-workflow-inbox': 'Bandeja de tareas',
+      'workspace-open': 'Abrir Mi jornada',
+    }[cmdId];
     if (!label) continue;
     add(suggestions, dismissedIds, {
       id: `cmd-freq-${cmdId}`,
@@ -222,10 +248,11 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
       icon: '⌘',
       to: '/',
       actionLabel: 'Abrir comandos',
-    });
+    }, hasPermission);
   }
 
   for (const [gridId, route] of Object.entries(GRID_ROUTES)) {
+    if (!canSuggest(route, hasPermission)) continue;
     const prod = loadGridProductivity(userId, gridId);
     for (const preset of prod.serverFilterPresets.filter((p) => p.pinned).slice(0, 1)) {
       add(suggestions, dismissedIds, {
@@ -237,7 +264,7 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
         icon: '🔖',
         to: route,
         actionLabel: 'Abrir consulta',
-      });
+      }, hasPermission);
     }
   }
 
@@ -254,10 +281,10 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
       icon: mod.icon,
       to: mod.to,
       actionLabel: 'Descubrir',
-    });
+    }, hasPermission);
   }
 
-  if (navHistoryCount < 4 && visitedModules.length < 3) {
+  if (navHistoryCount < 4 && visitedModules.length < 3 && hasPermission('producer:read')) {
     add(suggestions, dismissedIds, {
       id: 'onboard-first-steps',
       kind: 'discovery',
@@ -267,11 +294,11 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
       icon: '✨',
       to: '/productores',
       actionLabel: 'Empezar',
-    });
+    }, hasPermission);
   }
 
   const pinned = loadPinnedRecords(userId);
-  if (pinned.length === 0 && loadWorkEntityHistory(userId).length > 2) {
+  if (pinned.length === 0 && loadWorkEntityHistory(userId).length > 2 && hasPermission('producer:read')) {
     add(suggestions, dismissedIds, {
       id: 'tip-pin-records',
       kind: 'productivity',
@@ -281,13 +308,13 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
       icon: '📌',
       to: '/productores',
       actionLabel: 'Ver productores',
-    });
+    }, hasPermission);
   }
 
   const visits = loadWorkEntityHistory(userId);
   const hasProducer = visits.some((v) => v.kind === 'producer');
   const hasFarm = visits.some((v) => v.kind === 'farm');
-  if (hasProducer && !hasFarm && pathname.startsWith('/productores')) {
+  if (hasProducer && !hasFarm && pathname.startsWith('/productores') && hasPermission('farm:create')) {
     add(suggestions, dismissedIds, {
       id: 'ctx-producer-add-farm',
       kind: 'relationship',
@@ -297,7 +324,7 @@ export function computeSuggestions(input: ComputeSuggestionsInput): SmartSuggest
       icon: '🌿',
       to: '/fincas/nueva',
       actionLabel: 'Registrar finca',
-    });
+    }, hasPermission);
   }
 
   suggestions.sort((a, b) => b.priority - a.priority);

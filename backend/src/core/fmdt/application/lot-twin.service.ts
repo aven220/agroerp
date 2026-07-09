@@ -76,6 +76,7 @@ export class LotTwinService {
     if (avgYield < expectedYield * 0.7 && expectedYield > 0) riskFlags.push('low_yield');
     if (lot.operations.length === 0) riskFlags.push('no_operations');
 
+    const pendingOperationsCount = lot.operations.filter((o) => o.status === 'recorded').length;
     const lastOp = lot.operations.sort(
       (a, b) => b.operationDate.getTime() - a.operationDate.getTime(),
     )[0];
@@ -98,7 +99,7 @@ export class LotTwinService {
       qualityAvgScore,
       operationsCountYtd: lot.operations.length,
       lastOperationType: lastOp?.operationTypeCode ?? null,
-      pendingOperationsCount: 0,
+      pendingOperationsCount,
       riskFlags,
       compliancePct,
       thematicIndicators: {

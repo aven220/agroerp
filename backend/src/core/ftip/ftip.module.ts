@@ -22,6 +22,6 @@ import { FtipReportsController } from './presentation/ftip-reports.controller';
     FarmSyncService,
     FtipReportsService,
   ],
-  exports: [FarmsService, FarmTwinService],
+  exports: [FarmsService, FarmTwinService, FarmLifecycleService],
 })
 export class FtipModule {}

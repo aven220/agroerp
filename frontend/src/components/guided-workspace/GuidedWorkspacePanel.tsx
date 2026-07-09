@@ -6,6 +6,8 @@ import { useAdaptiveWorkspaceOptional } from '../../context/AdaptiveWorkspacePro
 import { useAuth } from '../../context/AuthContext';
 import { getContinueWorkItems, loadWorkEntityHistory } from '../../lib/workEntityHistory';
 import { getProcessNextStep, getLatestMilestone } from '../../lib/processWorkspace';
+import { canAccessPath } from '../../config/routePermissions';
+import { useOnEntityUpdated } from '../../lib/entitySync';
 import type { FlowId } from '../../lib/businessFlows';
 
 const FLOW_FROM_PATH: Array<{ prefix: string; flowId: FlowId }> = [
@@ -28,7 +30,7 @@ function detectFlowId(pathname: string): FlowId | null {
 }
 
 export function GuidedWorkspacePanel() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { pathname } = useLocation();
   const { recentSearches } = useNavigation();
   const {
@@ -62,6 +64,9 @@ export function GuidedWorkspacePanel() {
   const [shortcutTo, setShortcutTo] = useState('');
   const [setName, setSetName] = useState('');
   const [activeTab, setActiveTab] = useState<'work' | 'lists' | 'notes'>('work');
+  const [historyTick, setHistoryTick] = useState(0);
+
+  useOnEntityUpdated(() => setHistoryTick((t) => t + 1));
 
   useEffect(() => {
     if (panelOpen && adaptive?.prefs.adaptiveEnabled) {
@@ -70,13 +75,30 @@ export function GuidedWorkspacePanel() {
   }, [panelOpen, adaptive?.prefs.adaptiveEnabled, adaptive?.profile.guidedPanelTab]);
 
   const continueItems = useMemo(
-    () => getContinueWorkItems(user?.id, 5),
-    [user?.id, pinned.length],
+    () => getContinueWorkItems(user?.id, 5).filter((item) => canAccessPath(item.to, hasPermission)),
+    [user?.id, pinned.length, hasPermission, historyTick],
   );
 
   const recentRecords = useMemo(
-    () => loadWorkEntityHistory(user?.id).slice(0, 8),
-    [user?.id, pathname],
+    () => loadWorkEntityHistory(user?.id)
+      .filter((item) => canAccessPath(item.to, hasPermission))
+      .slice(0, 8),
+    [user?.id, pathname, hasPermission, historyTick],
+  );
+
+  const visiblePinned = useMemo(
+    () => pinned.filter((p) => canAccessPath(p.to, hasPermission)),
+    [pinned, hasPermission],
+  );
+
+  const visibleOpenProcesses = useMemo(
+    () => openProcesses.filter((p) => canAccessPath(p.to, hasPermission)),
+    [openProcesses, hasPermission],
+  );
+
+  const visibleShortcuts = useMemo(
+    () => shortcuts.filter((s) => canAccessPath(s.to, hasPermission)),
+    [shortcuts, hasPermission],
   );
 
   const flowHint = useMemo(() => {
@@ -89,14 +111,14 @@ export function GuidedWorkspacePanel() {
 
   const pendingTasks = tasks.filter((t) => !t.done);
   const pinnedByKind = useMemo(() => {
-    const map = new Map<string, typeof pinned>();
-    for (const p of pinned) {
+    const map = new Map<string, typeof visiblePinned>();
+    for (const p of visiblePinned) {
       const list = map.get(p.kind) ?? [];
       list.push(p);
       map.set(p.kind, list);
     }
     return map;
-  }, [pinned]);
+  }, [visiblePinned]);
 
   if (!panelOpen) return null;
 
@@ -117,7 +139,7 @@ export function GuidedWorkspacePanel() {
         </button>
       </header>
 
-      {flowHint ? (
+      {flowHint && canAccessPath(flowHint.route, hasPermission) ? (
         <div className="gwp-flow-hint">
           <span className="muted">Siguiente en este proceso:</span>
           <Link to={flowHint.route} className="gwp-flow-hint-link">
@@ -160,11 +182,11 @@ export function GuidedWorkspacePanel() {
               </section>
             ) : null}
 
-            {openProcesses.length > 0 ? (
+            {visibleOpenProcesses.length > 0 ? (
               <section className="gwp-section">
                 <h3 className="gwp-section-title">Procesos abiertos</h3>
                 <ul className="gwp-list">
-                  {openProcesses.map((p) => (
+                  {visibleOpenProcesses.map((p) => (
                     <li key={p.id} className="gwp-list-item-actions">
                       <Link to={p.to} className="gwp-link">
                         <span aria-hidden>⚙</span>
@@ -185,8 +207,8 @@ export function GuidedWorkspacePanel() {
             ) : null}
 
             <section className="gwp-section">
-              <h3 className="gwp-section-title">Fijados ({pinned.length})</h3>
-              {pinned.length === 0 ? (
+              <h3 className="gwp-section-title">Fijados ({visiblePinned.length})</h3>
+              {visiblePinned.length === 0 ? (
                 <p className="gwp-empty muted">
                   Use «Fijar» en productores, fincas, formularios o procesos para tenerlos siempre a mano.
                 </p>
@@ -212,7 +234,7 @@ export function GuidedWorkspacePanel() {
                   )}
                 </ul>
               )}
-              {pinned.length > 0 ? (
+              {visiblePinned.length > 0 ? (
                 <div className="gwp-inline-form">
                   <input
                     placeholder="Nombre del conjunto…"
@@ -344,7 +366,7 @@ export function GuidedWorkspacePanel() {
                 </button>
               </div>
               <ul className="gwp-list">
-                {shortcuts.map((s) => (
+                {visibleShortcuts.map((s) => (
                   <li key={s.id} className="gwp-list-item-actions">
                     <Link to={s.to} className="gwp-link">
                       <span aria-hidden>{s.icon}</span>

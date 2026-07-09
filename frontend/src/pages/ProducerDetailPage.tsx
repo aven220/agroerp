@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
@@ -18,7 +18,7 @@ import {
   type TimelineItem,
 } from '../api/prm';
 import { startProducerApprovalWorkflow } from '../lib/workflowIntegration';
-import { notifyEntityUpdated } from '../lib/entitySync';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
 const LIFECYCLE_LABELS: Record<string, string> = {
   draft: 'Borrador',
@@ -44,10 +44,13 @@ export function ProducerDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
   const [lifecycleOpen, setLifecycleOpen] = useState(false);
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [lifecycleStatus, setLifecycleStatus] = useState('active');
   const [lifecycleReason, setLifecycleReason] = useState('');
+  const canLifecycle = hasPermission('producer:lifecycle');
+  const canUpdate = hasPermission('producer:update');
 
-  useEffect(() => {
+  const reload = useCallback(() => {
     if (!id) return;
     setLoading(true);
     Promise.all([getProducer(id), getProducerTimeline(id)])
@@ -58,6 +61,12 @@ export function ProducerDetailPage() {
       .catch((err) => setError(err instanceof Error ? err.message : 'Error'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  useOnEntityUpdated(reload, ['producer', 'document', 'purchase'], id, 'Producer');
 
   useEffect(() => {
     if (!id || !producer) return;
@@ -81,7 +90,7 @@ export function ProducerDetailPage() {
 
   async function handleLifecycle(e: React.FormEvent) {
     e.preventDefault();
-    if (!id) return;
+    if (!id || lifecycleBusy) return;
     const destructive = ['suspended', 'inactive', 'archived'].includes(lifecycleStatus);
     if (
       destructive &&
@@ -91,6 +100,7 @@ export function ProducerDetailPage() {
     ) {
       return;
     }
+    setLifecycleBusy(true);
     try {
       await transitionLifecycle(id, {
         toStatus: lifecycleStatus,
@@ -110,6 +120,8 @@ export function ProducerDetailPage() {
       setActionError(null);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'No se pudo cambiar el estado');
+    } finally {
+      setLifecycleBusy(false);
     }
   }
 
@@ -139,10 +151,12 @@ export function ProducerDetailPage() {
                 Expediente 360°
               </Link>
             ) : null}
-            <button type="button" className="btn" onClick={() => setLifecycleOpen(true)}>
-              Cambiar estado
-            </button>
-            {hasPermission('producer:update') ? (
+            {canLifecycle ? (
+              <button type="button" className="btn" onClick={() => setLifecycleOpen(true)}>
+                Cambiar estado
+              </button>
+            ) : null}
+            {canUpdate ? (
               <Link to={`/productores/${id}/editar`} className="btn btn-primary">
                 Editar
               </Link>
@@ -175,18 +189,26 @@ export function ProducerDetailPage() {
                   },
                 ]
               : []),
-            {
-              label: 'Capturar actividad',
-              description: 'Registre labores de campo con formularios',
-              to: '/formularios/recoleccion',
-              icon: '📋',
-            },
-            {
-              label: 'Bandeja de aprobaciones',
-              description: 'Revise solicitudes pendientes',
-              to: '/procesos/bandeja',
-              icon: '✅',
-            },
+            ...(hasPermission('form:read')
+              ? [
+                  {
+                    label: 'Capturar actividad',
+                    description: 'Registre labores de campo con formularios',
+                    to: '/formularios/recoleccion',
+                    icon: '📋',
+                  },
+                ]
+              : []),
+            ...(hasPermission('workflow:read')
+              ? [
+                  {
+                    label: 'Bandeja de aprobaciones',
+                    description: 'Revise solicitudes pendientes',
+                    to: '/procesos/bandeja',
+                    icon: '✅',
+                  },
+                ]
+              : []),
             ...(hasPermission('producer:read')
               ? [
                   {
@@ -197,12 +219,16 @@ export function ProducerDetailPage() {
                   },
                 ]
               : []),
-            {
-              label: 'Ver indicadores',
-              description: 'Resumen de productores y actividad reciente',
-              to: '/productores/dashboard',
-              icon: '📊',
-            },
+            ...(hasPermission('producer:read')
+              ? [
+                  {
+                    label: 'Ver indicadores',
+                    description: 'Resumen de productores y actividad reciente',
+                    to: '/productores/dashboard',
+                    icon: '📊',
+                  },
+                ]
+              : []),
           ]}
         />
       ) : null}
@@ -380,15 +406,17 @@ export function ProducerDetailPage() {
 
         {tab === 'notas' && (
           <div>
-            <form onSubmit={handleAddNote} className="note-form">
-              <textarea
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                placeholder="Agregar nota..."
-                rows={3}
-              />
-              <button type="submit" className="btn btn-primary btn-sm">Guardar nota</button>
-            </form>
+            {canUpdate ? (
+              <form onSubmit={handleAddNote} className="note-form">
+                <textarea
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder="Agregar nota..."
+                  rows={3}
+                />
+                <button type="submit" className="btn btn-primary btn-sm">Guardar nota</button>
+              </form>
+            ) : null}
             {(producer.producerNotes ?? []).map((n) => (
               <div key={n.id} className="note-card">
                 <p>{n.content}</p>

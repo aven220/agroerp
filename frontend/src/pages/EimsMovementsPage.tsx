@@ -12,6 +12,7 @@ import {
   postEimsMovementBatch,
   voidEimsMovement,
 } from '../api/eims';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
 const MOVEMENT_TYPES = [
   'entry', 'exit', 'transfer', 'adjustment_positive', 'adjustment_negative',
@@ -39,7 +40,7 @@ export function EimsMovementsPage() {
     transformCost: '0',
     reason: '',
   });
-  const [csv, setCsv] = useState('movementType,itemKey,quantity,toWarehouseKey,fromWarehouseKey,lotKey,unitCost,reason\nentry,CAF-PERG-001,100,WH-MAIN,,LOT-DEMO,12000,Importacion');
+  const [csv, setCsv] = useState('movementType,itemKey,quantity,toWarehouseKey,fromWarehouseKey,lotKey,unitCost,reason\nentry,,,,,,');
   const [error, setError] = useState('');
 
   const reload = async () => {
@@ -67,6 +68,10 @@ export function EimsMovementsPage() {
 
   useEffect(() => { reload().catch((e) => setError(e.message)); }, []);
 
+  useOnEntityUpdated(() => {
+    reload().catch((e) => setError(e instanceof Error ? e.message : 'Error al recargar'));
+  }, ['inventory', 'purchase']);
+
   const post = async () => {
     setError('');
     try {
@@ -91,6 +96,7 @@ export function EimsMovementsPage() {
         payload.fromWarehouseKey = form.fromWarehouseKey || String(warehouses[0]?.warehouseKey ?? 'WH-MAIN');
       }
       await postEimsMovement(payload);
+      notifyEntityUpdated('inventory', '*');
       await reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error de movimiento');
@@ -169,7 +175,9 @@ export function EimsMovementsPage() {
                   unitCost: Number(form.unitCost),
                   reason: 'Lote masivo 2',
                 },
-              ]).then(reload).catch((e) => setError(e.message))
+              ]).then(() => {
+                notifyEntityUpdated('inventory', '*');
+              }).then(reload).catch((e) => setError(e.message))
             }
           >
             Movimiento masivo (2)
@@ -180,7 +188,7 @@ export function EimsMovementsPage() {
       <section className="panel">
         <h3>Importación CSV / Excel</h3>
         <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={4} style={{ width: '100%' }} />
-        <button className="btn" onClick={() => importEimsMovementsCsv(csv).then(reload).catch((e) => setError(e.message))}>
+        <button className="btn" onClick={() => importEimsMovementsCsv(csv).then(() => notifyEntityUpdated('inventory', '*')).then(reload).catch((e) => setError(e.message))}>
           Importar
         </button>
       </section>
@@ -227,6 +235,7 @@ export function EimsMovementsPage() {
                         className="btn"
                         onClick={() =>
                           voidEimsMovement(String(m.movementKey), 'Anulación controlada')
+                            .then(() => notifyEntityUpdated('inventory', '*'))
                             .then(reload)
                             .catch((e) => setError(e.message))
                         }

@@ -13,6 +13,7 @@ import {
   buildRecordExplorerPath,
   type UreRouteEntityType,
 } from '../record-explorer/types';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
 const SYNC_LABELS: Record<string, string> = {
   synced: 'Sincronizado',
@@ -48,6 +49,8 @@ export function FormCollectionPage() {
   }, [formFilter]);
 
   useEffect(() => { load(); }, [load]);
+
+  useOnEntityUpdated(load, ['capture', 'form']);
 
   const filtered = useMemo(() => {
     return items.filter((s) => {
@@ -103,9 +106,9 @@ export function FormCollectionPage() {
             icon: '✅',
           },
           {
-            label: 'Expediente 360°',
-            description: 'Consulte el registro unificado',
-            to: '/expediente',
+            label: 'Explorar productores',
+            description: 'Consulte expedientes desde el listado PRM',
+            to: '/productores',
             icon: '📂',
           },
         ]}

@@ -14,6 +14,7 @@ import {
   startQualitySession,
   type CoffeeTicket,
 } from '../api/coffee';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
 const emptyParams = {
   humidityPct: '11.2',
@@ -64,6 +65,10 @@ export function CoffeeQualityPage() {
     }
   }, [searchParams]);
 
+  useOnEntityUpdated(() => {
+    reload().catch(() => undefined);
+  }, ['purchase']);
+
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);
     setError('');
@@ -73,6 +78,12 @@ export function CoffeeQualityPage() {
         setSession(result as Record<string, unknown>);
       }
       await reload();
+      const ticketKey = String(
+        (session?.ticket as Record<string, unknown> | undefined)?.ticketKey ??
+          searchParams.get('ticket') ??
+          '*',
+      );
+      notifyEntityUpdated('purchase', ticketKey);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error de calidad');
     } finally {

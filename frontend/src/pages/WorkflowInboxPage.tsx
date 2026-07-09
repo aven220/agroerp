@@ -16,10 +16,13 @@ import {
   getWorkflowInbox,
   type WorkflowAssignment,
 } from '../api/workflows';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
 export function WorkflowInboxPage() {
   const { hasPermission } = useAuth();
   const canExecute = hasPermission('workflow:execute');
+  const canApprove = hasPermission('workflow:approve');
+  const canAct = canExecute || canApprove;
   const [items, setItems] = useState<WorkflowAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,10 +46,36 @@ export function WorkflowInboxPage() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getWorkflowInbox()
+      .then((data) => {
+        if (!cancelled) setItems(data);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Error al cargar la bandeja');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useOnEntityUpdated(load, 'workflow');
 
   async function handleTransition(assignment: WorkflowAssignment, transitionKey: string) {
     if (!assignment.instance?.id) return;
+    const transition = assignment.availableTransitions?.find((t) => t.key === transitionKey);
+    if (transition?.requirements?.comment && !comments[assignment.id]?.trim()) {
+      setActionError('Este paso requiere un comentario antes de continuar.');
+      return;
+    }
     const actionLabel = labelWorkflowTransition(transitionKey);
     if (!confirm(`¿Confirma la acción «${actionLabel}» en este proceso?`)) return;
     setActing(assignment.id);
@@ -56,6 +85,22 @@ export function WorkflowInboxPage() {
         transitionKey,
         comment: comments[assignment.id]?.trim() || undefined,
       });
+      const instance = assignment.instance;
+      notifyEntityUpdated('workflow', instance.id);
+      const ctx = (instance.context ?? {}) as Record<string, unknown>;
+      if (instance.resourceType === 'producer' && instance.resourceId) {
+        notifyEntityUpdated('producer', instance.resourceId);
+      } else if (instance.resourceType === 'farm' && instance.resourceId) {
+        notifyEntityUpdated('farm', instance.resourceId);
+      } else if (instance.resourceType === 'field_lot' && instance.resourceId) {
+        notifyEntityUpdated('lot', instance.resourceId);
+      } else if (ctx.producerId) {
+        notifyEntityUpdated('producer', String(ctx.producerId));
+      } else if (ctx.farmId) {
+        notifyEntityUpdated('farm', String(ctx.farmId));
+      } else if (ctx.lotId) {
+        notifyEntityUpdated('lot', String(ctx.lotId));
+      }
       const workflowName = assignment.instance?.workflowDefinition?.name ?? 'Proceso';
       setComments((prev) => {
         const next = { ...prev };
@@ -161,9 +206,11 @@ export function WorkflowInboxPage() {
       ) : (
         <div className="inbox-list">
           {items.map((task) => {
-            const transitionLabel = task.transitionKey
-              ? labelWorkflowTransition(task.transitionKey)
-              : null;
+            const transitions = task.availableTransitions?.length
+              ? task.availableTransitions
+              : task.transitionKey
+                ? [{ key: task.transitionKey, name: labelWorkflowTransition(task.transitionKey) }]
+                : [];
             const instanceId = task.instance?.id;
 
             return (
@@ -175,7 +222,9 @@ export function WorkflowInboxPage() {
                   </span>
                 </header>
                 <p>Paso actual: <strong>{labelWorkflowStep(task.stateKey)}</strong></p>
-                {transitionLabel ? <p>Acción sugerida: <strong>{transitionLabel}</strong></p> : null}
+                {transitions.length > 0 ? (
+                  <p>Acciones disponibles: <strong>{transitions.map((t) => t.name).join(' · ')}</strong></p>
+                ) : null}
                 {task.dueAt && (
                   <p className={new Date(task.dueAt) < new Date() ? 'text-danger' : ''}>
                     Vence: {new Date(task.dueAt).toLocaleString('es-CO')}
@@ -190,16 +239,19 @@ export function WorkflowInboxPage() {
                   rows={2}
                 />
                 <div className="row-actions">
-                  {task.transitionKey && canExecute ? (
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-sm"
-                      disabled={acting === task.id}
-                      onClick={() => handleTransition(task, task.transitionKey!)}
-                    >
-                      {acting === task.id ? 'Procesando…' : transitionLabel ?? 'Ejecutar acción'}
-                    </button>
-                  ) : null}
+                  {canAct
+                    ? transitions.map((transition) => (
+                        <button
+                          key={transition.key}
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          disabled={acting === task.id}
+                          onClick={() => handleTransition(task, transition.key)}
+                        >
+                          {acting === task.id ? 'Procesando…' : transition.name}
+                        </button>
+                      ))
+                    : null}
                   {instanceId ? (
                     <Link to={`/procesos/instancias?id=${instanceId}`} className="btn btn-sm">
                       Ver detalle del proceso

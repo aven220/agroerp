@@ -453,6 +453,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
         keywords: ['iot', 'sensores'],
       }),
       item('adv-docs', '/documentos', 'Documentos', '📄', {
+        permission: 'document:read',
         keywords: ['documentos', 'archivos'],
       }),
       /* ── Operaciones técnicas ── */

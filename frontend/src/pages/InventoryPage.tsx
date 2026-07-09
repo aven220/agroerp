@@ -6,7 +6,8 @@ import { Modal } from '../components/ui/Modal';
 import { listEimsStock, postEimsMovement, listEimsWarehouses } from '../api/eims';
 import { createBulkExportAction, createBulkCopyIdsAction } from '../lib/gridBulkActions';
 import type { GridColumnDef } from '../lib/data-grid/types';
-import { notifyEntityUpdated } from '../lib/entitySync';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
+import { useAuth } from '../context/AuthContext';
 
 interface EimsStockRow {
   id: string;
@@ -35,6 +36,8 @@ function mapStockRow(raw: Record<string, unknown>): EimsStockRow {
 }
 
 export function InventoryPage() {
+  const { hasPermission } = useAuth();
+  const canCreateMovement = hasPermission('inventory:item');
   const [refresh, setRefresh] = useState(0);
   const [items, setItems] = useState<EimsStockRow[]>([]);
   const [warehouses, setWarehouses] = useState<Array<{ warehouseKey: string; name: string }>>([]);
@@ -68,6 +71,8 @@ export function InventoryPage() {
     load();
   }, [load, refresh]);
 
+  useOnEntityUpdated(() => setRefresh((r) => r + 1), ['inventory', 'purchase']);
+
   const totalStock = items.reduce((s, i) => s + i.onHandQty, 0);
 
   function openCreate() {
@@ -86,11 +91,11 @@ export function InventoryPage() {
     setSaving(true);
     try {
       await postEimsMovement({
-        movementType: 'receipt',
+        movementType: 'entry',
         itemKey: form.itemKey.trim(),
-        warehouseKey: form.warehouseKey,
+        toWarehouseKey: form.warehouseKey,
         quantity: form.quantity,
-        notes: form.notes || 'Entrada desde vista de inventario',
+        reason: form.notes || 'Entrada desde vista de inventario',
       });
       setModalOpen(false);
       setRefresh((r) => r + 1);
@@ -128,9 +133,11 @@ export function InventoryPage() {
         title="Inventario"
         subtitle={`Existencias EIMS · ${totalStock.toLocaleString('es-CO')} unidades en vista`}
         actions={
-          <button type="button" className="btn btn-primary" onClick={openCreate}>
-            + Entrada de inventario
-          </button>
+          canCreateMovement ? (
+            <button type="button" className="btn btn-primary" onClick={openCreate}>
+              + Entrada de inventario
+            </button>
+          ) : null
         }
       />
 

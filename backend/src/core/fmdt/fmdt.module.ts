@@ -24,6 +24,6 @@ import { FmdtReportsController } from './presentation/fmdt-reports.controller';
     LotSyncService,
     FmdtReportsService,
   ],
-  exports: [LotsService, LotTwinService],
+  exports: [LotsService, LotTwinService, LotLifecycleService],
 })
 export class FmdtModule {}

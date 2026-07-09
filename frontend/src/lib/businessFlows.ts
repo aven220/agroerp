@@ -162,8 +162,12 @@ export const BUSINESS_FLOWS: Record<FlowId, BusinessFlow> = {
       {
         id: 'record',
         label: 'Expediente',
-        route: '/expediente',
-        match: (p) => starts(p, '/expediente'),
+        route: '/productores',
+        match: (p) =>
+          starts(p, '/record-explorer') ||
+          /^\/productores\/[^/]+$/.test(p) ||
+          /^\/fincas\/[^/]+$/.test(p) ||
+          /^\/lotes\/[^/]+$/.test(p),
       },
       {
         id: 'indicators',

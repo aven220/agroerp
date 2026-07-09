@@ -11,11 +11,14 @@ import {
 } from '../api/coffee';
 import { createBulkExportAction, createBulkCopyIdsAction } from '../lib/gridBulkActions';
 import type { GridColumnDef } from '../lib/data-grid/types';
-import { notifyEntityUpdated } from '../lib/entitySync';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
+import { useAuth } from '../context/AuthContext';
 
 const today = new Date().toISOString().slice(0, 10);
 
 export function PurchasesPage() {
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission('coffee:receive');
   const [refresh, setRefresh] = useState(0);
   const [tickets, setTickets] = useState<CoffeeTicket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +47,8 @@ export function PurchasesPage() {
   useEffect(() => {
     loadTickets();
   }, [loadTickets, refresh]);
+
+  useOnEntityUpdated(() => setRefresh((r) => r + 1), ['purchase', 'producer']);
 
   useEffect(() => {
     setProducersLoading(true);
@@ -80,8 +85,9 @@ export function PurchasesPage() {
       await createCoffeeTicket({
         producerId,
         producerName: producer?.legalName,
-        notes: notes || `Registro simple ${today}`,
-        netWeightKg: netWeightKg > 0 ? netWeightKg : undefined,
+        notes: notes || (netWeightKg > 0
+          ? `Registro simple ${today} · ${netWeightKg} kg indicados`
+          : `Registro simple ${today}`),
       });
       setModalOpen(false);
       setRefresh((r) => r + 1);
@@ -129,15 +135,17 @@ export function PurchasesPage() {
         title="Compras de café"
         subtitle="Tickets de recepción CPEP vinculados a productores PRM"
         actions={
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={openCreate}
-            disabled={producers.length === 0}
-            title={producersLoading ? 'Cargando productores…' : producers.length === 0 ? 'Registre productores en PRM primero' : undefined}
-          >
-            + Nueva compra
-          </button>
+          canCreate ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={openCreate}
+              disabled={producers.length === 0}
+              title={producersLoading ? 'Cargando productores…' : producers.length === 0 ? 'Registre productores en PRM primero' : undefined}
+            >
+              + Nueva compra
+            </button>
+          ) : null
         }
       />
 

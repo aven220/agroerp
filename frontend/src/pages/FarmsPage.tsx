@@ -15,6 +15,7 @@ import {
   type FarmFilters,
   type FarmUnit,
 } from '../api/ftip';
+import { useOnEntityUpdated, notifyEntityUpdated } from '../lib/entitySync';
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Borrador',
@@ -30,6 +31,7 @@ export function FarmsPage() {
   const canCreate = hasPermission('farm:create');
   const canUpdate = hasPermission('farm:update');
   const canDelete = hasPermission('farm:delete');
+  const canExport = hasPermission('farm:export');
   const [filters, setFilters] = useState<FarmFilters>({ page: 1, limit: 25 });
   const [items, setItems] = useState<FarmUnit[]>([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
@@ -77,6 +79,11 @@ export function FarmsPage() {
     loadMeta();
   }, [loadMeta]);
 
+  useOnEntityUpdated(() => {
+    loadList();
+    loadMeta();
+  }, 'farm');
+
   useEffect(() => {
     const raw = sessionStorage.getItem('agroerp_cmd_filter_farms');
     if (!raw) return;
@@ -101,6 +108,7 @@ export function FarmsPage() {
     if (!confirm(`¿Archivar finca "${row.farmName}"?`)) return;
     try {
       await deleteFarm(row.id);
+      notifyEntityUpdated('farm', row.id);
       loadList();
       getFarmDashboard().then(setDashboard).catch(() => {});
     } catch (err) {
@@ -118,8 +126,9 @@ export function FarmsPage() {
   ], []);
 
   const bulkActions = useMemo(
-    () => createStandardBulkActions(exportColumns, 'fincas', (r) => `/fincas/${r.id}`),
-    [exportColumns],
+    () => createStandardBulkActions(exportColumns, 'fincas', (r) => `/fincas/${r.id}`)
+      .filter((a) => a.id !== 'bulk-export' || canExport),
+    [exportColumns, canExport],
   );
 
   const rowActions = useMemo((): RowAction<FarmUnit>[] => {
@@ -227,7 +236,7 @@ export function FarmsPage() {
         onPageChange={(p) => setFilters((f) => ({ ...f, page: p }))}
         onPageSizeChange={(limit) => setFilters((f) => ({ ...f, limit, page: 1 }))}
         onQuickSearchChange={handleQuickSearchChange}
-        onExport={handleExport}
+        onExport={canExport ? handleExport : undefined}
         onRowClick={(r) => navigate(`/fincas/${r.id}`)}
         bulkActions={bulkActions}
         rowActions={rowActions}

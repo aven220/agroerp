@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useMobile } from '../../context/MobileContext';
 import { useNavigation } from '../../context/NavigationContext';
@@ -9,6 +10,7 @@ import { getContinueWorkItems, kindIcon } from '../../lib/workEntityHistory';
 import { useAdaptiveWorkspaceOptional } from '../../context/AdaptiveWorkspaceProvider';
 import { useDeviceCapabilities } from '../../hooks/useDeviceCapabilities';
 import { useToast } from '../../context/ToastContext';
+import { useOnEntityUpdated } from '../../lib/entitySync';
 
 export function MobileHome() {
   const { user, hasPermission } = useAuth();
@@ -17,10 +19,15 @@ export function MobileHome() {
   const device = useDeviceCapabilities();
   const toast = useToast();
   const adaptive = useAdaptiveWorkspaceOptional();
+  const [historyTick, setHistoryTick] = useState(0);
+  useOnEntityUpdated(() => setHistoryTick((t) => t + 1));
   const quickActions = adaptive?.prefs.adaptiveEnabled
     ? adaptive.adaptiveQuickActions
     : getQuickActionsForRole(dashboardRole, hasPermission);
-  const continueItems = getContinueWorkItems(user?.id, 4);
+  const continueItems = useMemo(
+    () => getContinueWorkItems(user?.id, 4),
+    [user?.id, historyTick],
+  );
 
   async function handleDeviceAction(action: string) {
     if (action === 'gps') {

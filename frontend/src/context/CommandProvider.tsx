@@ -23,6 +23,7 @@ import {
 import { useAuth } from './AuthContext';
 import { useNavigation } from './NavigationContext';
 import { useGuidedWorkspaceOptional } from './GuidedWorkspaceContext';
+import { useOnEntityUpdated } from '../lib/entitySync';
 
 interface CommandContextValue {
   mode: CommandPaletteMode;
@@ -52,6 +53,9 @@ export function CommandProvider({ children }: { children: ReactNode }) {
   const [query, setQuery] = useState('');
   const [recentCommandIds, setRecentCommandIds] = useState(() => loadRecentCommandIds(userId));
   const [favoriteCommandIds, setFavoriteCommandIds] = useState(() => loadFavoriteCommandIds(userId));
+  const [entityTick, setEntityTick] = useState(0);
+
+  useOnEntityUpdated(() => setEntityTick((t) => t + 1));
 
   const openPalette = useCallback(
     (paletteMode: CommandPaletteMode = 'launcher') => {
@@ -101,6 +105,7 @@ export function CommandProvider({ children }: { children: ReactNode }) {
       gw?.setPanelOpen,
       userId,
       favoriteCommandIds,
+      entityTick,
     ],
   );
 

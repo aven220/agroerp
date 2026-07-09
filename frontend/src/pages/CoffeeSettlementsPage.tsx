@@ -16,8 +16,11 @@ import {
   voidSettlement,
   type CoffeeTicket,
 } from '../api/coffee';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
+import { useIsMounted } from '../hooks/useIsMounted';
 
 export function CoffeeSettlementsPage() {
+  const mounted = useIsMounted();
   const [searchParams] = useSearchParams();
   const [pending, setPending] = useState<CoffeeTicket[]>([]);
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
@@ -39,11 +42,16 @@ export function CoffeeSettlementsPage() {
       listCoffeeDocuments(),
       getSettlementKpis(),
     ]);
+    if (!mounted.current) return;
     setPending(p);
     setRows(s as Array<Record<string, unknown>>);
     setDocs(d as Array<Record<string, unknown>>);
     setKpis(k);
   };
+
+  useOnEntityUpdated(() => {
+    reload().catch(() => undefined);
+  }, ['purchase', 'document', 'inventory']);
 
   useEffect(() => {
     reload().catch(() => undefined);
@@ -66,6 +74,13 @@ export function CoffeeSettlementsPage() {
         setSession((result as { session: Record<string, unknown> }).session);
       }
       await reload();
+      const ticketKey = String(
+        (session?.ticket as Record<string, unknown> | undefined)?.ticketKey ??
+          searchParams.get('ticket') ??
+          '*',
+      );
+      notifyEntityUpdated('purchase', ticketKey);
+      notifyEntityUpdated('document', '*');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error de liquidación');
     } finally {
@@ -84,6 +99,36 @@ export function CoffeeSettlementsPage() {
         roundingPrecision: 0,
       }),
     );
+
+  const paySettlement = (ticketKey: string, amount: number) => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    registerCoffeePayment(ticketKey, {
+      paidAmount: amount,
+      method: payMethod,
+      reference: `PAY-${Date.now()}`,
+    })
+      .then(() => {
+        notifyEntityUpdated('purchase', ticketKey);
+        return reload();
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Error al registrar pago'))
+      .finally(() => setBusy(false));
+  };
+
+  const voidRow = (settlementKey: string) => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    voidSettlement(settlementKey, 'Anulación controlada operativa')
+      .then(() => {
+        notifyEntityUpdated('purchase', '*');
+        return reload();
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Error al anular'))
+      .finally(() => setBusy(false));
+  };
 
   const confirmAndRegister = () =>
     run(async () => {
@@ -221,22 +266,22 @@ export function CoffeeSettlementsPage() {
                   <td style={{ display: 'flex', gap: 4 }}>
                     <button
                       className="btn"
+                      disabled={busy}
                       onClick={() => {
                         const amount = Number(payAmount || r.netPayable || r.totalAmount);
-                        registerCoffeePayment(String(t?.ticketKey), {
-                          paidAmount: amount,
-                          method: payMethod,
-                          reference: `PAY-${Date.now()}`,
-                        }).then(reload);
+                        if (!amount || Number.isNaN(amount)) {
+                          setError('Indique un monto de pago válido');
+                          return;
+                        }
+                        paySettlement(String(t?.ticketKey), amount);
                       }}
                     >
                       Pagar
                     </button>
                     <button
                       className="btn"
-                      onClick={() =>
-                        voidSettlement(String(r.settlementKey), 'Anulación controlada operativa').then(reload).catch((e) => setError(e.message))
-                      }
+                      disabled={busy}
+                      onClick={() => voidRow(String(r.settlementKey))}
                     >
                       Anular
                     </button>
@@ -268,20 +313,29 @@ export function CoffeeSettlementsPage() {
             <tr><th>Tipo</th><th>Título</th><th>QR</th><th>PDF</th><th>Reimpresiones</th><th></th></tr>
           </thead>
           <tbody>
-            {docs.map((d) => (
+            {docs.map((d) => {
+              const isCpep = d.source !== 'prm';
+              return (
               <tr key={String(d.id)}>
                 <td>{String(d.documentType)}</td>
                 <td>{String(d.title)}</td>
-                <td>{String(d.qrPayload ?? '—')}</td>
-                <td>{String(d.pdfUrl ?? '—')}</td>
-                <td>{String(d.reprintCount ?? 0)}</td>
+                <td>{isCpep ? String(d.qrPayload ?? '—') : '—'}</td>
+                <td>{isCpep ? String(d.pdfUrl ?? '—') : '—'}</td>
+                <td>{isCpep ? String(d.reprintCount ?? 0) : '—'}</td>
                 <td>
-                  <button className="btn" onClick={() => reprintCoffeeDocument(String(d.documentKey)).then(reload)}>
-                    Reimprimir
-                  </button>
+                  {isCpep ? (
+                    <button className="btn" disabled={busy} onClick={() => reprintCoffeeDocument(String(d.documentKey)).then(() => {
+                      notifyEntityUpdated('document', String(d.documentKey));
+                      return reload();
+                    })}>
+                      Reimprimir
+                    </button>
+                  ) : (
+                    '—'
+                  )}
                 </td>
               </tr>
-            ))}
+            );})}
           </tbody>
         </table>
       </section>

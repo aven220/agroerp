@@ -17,6 +17,7 @@ import {
   type WorkflowHistoryEntry,
   type WorkflowInstance,
 } from '../api/workflows';
+import { useOnEntityUpdated, notifyEntityUpdated } from '../lib/entitySync';
 import { labelWorkflowStep } from '../lib/humanizeCopy';
 import { labelWorkflowStatus } from '../lib/userLabels';
 
@@ -37,6 +38,7 @@ export function WorkflowInstancesPage() {
   const [history, setHistory] = useState<WorkflowHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -53,15 +55,20 @@ export function WorkflowInstancesPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  useOnEntityUpdated(load, 'workflow');
+
   useEffect(() => {
     const instanceId = searchParams.get('id');
     if (instanceId) {
-      openDetail(instanceId);
+      openDetail(instanceId).catch((e: unknown) => {
+        setDetailError(e instanceof Error ? e.message : 'No se pudo abrir la instancia');
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- abrir detalle desde URL EFX
   }, [searchParams]);
 
   async function openDetail(id: string) {
+    setDetailError(null);
     const [inst, hist] = await Promise.all([
       getWorkflowInstance(id),
       getWorkflowHistory(id),
@@ -78,23 +85,38 @@ export function WorkflowInstancesPage() {
   }
 
   async function handleSuspend(id: string) {
-    await suspendWorkflowInstance(id);
-    load();
-    if (selected?.id === id) openDetail(id);
+    try {
+      await suspendWorkflowInstance(id);
+      notifyEntityUpdated('workflow', id);
+      await load();
+      if (selected?.id === id) await openDetail(id);
+    } catch (e: unknown) {
+      setDetailError(e instanceof Error ? e.message : 'No se pudo suspender');
+    }
   }
 
   async function handleResume(id: string) {
-    await resumeWorkflowInstance(id);
-    load();
-    if (selected?.id === id) openDetail(id);
+    try {
+      await resumeWorkflowInstance(id);
+      notifyEntityUpdated('workflow', id);
+      await load();
+      if (selected?.id === id) await openDetail(id);
+    } catch (e: unknown) {
+      setDetailError(e instanceof Error ? e.message : 'No se pudo reanudar');
+    }
   }
 
   async function handleCancel(id: string) {
     const reason = prompt('Motivo de cancelación:');
     if (!reason) return;
-    await cancelWorkflowInstance(id, reason);
-    load();
-    setSelected(null);
+    try {
+      await cancelWorkflowInstance(id, reason);
+      notifyEntityUpdated('workflow', id);
+      await load();
+      setSelected(null);
+    } catch (e: unknown) {
+      setDetailError(e instanceof Error ? e.message : 'No se pudo cancelar');
+    }
   }
 
   return (
@@ -110,6 +132,9 @@ export function WorkflowInstancesPage() {
           </div>
         }
       />
+
+      {detailError ? <div className="alert alert-error">{detailError}</div> : null}
+      {error ? <div className="alert alert-error">{error}</div> : null}
 
       <FlowProgress flowId="workflow" currentStepId="detail" />
 

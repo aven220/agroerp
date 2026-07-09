@@ -7,17 +7,22 @@ import {
   registerInventoryMovement,
   revalueInventoryLot,
 } from '../api/coffee';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
 export function CoffeeInventoryPage() {
   const [lots, setLots] = useState<Array<Record<string, unknown>>>([]);
   const [selected, setSelected] = useState<Record<string, unknown> | null>(null);
-  const [qty, setQty] = useState('100');
+  const [qty, setQty] = useState('');
   const [movementType, setMovementType] = useState('transfer');
-  const [toWarehouse, setToWarehouse] = useState('Bodega secundaria');
+  const [toWarehouse, setToWarehouse] = useState('');
   const [error, setError] = useState('');
 
   const reload = () => listInventoryLots().then((r) => setLots(r as Array<Record<string, unknown>>));
   useEffect(() => { reload(); }, []);
+
+  useOnEntityUpdated(() => {
+    reload();
+  }, ['purchase', 'inventory']);
 
   const openLot = async (lotKey: string) => {
     setSelected(await getInventoryLot(lotKey));
@@ -87,17 +92,26 @@ export function CoffeeInventoryPage() {
             <input value={toWarehouse} onChange={(e) => setToWarehouse(e.target.value)} placeholder="Bodega destino" />
             <button
               className="btn"
-              onClick={() =>
+              onClick={() => {
+                const quantityKg = Number(qty);
+                if (!quantityKg) {
+                  setError('Indique la cantidad del movimiento');
+                  return;
+                }
                 registerInventoryMovement(String(selected.lotKey), {
                   movementType,
-                  quantityKg: Number(qty),
-                  toWarehouse: movementType === 'transfer' ? toWarehouse : undefined,
+                  quantityKg,
+                  toWarehouse: movementType === 'transfer' ? toWarehouse.trim() || undefined : undefined,
                   reason: `Movimiento ${movementType}`,
                 })
+                  .then(() => {
+                    notifyEntityUpdated('inventory', String(selected.lotKey));
+                    notifyEntityUpdated('purchase', '*');
+                  })
                   .then(() => openLot(String(selected.lotKey)))
                   .then(reload)
-                  .catch((e) => setError(e.message))
-              }
+                  .catch((e) => setError(e.message));
+              }}
             >
               Registrar movimiento
             </button>
@@ -105,6 +119,9 @@ export function CoffeeInventoryPage() {
               className="btn"
               onClick={() =>
                 revalueInventoryLot(String(selected.lotKey), Number(selected.unitCost) * 1.02, 'Revalorización operativa')
+                  .then(() => {
+                    notifyEntityUpdated('inventory', String(selected.lotKey));
+                  })
                   .then(() => openLot(String(selected.lotKey)))
                   .then(reload)
                   .catch((e) => setError(e.message))

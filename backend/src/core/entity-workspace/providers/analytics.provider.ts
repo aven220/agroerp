@@ -78,14 +78,13 @@ export class AnalyticsProvider implements WorkspaceProvider {
   private async farmMetrics(context: WorkspaceQueryContext): Promise<UreAnalyticsMetric[]> {
     const profile = await this.farms.findOne(context.organizationId, context.entityId);
     const twin = await this.farmTwin.getTwin(context.organizationId, context.entityId).catch(() => null);
-    const twinKpis = (twin as { twin?: { kpis?: Record<string, unknown> } } | null)?.twin?.kpis;
-
-    if (twinKpis) {
-      return Object.entries(twinKpis).map(([key, value]) => ({
-        key,
-        label: key,
-        value: typeof value === 'number' ? value : String(value ?? ''),
-      }));
+    const twinData = (twin as { twin?: Record<string, unknown> } | null)?.twin;
+    if (twinData) {
+      return [
+        { key: 'productionYtdKg', label: 'Producción YTD (kg)', value: Number(twinData.productionYtdKg ?? 0) },
+        { key: 'avgYieldKgHa', label: 'Rendimiento (kg/ha)', value: Number(twinData.avgYieldKgHa ?? 0) },
+        { key: 'documentCompletenessPct', label: 'Documentación (%)', value: Number(twinData.documentCompletenessPct ?? 0) },
+      ].filter((m) => Number(m.value) > 0);
     }
 
     return [{ key: 'area', label: 'Área total (ha)', value: Number(profile.totalAreaHa ?? 0) }];

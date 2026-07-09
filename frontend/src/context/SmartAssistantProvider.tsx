@@ -25,6 +25,7 @@ import {
   type DismissedSuggestion,
 } from '../lib/smartAssistant';
 import { loadGridProductivity } from '../lib/gridProductivity';
+import { useOnEntityUpdated } from '../lib/entitySync';
 
 interface SmartAssistantContextValue {
   suggestions: SmartSuggestion[];
@@ -129,6 +130,7 @@ export function SmartAssistantProvider({ children }: { children: ReactNode }) {
   );
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
+  useOnEntityUpdated(refresh);
 
   const badgeCount = suggestions.filter((s) => s.priority >= 80).length;
 

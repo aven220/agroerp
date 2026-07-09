@@ -121,6 +121,7 @@ export function LotFormPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (saving) return;
     setSaving(true);
     setError(null);
     try {

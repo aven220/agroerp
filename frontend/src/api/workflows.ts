@@ -64,6 +64,8 @@ export interface WorkflowDefinitionSchema {
 export interface WorkflowInstance {
   id: string;
   workflowKey?: string;
+  resourceId?: string | null;
+  resourceType?: string | null;
   currentState: string;
   status: string;
   priority?: string;
@@ -84,6 +86,11 @@ export interface WorkflowAssignment {
   status: string;
   userId: string;
   dueAt?: string | null;
+  availableTransitions?: Array<{
+    key: string;
+    name: string;
+    requirements?: { comment?: boolean; signature?: boolean; gps?: boolean };
+  }>;
   instance?: WorkflowInstance;
 }
 

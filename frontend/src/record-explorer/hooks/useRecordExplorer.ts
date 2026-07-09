@@ -1,58 +1,54 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchRecordExplorer } from '../api/record-explorer';
 import type { UreRecordExplorerResponse } from '../types';
+import { useOnEntityUpdated } from '../../lib/entitySync';
 
 export function useRecordExplorer(entityType: string, recordId: string) {
   const [data, setData] = useState<UreRecordExplorerResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const hasDataRef = useRef(false);
+  const requestIdRef = useRef(0);
 
   const reload = useCallback(async () => {
     if (!entityType || !recordId) return;
-    if (!hasDataRef.current) setLoading(true);
+    const requestId = ++requestIdRef.current;
+    setLoading(true);
     setError(null);
     try {
       const payload = await fetchRecordExplorer(entityType, recordId);
+      if (requestId !== requestIdRef.current) return;
       setData(payload);
-      hasDataRef.current = true;
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setError(err instanceof Error ? err.message : 'Error al cargar el registro');
-      if (!hasDataRef.current) setData(null);
+      setData(null);
     } finally {
-      if (!hasDataRef.current) setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, [entityType, recordId]);
 
   useEffect(() => {
-    hasDataRef.current = false;
+    const requestId = ++requestIdRef.current;
     setData(null);
     setError(null);
     setLoading(true);
 
-    let cancelled = false;
-
     (async () => {
       try {
         const payload = await fetchRecordExplorer(entityType, recordId);
-        if (!cancelled) {
-          setData(payload);
-          hasDataRef.current = true;
-        }
+        if (requestId !== requestIdRef.current) return;
+        setData(payload);
       } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Error al cargar el registro');
-          setData(null);
-        }
+        if (requestId !== requestIdRef.current) return;
+        setError(err instanceof Error ? err.message : 'Error al cargar el registro');
+        setData(null);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (requestId === requestIdRef.current) setLoading(false);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [entityType, recordId]);
+
+  useOnEntityUpdated(reload, undefined, recordId, entityType);
 
   return { data, loading, error, reload };
 }

@@ -3,16 +3,27 @@ import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { getWeighingMonitor, syncWeighingContingency } from '../api/coffee';
 import { LoadingState } from '../components/ux/LoadingState';
+import { useIsMounted } from '../hooks/useIsMounted';
+import { useOnEntityUpdated } from '../lib/entitySync';
 
 export function CoffeeWeighingMonitorPage() {
+  const mounted = useIsMounted();
   const [monitor, setMonitor] = useState<Record<string, unknown> | null>(null);
 
-  const reload = () => getWeighingMonitor().then(setMonitor);
+  const reload = () =>
+    getWeighingMonitor().then((data) => {
+      if (mounted.current) setMonitor(data);
+    });
+
   useEffect(() => {
     reload().catch(() => undefined);
     const t = setInterval(() => reload().catch(() => undefined), 3000);
     return () => clearInterval(t);
-  }, []);
+  }, [mounted]);
+
+  useOnEntityUpdated(() => {
+    reload().catch(() => undefined);
+  }, ['purchase', 'inventory']);
 
   if (!monitor) return <LoadingState variant="page" message="Cargando monitor de pesaje..." />;
 
@@ -29,7 +40,7 @@ export function CoffeeWeighingMonitorPage() {
         subtitle="Estado de balanzas, sesiones y lecturas"
         actions={
           <>
-            <button className="btn" onClick={() => syncWeighingContingency().then(reload)}>
+            <button type="button" className="btn" onClick={() => syncWeighingContingency().then(reload)}>
               Sincronizar contingencias
             </button>
             <Link to="/compras/pesaje" className="btn">Panel pesaje</Link>

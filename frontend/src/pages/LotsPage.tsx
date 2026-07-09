@@ -15,6 +15,7 @@ import {
   type LotDashboard,
   type LotFilters,
 } from '../api/fmdt';
+import { useOnEntityUpdated, notifyEntityUpdated } from '../lib/entitySync';
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Borrador',
@@ -32,6 +33,7 @@ export function LotsPage() {
   const canUpdate = hasPermission('lot:update');
   const canDelete = hasPermission('lot:delete');
   const canImport = hasPermission('lot:import');
+  const canExport = hasPermission('lot:export');
   const [filters, setFilters] = useState<LotFilters>({ page: 1, limit: 25 });
   const [items, setItems] = useState<FieldLotProfile[]>([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
@@ -79,6 +81,11 @@ export function LotsPage() {
     loadMeta();
   }, [loadMeta]);
 
+  useOnEntityUpdated(() => {
+    loadList();
+    loadMeta();
+  }, 'lot');
+
   useEffect(() => {
     const raw = sessionStorage.getItem('agroerp_cmd_filter_lots');
     if (!raw) return;
@@ -103,6 +110,7 @@ export function LotsPage() {
     if (!confirm(`¿Archivar lote "${row.lotName}"?`)) return;
     try {
       await deleteLot(row.id);
+      notifyEntityUpdated('lot', row.id);
       loadList();
       getLotDashboard().then(setDashboard).catch(() => {});
     } catch (err) {
@@ -121,8 +129,9 @@ export function LotsPage() {
   ], []);
 
   const bulkActions = useMemo(
-    () => createStandardBulkActions(exportColumns, 'lotes', (r) => `/lotes/${r.id}`),
-    [exportColumns],
+    () => createStandardBulkActions(exportColumns, 'lotes', (r) => `/lotes/${r.id}`)
+      .filter((a) => a.id !== 'bulk-export' || canExport),
+    [exportColumns, canExport],
   );
 
   const rowActions = useMemo((): RowAction<FieldLotProfile>[] => {
@@ -240,7 +249,7 @@ export function LotsPage() {
         onPageChange={(p) => setFilters((f) => ({ ...f, page: p }))}
         onPageSizeChange={(limit) => setFilters((f) => ({ ...f, limit, page: 1 }))}
         onQuickSearchChange={handleQuickSearchChange}
-        onExport={handleExport}
+        onExport={canExport ? handleExport : undefined}
         emptyMessage="No se encontraron lotes con los filtros aplicados."
         onRowClick={(r) => navigate(`/lotes/${r.id}`)}
         bulkActions={bulkActions}

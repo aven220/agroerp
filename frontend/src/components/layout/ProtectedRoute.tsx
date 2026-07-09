@@ -6,6 +6,7 @@ import { ContextualHints } from '../smart-assistant/RecommendationCenter';
 import { useSmartAssistantOptional } from '../../context/SmartAssistantProvider';
 import { useAdaptiveWorkspaceOptional } from '../../context/AdaptiveWorkspaceProvider';
 import { AdaptiveWorkspaceBanner } from '../adaptive-workspace/AdaptiveToolbar';
+import { PermissionGuard } from './PermissionGuard';
 
 function PageWithHints() {
   const assistant = useSmartAssistantOptional();
@@ -16,7 +17,9 @@ function PageWithHints() {
     <div className="erp-content-inner">
       {adaptive ? <AdaptiveWorkspaceBanner /> : null}
       {assistant && !focusMode ? <ContextualHints /> : null}
-      <Outlet />
+      <PermissionGuard>
+        <Outlet />
+      </PermissionGuard>
     </div>
   );
 }

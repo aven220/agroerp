@@ -558,7 +558,10 @@ export class LotsService {
         deletedAt: null,
         id: { notIn: linkedIds },
         ...(farmUnitId ? { farmUnitId } : {}),
-        farmUnit: { status: 'active', deletedAt: null },
+        farmUnit: {
+          status: { in: ['draft', 'under_validation', 'active'] },
+          deletedAt: null,
+        },
       },
       include: {
         farmUnit: { select: { farmCode: true, farmName: true } },

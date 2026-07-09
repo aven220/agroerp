@@ -7,16 +7,27 @@ import {
   evaluateOpsAlerts,
   getOperationalDashboard,
 } from '../api/coffee';
+import { useIsMounted } from '../hooks/useIsMounted';
+import { useOnEntityUpdated } from '../lib/entitySync';
 
 export function CoffeeOpsCenterPage() {
+  const mounted = useIsMounted();
   const [data, setData] = useState<Record<string, unknown> | null>(null);
 
-  const reload = () => getOperationalDashboard().then(setData);
+  const reload = () =>
+    getOperationalDashboard().then((next) => {
+      if (mounted.current) setData(next);
+    });
+
   useEffect(() => {
-    reload();
-    const t = setInterval(reload, 15000);
+    reload().catch(() => undefined);
+    const t = setInterval(() => reload().catch(() => undefined), 15000);
     return () => clearInterval(t);
-  }, []);
+  }, [mounted]);
+
+  useOnEntityUpdated(() => {
+    reload().catch(() => undefined);
+  }, ['purchase', 'inventory']);
 
   if (!data) return <LoadingState variant="dashboard" message="Cargando operations center..." />;
   const ops = (data.operations ?? {}) as Record<string, unknown>;

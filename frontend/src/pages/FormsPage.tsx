@@ -10,7 +10,7 @@ import { FormAvailabilityBadges } from '../components/forms/FormAvailabilityBadg
 import { FormLifecycleStepper } from '../components/forms/FormLifecycleStepper';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { notifyEntityUpdated } from '../lib/entitySync';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 import {
   archiveForm,
   approveForm,
@@ -127,12 +127,15 @@ export function FormsPage() {
     loadMeta();
   }, [loadList, loadMeta]);
 
+  useOnEntityUpdated(refreshAfterMutation, 'form');
+
   const modifierName = user ? `${user.firstName} ${user.lastName}`.trim() : undefined;
 
   async function handlePublish(row: FormDefinition) {
     if (!confirm(`¿Publicar "${row.name}" v${row.version}?\n\nTras publicar estará disponible en la web y se incluirá en la próxima descarga de formularios en dispositivos móviles.`)) return;
     try {
       await publishForm(row.id);
+      notifyEntityUpdated('form', row.id);
       success('Publicado. Los dispositivos lo recibirán al sincronizar.', row.name);
       refreshAfterMutation();
     } catch (err) {
@@ -144,6 +147,7 @@ export function FormsPage() {
     if (!confirm(`¿Archivar "${row.name}"? Dejará de estar disponible en la app.`)) return;
     try {
       await archiveForm(row.id);
+      notifyEntityUpdated('form', row.id);
       info('Formulario archivado.');
       refreshAfterMutation();
     } catch (err) {
@@ -158,6 +162,7 @@ export function FormsPage() {
     if (!confirm(msg)) return;
     try {
       await deleteForm(row.id);
+      notifyEntityUpdated('form', row.id);
       success('Formulario eliminado.');
       refreshAfterMutation();
     } catch (err) {
@@ -199,6 +204,7 @@ export function FormsPage() {
   async function handleSubmitReview(row: FormDefinition) {
     try {
       await submitFormForReview(row.id);
+      notifyEntityUpdated('form', row.id);
       info('Enviado a revisión.');
       refreshAfterMutation();
     } catch (err) {
@@ -234,6 +240,7 @@ export function FormsPage() {
   async function handleRestore(row: FormDefinition) {
     try {
       await restoreForm(row.id);
+      notifyEntityUpdated('form', row.id);
       success('Restaurado como borrador.');
       refreshAfterMutation();
     } catch (err) {
@@ -245,6 +252,7 @@ export function FormsPage() {
     if (!confirm(`¿Despublicar "${row.name}"?`)) return;
     try {
       await unpublishForm(row.id);
+      notifyEntityUpdated('form', row.id);
       warning('Despublicado. Vuelve a borrador.');
       refreshAfterMutation();
     } catch (err) {

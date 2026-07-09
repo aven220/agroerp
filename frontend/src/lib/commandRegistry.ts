@@ -3,6 +3,7 @@
  */
 
 import { ALL_NAV_ITEMS } from '../config/navigation';
+import { canAccessPath } from '../config/routePermissions';
 import { loadGridProductivity } from './gridProductivity';
 import { loadWorkEntityHistory, kindIcon, type WorkEntityVisit } from './workEntityHistory';
 import type { GuidedOpenProcess, GuidedPersonalShortcut, GuidedPinnedRecord } from './guidedWorkspace';
@@ -58,11 +59,11 @@ const ACTION_COMMANDS: Array<{
   { id: 'action-create-farm', label: 'Crear finca', icon: '➕', to: '/fincas/nueva', permission: 'farm:create', keywords: ['nuevo', 'registrar'] },
   { id: 'action-create-lot', label: 'Crear lote', icon: '➕', to: '/lotes/nuevo', permission: 'lot:create', keywords: ['nuevo', 'parcela'] },
   { id: 'action-create-form', label: 'Diseñar formulario', icon: '📝', to: '/formularios/disenar', permission: 'form:create', keywords: ['nuevo', 'form studio'] },
-  { id: 'action-new-purchase', label: 'Registrar compra', icon: '☕', to: '/compras', keywords: ['café', 'compras'] },
-  { id: 'action-workflow-inbox', label: 'Bandeja de tareas', icon: '📥', to: '/procesos/bandeja', keywords: ['workflow', 'aprobaciones'] },
+  { id: 'action-new-purchase', label: 'Registrar compra', icon: '☕', to: '/compras', permission: 'coffee:receive', keywords: ['café', 'compras'] },
+  { id: 'action-workflow-inbox', label: 'Bandeja de tareas', icon: '📥', to: '/procesos/bandeja', permission: 'workflow:read', keywords: ['workflow', 'aprobaciones'] },
   { id: 'action-home', label: 'Ir al inicio', icon: '🏠', to: '/', keywords: ['dashboard', 'inicio'] },
   { id: 'action-notifications', label: 'Notificaciones', icon: '🔔', to: '/notificaciones' },
-  { id: 'action-admin', label: 'Administración', icon: '⚙', to: '/administracion', permission: 'admin:read' },
+  { id: 'action-admin', label: 'Administración', icon: '⚙', to: '/administracion', permission: 'organization:read' },
 ];
 
 function scoreCommand(cmd: CommandItem, q: string): number {
@@ -107,6 +108,7 @@ export function buildCommandRegistry(opts: BuildCommandsOptions): CommandItem[] 
 
   const add = (cmd: Omit<CommandItem, 'categoryLabel' | 'keywords'> & { keywords?: string[] }) => {
     if (cmd.permission && !hasPermission(cmd.permission)) return;
+    if (cmd.to && !canAccessPath(cmd.to, hasPermission)) return;
     commands.push({
       ...cmd,
       keywords: cmd.keywords ?? [],

@@ -279,6 +279,21 @@ export function addProducerNote(id: string, content: string) {
   });
 }
 
+export function addProducerDocument(
+  id: string,
+  data: {
+    title: string;
+    documentTypeCode: string;
+    contentId: string;
+    description?: string;
+  },
+) {
+  return apiRequest<ProducerDocument>(`/prm/producers/${id}/documents`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 export function assignProducer(
   id: string,
   data: { assignmentType: string; assigneeId: string; reason?: string },

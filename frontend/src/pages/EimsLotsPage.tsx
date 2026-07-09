@@ -7,6 +7,7 @@ import {
   listEimsLots,
   listEimsWarehouses,
 } from '../api/eims';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
 export function EimsLotsPage() {
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
@@ -47,6 +48,10 @@ export function EimsLotsPage() {
 
   useEffect(() => { reload().catch((e) => setError(e.message)); }, []);
 
+  useOnEntityUpdated(() => {
+    reload().catch((e) => setError(e instanceof Error ? e.message : 'Error al recargar'));
+  }, ['inventory']);
+
   const create = async () => {
     await createEimsLot({
       itemKey: form.itemKey,
@@ -60,6 +65,7 @@ export function EimsLotsPage() {
       agriculturalLotCode: form.agriculturalLotCode || undefined,
       sourceType: 'manual',
     });
+    notifyEntityUpdated('inventory', '*');
     setForm({ ...form, lotKey: '', initialQty: '0' });
     await reload();
   };

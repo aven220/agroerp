@@ -17,23 +17,31 @@ import {
   verifyWeighingScale,
   type CoffeeTicket,
 } from '../api/coffee';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
+import { useIsMounted } from '../hooks/useIsMounted';
 
 export function CoffeeWeighingPage() {
+  const mounted = useIsMounted();
   const [searchParams] = useSearchParams();
   const [pending, setPending] = useState<CoffeeTicket[]>([]);
   const [monitor, setMonitor] = useState<Record<string, unknown> | null>(null);
   const [session, setSession] = useState<Record<string, unknown> | null>(null);
-  const [manualGross, setManualGross] = useState('1250');
-  const [manualTare, setManualTare] = useState('250');
+  const [manualGross, setManualGross] = useState('');
+  const [manualTare, setManualTare] = useState('');
   const [reason, setReason] = useState('Balanza desconectada — contingencia operativa');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   const reload = async () => {
     const [p, m] = await Promise.all([listWeighingPending(), getWeighingMonitor()]);
+    if (!mounted.current) return;
     setPending(p);
     setMonitor(m);
   };
+
+  useOnEntityUpdated(() => {
+    reload().catch(() => undefined);
+  }, ['purchase', 'inventory']);
 
   useEffect(() => {
     reload().catch(() => undefined);
@@ -56,11 +64,15 @@ export function CoffeeWeighingPage() {
     const t = setInterval(() => {
       reload().catch(() => undefined);
       if (session?.sessionKey) {
-        getWeighingSession(String(session.sessionKey)).then(setSession).catch(() => undefined);
+        getWeighingSession(String(session.sessionKey))
+          .then((s) => {
+            if (mounted.current) setSession(s);
+          })
+          .catch(() => undefined);
       }
     }, 5000);
     return () => clearInterval(t);
-  }, [session?.sessionKey]);
+  }, [session?.sessionKey, mounted]);
 
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);
@@ -71,6 +83,13 @@ export function CoffeeWeighingPage() {
         setSession(result as Record<string, unknown>);
       }
       await reload();
+      const ticketKey = String(
+        (session?.ticket as Record<string, unknown> | undefined)?.ticketKey ??
+          searchParams.get('ticket') ??
+          '*',
+      );
+      notifyEntityUpdated('purchase', ticketKey);
+      notifyEntityUpdated('inventory', '*');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error de pesaje');
     } finally {

@@ -5,17 +5,38 @@ import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { getBiCenter, getBiRealtime, type BiCenter } from '../api/bi';
 import { LoadingState } from '../components/ux/LoadingState';
+import { useIsMounted } from '../hooks/useIsMounted';
+import { useOnEntityUpdated } from '../lib/entitySync';
 
 export function BiCenterPage() {
+  const mounted = useIsMounted();
   const [center, setCenter] = useState<BiCenter | null>(null);
   const [realtime, setRealtime] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
-    getBiCenter().then(setCenter);
-    getBiRealtime().then(setRealtime);
-    const iv = setInterval(() => getBiRealtime().then(setRealtime), 30000);
+    getBiCenter().then((c) => {
+      if (mounted.current) setCenter(c);
+    });
+    getBiRealtime().then((r) => {
+      if (mounted.current) setRealtime(r);
+    });
+    const iv = setInterval(() => {
+      getBiRealtime()
+        .then((r) => {
+          if (mounted.current) setRealtime(r);
+        })
+        .catch(() => undefined);
+    }, 30000);
     return () => clearInterval(iv);
-  }, []);
+  }, [mounted]);
+
+  useOnEntityUpdated(() => {
+    getBiCenter()
+      .then((c) => {
+        if (mounted.current) setCenter(c);
+      })
+      .catch(() => undefined);
+  }, ['producer', 'farm', 'lot', 'purchase', 'inventory']);
 
   if (!center) return <LoadingState variant="dashboard" message="Cargando reportes e indicadores..." />;
 

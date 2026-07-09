@@ -20,6 +20,7 @@ import { WorkflowAssignmentResolver } from './workflow-assignment.resolver';
 import { WorkflowActionExecutor } from './workflow-action.executor';
 import { WorkflowFormBridgeService } from './workflow-form-bridge.service';
 import { WorkflowNotificationDispatcher } from './workflow-notification.dispatcher';
+import { WorkflowEntityLifecycleBridge } from './workflow-entity-lifecycle.bridge';
 import {
   ExecuteTransitionDto,
   StartWorkflowInstanceDto,
@@ -38,6 +39,7 @@ export class WorkflowInstancesService {
     private readonly accessControl: AccessControlService,
     private readonly formBridge: WorkflowFormBridgeService,
     private readonly notificationDispatcher: WorkflowNotificationDispatcher,
+    private readonly entityLifecycleBridge: WorkflowEntityLifecycleBridge,
   ) {}
 
   findAll(
@@ -161,6 +163,7 @@ export class WorkflowInstancesService {
           variables: dto.context,
           startedBy: userId,
         },
+        this.getOutgoingTransitions(schema, initialState.key)[0]?.key,
       );
 
       return created;
@@ -338,6 +341,7 @@ export class WorkflowInstancesService {
       const createdAssignments: Array<{ id: string; userId: string }> = [];
       if (pendingAssignees.length > 0) {
         const state = schema.states.find((s) => s.key === transition.to);
+        const outgoing = this.getOutgoingTransitions(schema, transition.to);
         for (const assigneeId of pendingAssignees) {
           const assignment = await tx.workflowAssignment.create({
             data: {
@@ -345,7 +349,7 @@ export class WorkflowInstancesService {
               organizationId,
               userId: assigneeId,
               stateKey: transition.to,
-              transitionKey: transition.key,
+              transitionKey: outgoing[0]?.key ?? null,
               dueAt: state?.slaHours
                 ? new Date(Date.now() + state.slaHours * 3600000)
                 : undefined,
@@ -412,6 +416,19 @@ export class WorkflowInstancesService {
     );
 
     await this.notificationDispatcher.dispatchPending(organizationId, 50);
+
+    const workflowKey = instance.workflowDefinition?.workflowKey ?? '';
+    await this.entityLifecycleBridge.applyTransition({
+      organizationId,
+      instanceId,
+      workflowKey,
+      resourceType: instance.resourceType,
+      resourceId: instance.resourceId,
+      transitionKey: transition.key,
+      toState: transition.to,
+      actorId: userId,
+      ctx,
+    });
 
     if (isFinal) {
       await this.core.emitWorkflowCompleted(organizationId, instanceId, {}, { ctx });
@@ -582,18 +599,33 @@ export class WorkflowInstancesService {
   }
 
   async getInbox(organizationId: string, userId: string) {
-    return this.prisma.workflowAssignment.findMany({
+    const assignments = await this.prisma.workflowAssignment.findMany({
       where: { organizationId, userId, status: { in: ['pending', 'escalated'] } },
       include: {
         instance: {
           include: {
             workflowDefinition: { select: { workflowKey: true, name: true } },
-            workflowVersion: { select: { version: true } },
+            workflowVersion: { select: { version: true, definition: true } },
           },
         },
       },
       orderBy: [{ dueAt: 'asc' }, { createdAt: 'desc' }],
       take: 200,
+    });
+
+    return assignments.map((assignment) => {
+      const schema = assignment.instance.workflowVersion
+        .definition as unknown as WorkflowDefinitionSchema;
+      const stateKey = assignment.instance.currentState;
+      const outgoing = this.getOutgoingTransitions(schema, stateKey);
+      return {
+        ...assignment,
+        availableTransitions: outgoing.map((t) => ({
+          key: t.key,
+          name: t.name,
+          requirements: t.requirements,
+        })),
+      };
     });
   }
 
@@ -690,6 +722,17 @@ export class WorkflowInstancesService {
       (t) =>
         t.key === transitionKey &&
         (t.from === currentState || t.from === '*'),
+    );
+  }
+
+  private getOutgoingTransitions(
+    schema: WorkflowDefinitionSchema,
+    stateKey: string,
+  ): WorkflowTransitionDefinition[] {
+    return schema.transitions.filter(
+      (t) =>
+        (t.from === stateKey || t.from === '*') &&
+        t.key !== 'cancel',
     );
   }
 

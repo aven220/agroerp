@@ -19,6 +19,7 @@ import {
 import type { DashboardRole } from '../config/navigation';
 import { DEFAULT_WIDGET_ORDER } from '../config/dashboardWidgets';
 import { resolveDashboardRole } from '../config/navigation';
+import { canAccessPath } from '../config/routePermissions';
 import { parseEntityFromPath, recordWorkEntityVisit } from '../lib/workEntityHistory';
 import { useAuth } from './AuthContext';
 
@@ -148,6 +149,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     return NAV_CATEGORIES.map((cat) => {
       if (cat.id === 'favorites') {
         const favItems: NavItem[] = favorites
+          .filter((f) => canAccessPath(f.to, hasPermission))
           .sort((a, b) => a.order - b.order)
           .map((f) => ({ id: f.id, to: f.to, label: f.label, icon: f.icon }));
         return { ...cat, items: favItems };
@@ -156,7 +158,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       if (items.length === 0 && cat.id !== 'home') return null;
       return { ...cat, items };
     }).filter(Boolean) as typeof NAV_CATEGORIES;
-  }, [favorites, filterNavItem]);
+  }, [favorites, filterNavItem, hasPermission]);
 
   const toggleGroup = useCallback((id: NavCategoryId) => {
     setCollapsedGroups((prev) => {

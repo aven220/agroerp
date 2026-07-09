@@ -21,7 +21,8 @@ import {
   type LotDigitalTwin,
 } from '../api/fmdt';
 import { startLotApprovalWorkflow } from '../lib/workflowIntegration';
-import { notifyEntityUpdated } from '../lib/entitySync';
+import { storeDocumentFile } from '../lib/documentStorage';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Borrador',
@@ -51,13 +52,21 @@ export function LotDetailPage() {
   const [tab, setTab] = useState<Tab>('perfil');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [lifecycleOpen, setLifecycleOpen] = useState(false);
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [lifecycleStatus, setLifecycleStatus] = useState('active');
   const [lifecycleReason, setLifecycleReason] = useState('');
   const [docTitle, setDocTitle] = useState('');
   const [docType, setDocType] = useState('photo');
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docUploading, setDocUploading] = useState(false);
   const [opType, setOpType] = useState('fertilization');
   const [opArea, setOpArea] = useState('');
+  const canLifecycle = hasPermission('lot:approve');
+  const canUpdate = hasPermission('lot:update');
+  const canFieldOp = hasPermission('field_operation:create');
+  const canUploadDoc = hasPermission('document:upload');
 
   async function reload() {
     if (!id) return;
@@ -79,6 +88,10 @@ export function LotDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  useOnEntityUpdated(() => {
+    reload().catch(() => undefined);
+  }, ['lot', 'workflow'], id, 'Lot');
+
   useEffect(() => {
     if (!id || !lot) return;
     updateWorkEntityLabel(user?.id, 'lot', id, lot.lotName);
@@ -86,46 +99,72 @@ export function LotDetailPage() {
 
   async function handleLifecycle(e: React.FormEvent) {
     e.preventDefault();
-    if (!id) return;
-    await transitionLotLifecycle(id, {
-      toStatus: lifecycleStatus,
-      reasonNotes: lifecycleReason,
-    });
-    if (lifecycleStatus === 'active' && lot?.status !== 'active') {
-      await startLotApprovalWorkflow(id, {
-        lotName: lot?.lotName,
-        lotCode: lot?.lotCode,
+    if (!id || lifecycleBusy) return;
+    setLifecycleBusy(true);
+    try {
+      await transitionLotLifecycle(id, {
+        toStatus: lifecycleStatus,
+        reasonNotes: lifecycleReason,
       });
+      if (lifecycleStatus === 'active' && lot?.status !== 'active') {
+        await startLotApprovalWorkflow(id, {
+          lotName: lot?.lotName,
+          lotCode: lot?.lotCode,
+        });
+      }
+      notifyEntityUpdated('lot', id);
+      setLifecycleOpen(false);
+      setActionError(null);
+      await reload();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo cambiar el estado');
+    } finally {
+      setLifecycleBusy(false);
     }
-    notifyEntityUpdated('lot', id);
-    setLifecycleOpen(false);
-    await reload();
   }
 
   async function handleAddDocument(e: React.FormEvent) {
     e.preventDefault();
-    if (!id || !docTitle.trim()) return;
-    await addLotDocument(id, {
-      title: docTitle,
-      documentTypeCode: docType,
-      contentId: crypto.randomUUID(),
-      mediaType: docType === 'video' ? 'video/mp4' : 'image/jpeg',
-    });
-    setDocTitle('');
-    await reload();
+    if (!id || !docTitle.trim() || !docFile || !user || docUploading) return;
+    setDocUploading(true);
+    try {
+      const stored = await storeDocumentFile(docFile, user.organizationId);
+      await addLotDocument(id, {
+        title: docTitle.trim(),
+        documentTypeCode: docType,
+        contentId: stored.contentId,
+        mediaType: stored.mimeType,
+      });
+      setDocTitle('');
+      setDocFile(null);
+      notifyEntityUpdated('document', stored.contentId);
+      notifyEntityUpdated('lot', id);
+      setActionError(null);
+      await reload();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo agregar el documento');
+    } finally {
+      setDocUploading(false);
+    }
   }
 
   async function handleAddOperation(e: React.FormEvent) {
     e.preventDefault();
     if (!id || !opArea) return;
-    await addFieldOperation(id, {
-      operationTypeCode: opType,
-      operationDate: new Date().toISOString().slice(0, 10),
-      performedByType: 'technician',
-      areaTreatedHa: Number(opArea),
-    });
-    setOpArea('');
-    await reload();
+    try {
+      await addFieldOperation(id, {
+        operationTypeCode: opType,
+        operationDate: new Date().toISOString().slice(0, 10),
+        performedByType: 'technician',
+        areaTreatedHa: Number(opArea),
+      });
+      setOpArea('');
+      notifyEntityUpdated('lot', id);
+      setActionError(null);
+      await reload();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo registrar la labor');
+    }
   }
 
   if (loading) return <LoadingState variant="page" message="Cargando expediente..." />;
@@ -163,10 +202,12 @@ export function LotDetailPage() {
                 Expediente 360°
               </Link>
             ) : null}
-            <button type="button" className="btn" onClick={() => setLifecycleOpen(true)}>
-              Cambiar estado
-            </button>
-            {hasPermission('lot:update') ? (
+            {canLifecycle ? (
+              <button type="button" className="btn" onClick={() => setLifecycleOpen(true)}>
+                Cambiar estado
+              </button>
+            ) : null}
+            {canUpdate ? (
               <Link to={`/lotes/${id}/editar`} className="btn btn-primary">
                 Editar
               </Link>
@@ -174,6 +215,8 @@ export function LotDetailPage() {
           </div>
         }
       />
+
+      {actionError ? <div className="alert alert-error">{actionError}</div> : null}
 
       <FlowProgress flowId="agricultural" currentStepId="lot" />
 
@@ -354,19 +397,21 @@ export function LotDetailPage() {
 
         {tab === 'labores' && (
           <div>
-            <form onSubmit={handleAddOperation} className="inline-form row-actions">
-              <select value={opType} onChange={(e) => setOpType(e.target.value)}>
-                {(operationTypes.length ? operationTypes : ['fertilization', 'harvest', 'pruning']).map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-              <input
-                placeholder="Área tratada (ha)"
-                value={opArea}
-                onChange={(e) => setOpArea(e.target.value)}
-              />
-              <button type="submit" className="btn btn-sm btn-primary">Registrar labor</button>
-            </form>
+            {canFieldOp ? (
+              <form onSubmit={handleAddOperation} className="inline-form row-actions">
+                <select value={opType} onChange={(e) => setOpType(e.target.value)}>
+                  {(operationTypes.length ? operationTypes : ['fertilization', 'harvest', 'pruning']).map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+                <input
+                  placeholder="Área tratada (ha)"
+                  value={opArea}
+                  onChange={(e) => setOpArea(e.target.value)}
+                />
+                <button type="submit" className="btn btn-sm btn-primary">Registrar labor</button>
+              </form>
+            ) : null}
             {(lot.operations ?? []).length === 0 ? (
               <p className="muted">Sin labores registradas</p>
             ) : (
@@ -464,20 +509,29 @@ export function LotDetailPage() {
 
         {tab === 'documentos' && (
           <div>
-            <form onSubmit={handleAddDocument} className="inline-form row-actions">
-              <input
-                placeholder="Título documento"
-                value={docTitle}
-                onChange={(e) => setDocTitle(e.target.value)}
-              />
-              <select value={docType} onChange={(e) => setDocType(e.target.value)}>
-                <option value="photo">Fotografía</option>
-                <option value="video">Video</option>
-                <option value="certificate">Certificado</option>
-                <option value="report">Informe</option>
-              </select>
-              <button type="submit" className="btn btn-sm btn-primary">Agregar</button>
-            </form>
+            {canUploadDoc ? (
+              <form onSubmit={handleAddDocument} className="inline-form row-actions">
+                <input
+                  placeholder="Título documento"
+                  value={docTitle}
+                  onChange={(e) => setDocTitle(e.target.value)}
+                />
+                <select value={docType} onChange={(e) => setDocType(e.target.value)}>
+                  <option value="photo">Fotografía</option>
+                  <option value="video">Video</option>
+                  <option value="certificate">Certificado</option>
+                  <option value="report">Informe</option>
+                </select>
+                <input
+                  type="file"
+                  accept="image/*,video/*,.pdf,.doc,.docx"
+                  onChange={(e) => setDocFile(e.target.files?.[0] ?? null)}
+                />
+                <button type="submit" className="btn btn-sm btn-primary" disabled={docUploading || !docFile}>
+                  {docUploading ? 'Subiendo…' : 'Agregar'}
+                </button>
+              </form>
+            ) : null}
             {(lot.documents ?? []).length === 0 ? (
               <p className="muted">Sin documentos</p>
             ) : (

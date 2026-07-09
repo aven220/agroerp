@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ALL_NAV_ITEMS, type NavItem } from '../../config/navigation';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
+import { canAccessPath } from '../../config/routePermissions';
 
 const TYPE_LABELS: Record<string, string> = {
   screen: 'Pantallas',
@@ -66,10 +67,12 @@ export function GlobalSearch() {
 
   const favoriteResults = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const sorted = [...favorites].sort((a, b) => a.order - b.order);
+    const sorted = [...favorites]
+      .filter((f) => canAccessPath(f.to, hasPermission))
+      .sort((a, b) => a.order - b.order);
     if (!q) return sorted.slice(0, 8);
     return sorted.filter((f) => f.label.toLowerCase().includes(q) || f.to.toLowerCase().includes(q));
-  }, [favorites, query]);
+  }, [favorites, query, hasPermission]);
 
   const open = (item: NavItem) => {
     addRecentSearch(item.label);

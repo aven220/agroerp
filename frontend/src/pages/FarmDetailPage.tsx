@@ -21,7 +21,8 @@ import {
   type TerritoryDocument,
 } from '../api/ftip';
 import { startFarmApprovalWorkflow } from '../lib/workflowIntegration';
-import { notifyEntityUpdated } from '../lib/entitySync';
+import { storeDocumentFile } from '../lib/documentStorage';
+import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Borrador',
@@ -49,12 +50,20 @@ export function FarmDetailPage() {
   const [tab, setTab] = useState<Tab>('perfil');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [lifecycleOpen, setLifecycleOpen] = useState(false);
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [lifecycleStatus, setLifecycleStatus] = useState('active');
   const [lifecycleReason, setLifecycleReason] = useState('');
   const [docTitle, setDocTitle] = useState('');
   const [docType, setDocType] = useState('photo');
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docUploading, setDocUploading] = useState(false);
   const [lotCode, setLotCode] = useState('');
+  const canLifecycle = hasPermission('farm:approve');
+  const canUpdate = hasPermission('farm:update');
+  const canCreateLot = hasPermission('lot:create');
+  const canUploadDoc = hasPermission('document:upload');
 
   async function reload() {
     if (!id) return;
@@ -76,6 +85,10 @@ export function FarmDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  useOnEntityUpdated(() => {
+    reload().catch(() => undefined);
+  }, ['farm', 'workflow'], id, 'Farm');
+
   useEffect(() => {
     if (!id || !farm) return;
     updateWorkEntityLabel(user?.id, 'farm', id, farm.farmName);
@@ -83,41 +96,67 @@ export function FarmDetailPage() {
 
   async function handleLifecycle(e: React.FormEvent) {
     e.preventDefault();
-    if (!id) return;
-    await transitionFarmLifecycle(id, {
-      toStatus: lifecycleStatus,
-      reasonNotes: lifecycleReason,
-    });
-    if (lifecycleStatus === 'under_validation') {
-      await startFarmApprovalWorkflow(id, {
-        farmName: farm?.farmName,
-        farmCode: farm?.farmCode,
+    if (!id || lifecycleBusy) return;
+    setLifecycleBusy(true);
+    try {
+      await transitionFarmLifecycle(id, {
+        toStatus: lifecycleStatus,
+        reasonNotes: lifecycleReason,
       });
+      if (lifecycleStatus === 'under_validation') {
+        await startFarmApprovalWorkflow(id, {
+          farmName: farm?.farmName,
+          farmCode: farm?.farmCode,
+        });
+      }
+      notifyEntityUpdated('farm', id);
+      setLifecycleOpen(false);
+      setActionError(null);
+      await reload();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo cambiar el estado');
+    } finally {
+      setLifecycleBusy(false);
     }
-    notifyEntityUpdated('farm', id);
-    setLifecycleOpen(false);
-    await reload();
   }
 
   async function handleAddDocument(e: React.FormEvent) {
     e.preventDefault();
-    if (!id || !docTitle.trim()) return;
-    await addFarmDocument(id, {
-      title: docTitle,
-      documentTypeCode: docType,
-      contentId: crypto.randomUUID(),
-      mediaType: docType === 'video' ? 'video/mp4' : 'image/jpeg',
-    });
-    setDocTitle('');
-    await reload();
+    if (!id || !docTitle.trim() || !docFile || !user || docUploading) return;
+    setDocUploading(true);
+    try {
+      const stored = await storeDocumentFile(docFile, user.organizationId);
+      await addFarmDocument(id, {
+        title: docTitle.trim(),
+        documentTypeCode: docType,
+        contentId: stored.contentId,
+        mediaType: stored.mimeType,
+      });
+      setDocTitle('');
+      setDocFile(null);
+      notifyEntityUpdated('document', stored.contentId);
+      notifyEntityUpdated('farm', id);
+      setActionError(null);
+      await reload();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo agregar el documento');
+    } finally {
+      setDocUploading(false);
+    }
   }
 
   async function handleAddLot(e: React.FormEvent) {
     e.preventDefault();
     if (!id || !lotCode.trim()) return;
-    await addFarmLot(id, { lotCode, lotName: `Lote ${lotCode}` });
-    setLotCode('');
-    await reload();
+    try {
+      await addFarmLot(id, { lotCode, lotName: `Lote ${lotCode}` });
+      setLotCode('');
+      notifyEntityUpdated('farm', id);
+      setActionError(null);
+      await reload();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo agregar el lote');
+    }
   }
 
   if (loading) return <LoadingState variant="page" message="Cargando expediente..." />;
@@ -150,10 +189,12 @@ export function FarmDetailPage() {
                 Expediente 360°
               </Link>
             ) : null}
-            <button type="button" className="btn" onClick={() => setLifecycleOpen(true)}>
-              Cambiar estado
-            </button>
-            {hasPermission('farm:update') ? (
+            {canLifecycle ? (
+              <button type="button" className="btn" onClick={() => setLifecycleOpen(true)}>
+                Cambiar estado
+              </button>
+            ) : null}
+            {canUpdate ? (
               <Link to={`/fincas/${id}/editar`} className="btn btn-primary">
                 Editar
               </Link>
@@ -161,6 +202,8 @@ export function FarmDetailPage() {
           </div>
         }
       />
+
+      {actionError ? <div className="alert alert-error">{actionError}</div> : null}
 
       <FlowProgress flowId="agricultural" currentStepId="farm" />
 
@@ -186,12 +229,16 @@ export function FarmDetailPage() {
                   },
                 ]
               : []),
-            {
-              label: 'Registrar cultivo',
-              description: 'Asocie variedades y stands productivos',
-              to: '/plataforma-agritech/cultivos',
-              icon: '☕',
-            },
+            ...(hasPermission('eatp:read')
+              ? [
+                  {
+                    label: 'Registrar cultivo',
+                    description: 'Asocie variedades y stands productivos',
+                    to: '/plataforma-agritech/cultivos',
+                    icon: '☕',
+                  },
+                ]
+              : []),
             ...(hasPermission('farm:read')
               ? [
                   {
@@ -202,12 +249,16 @@ export function FarmDetailPage() {
                   },
                 ]
               : []),
-            {
-              label: 'Indicadores de fincas',
-              description: 'Indicadores territoriales de la finca',
-              to: '/fincas/dashboard',
-              icon: '📊',
-            },
+            ...(hasPermission('farm:read')
+              ? [
+                  {
+                    label: 'Indicadores de fincas',
+                    description: 'Indicadores territoriales de la finca',
+                    to: '/fincas/dashboard',
+                    icon: '📊',
+                  },
+                ]
+              : []),
           ]}
         />
       ) : null}
@@ -316,14 +367,16 @@ export function FarmDetailPage() {
 
         {tab === 'lotes' && (
           <div>
-            <form onSubmit={handleAddLot} className="inline-form row-actions">
-              <input
-                placeholder="Código lote"
-                value={lotCode}
-                onChange={(e) => setLotCode(e.target.value)}
-              />
-              <button type="submit" className="btn btn-sm btn-primary">Agregar lote</button>
-            </form>
+            {canCreateLot ? (
+              <form onSubmit={handleAddLot} className="inline-form row-actions">
+                <input
+                  placeholder="Código lote"
+                  value={lotCode}
+                  onChange={(e) => setLotCode(e.target.value)}
+                />
+                <button type="submit" className="btn btn-sm btn-primary">Agregar lote</button>
+              </form>
+            ) : null}
             {(farm.lots ?? []).length === 0 ? (
               <p className="muted">Sin lotes registrados</p>
             ) : (
@@ -346,9 +399,9 @@ export function FarmDetailPage() {
                       <td>{l.status}</td>
                       <td>{l.cropStands?.map((c) => c.speciesCode).join(', ') || '—'}</td>
                       <td>
-                        {!l.fieldLotProfile?.id && (
-                          <Link to="/lotes/nuevo" className="btn btn-sm">Registrar lote</Link>
-                        )}
+                        {!l.fieldLotProfile?.id && canCreateLot && id ? (
+                          <Link to={`/lotes/nuevo?finca=${id}`} className="btn btn-sm">Registrar lote</Link>
+                        ) : null}
                       </td>
                     </tr>
                   ))}
@@ -384,21 +437,30 @@ export function FarmDetailPage() {
 
         {tab === 'documentos' && (
           <div>
-            <form onSubmit={handleAddDocument} className="inline-form row-actions">
-              <select value={docType} onChange={(e) => setDocType(e.target.value)}>
-                <option value="photo">Fotografía</option>
-                <option value="video">Video</option>
-                <option value="contract">Contrato</option>
-                <option value="title_deed">Escritura</option>
-                <option value="signature">Firma</option>
-              </select>
-              <input
-                placeholder="Título documento"
-                value={docTitle}
-                onChange={(e) => setDocTitle(e.target.value)}
-              />
-              <button type="submit" className="btn btn-sm btn-primary">Registrar</button>
-            </form>
+            {canUploadDoc ? (
+              <form onSubmit={handleAddDocument} className="inline-form row-actions">
+                <select value={docType} onChange={(e) => setDocType(e.target.value)}>
+                  <option value="photo">Fotografía</option>
+                  <option value="video">Video</option>
+                  <option value="contract">Contrato</option>
+                  <option value="title_deed">Escritura</option>
+                  <option value="signature">Firma</option>
+                </select>
+                <input
+                  placeholder="Título documento"
+                  value={docTitle}
+                  onChange={(e) => setDocTitle(e.target.value)}
+                />
+                <input
+                  type="file"
+                  accept="image/*,video/*,.pdf,.doc,.docx"
+                  onChange={(e) => setDocFile(e.target.files?.[0] ?? null)}
+                />
+                <button type="submit" className="btn btn-sm btn-primary" disabled={docUploading || !docFile}>
+                  {docUploading ? 'Subiendo…' : 'Registrar'}
+                </button>
+              </form>
+            ) : null}
             {(farm.documents ?? []).length === 0 ? (
               <p className="muted">Sin documentos indexados</p>
             ) : (

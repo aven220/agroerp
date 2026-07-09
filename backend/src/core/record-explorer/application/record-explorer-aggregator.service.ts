@@ -184,13 +184,13 @@ export class RecordExplorerAggregatorService {
       ],
     };
 
-    const twinKpis = (twin as { twin?: { kpis?: Record<string, unknown> } } | null)?.twin?.kpis;
-    const analytics: UreAnalyticsMetric[] = twinKpis
-      ? Object.entries(twinKpis).map(([key, value]) => ({
-          key,
-          label: key,
-          value: typeof value === 'number' ? value : String(value ?? ''),
-        }))
+    const twinData = (twin as { twin?: Record<string, unknown> } | null)?.twin;
+    const analytics: UreAnalyticsMetric[] = twinData
+      ? [
+          { key: 'productionYtdKg', label: 'Producción YTD (kg)', value: Number(twinData.productionYtdKg ?? 0) },
+          { key: 'avgYieldKgHa', label: 'Rendimiento (kg/ha)', value: Number(twinData.avgYieldKgHa ?? 0) },
+          { key: 'documentCompletenessPct', label: 'Documentación (%)', value: Number(twinData.documentCompletenessPct ?? 0) },
+        ].filter((m) => Number(m.value) > 0)
       : [{ key: 'area', label: 'Área total (ha)', value: Number(profile.totalAreaHa ?? 0) }];
 
     return {

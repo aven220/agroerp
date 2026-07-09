@@ -95,6 +95,7 @@ export function ProducerFormPage() {
   }
 
   async function handleSubmit() {
+    if (saving) return;
     setSaving(true);
     setError(null);
     try {
@@ -145,7 +146,7 @@ export function ProducerFormPage() {
         title={isEdit ? 'Expediente del productor' : 'Registro de nuevo productor'}
         progress={progress}
         dirty={dirty}
-        loading={loading}
+        loading={loading || saving}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         submitLabel={saving ? 'Guardando…' : isEdit ? 'Actualizar' : 'Crear productor'}

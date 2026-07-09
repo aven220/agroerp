@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { getWorkflowDashboard, type WorkflowDashboard } from '../api/workflows';
 import { LoadingState } from '../components/ux/LoadingState';
+import { useOnEntityUpdated } from '../lib/entitySync';
 
 export function WorkflowDashboardPage() {
   const [dashboard, setDashboard] = useState<WorkflowDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const reload = useCallback(() => {
     setLoading(true);
     setError(null);
     getWorkflowDashboard()
@@ -20,6 +21,12 @@ export function WorkflowDashboardPage() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  useOnEntityUpdated(reload, 'workflow');
 
   if (loading) return <LoadingState variant="dashboard" message="Cargando dashboard BPM..." />;
   if (error || !dashboard) {

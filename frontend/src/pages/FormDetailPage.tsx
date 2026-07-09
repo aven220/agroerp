@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { updateWorkEntityLabel } from '../lib/workEntityHistory';
 import { useToast } from '../context/ToastContext';
 import { notifyEntityUpdated } from '../lib/entitySync';
+import { canAccessPath } from '../config/routePermissions';
 import {
   archiveForm,
   approveForm,
@@ -46,6 +47,12 @@ export function FormDetailPage() {
   const [loading, setLoading] = useState(true);
   const [syncChecking, setSyncChecking] = useState(false);
   const canApproveForm = hasPermission('form:approve');
+  const canCreateForm = hasPermission('form:create');
+  const canUpdateForm = hasPermission('form:update');
+  const canPublishForm = hasPermission('form:publish');
+  const canDeleteForm = hasPermission('form:delete');
+  const canAdminForm = hasPermission('form:admin');
+  const canReadForm = hasPermission('form:read');
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -229,7 +236,7 @@ export function FormDetailPage() {
         icon: '✏️',
       },
     ];
-  })();
+  })().filter((action) => canAccessPath(action.to, hasPermission));
 
   return (
     <>
@@ -245,17 +252,19 @@ export function FormDetailPage() {
               to={`/formularios/${form.id}`}
             />
             <Link to="/formularios" className="btn">← Mis Formularios</Link>
-            <button type="button" className="btn" onClick={() => navigate(`/formularios/${form.id}/disenar`)}>
-              Editar diseño
-            </button>
-            {form.status === 'published' && (
+            {canUpdateForm ? (
+              <button type="button" className="btn" onClick={() => navigate(`/formularios/${form.id}/disenar`)}>
+                Editar diseño
+              </button>
+            ) : null}
+            {form.status === 'published' && canReadForm ? (
               <button type="button" className="btn" onClick={() => navigate(`/formularios/${form.id}/ejecutar`)}>
                 Llenar en web
               </button>
-            )}
-            {(form.status === 'draft' || form.status === 'approved') && (
+            ) : null}
+            {(form.status === 'draft' || form.status === 'approved') && canPublishForm ? (
               <button type="button" className="btn btn-primary" onClick={handlePublish}>Publicar</button>
-            )}
+            ) : null}
             {form.status === 'draft' && canApproveForm ? (
               <button type="button" className="btn" onClick={handleSubmitReview}>Enviar a revisión</button>
             ) : null}
@@ -313,39 +322,61 @@ export function FormDetailPage() {
         <aside className="panel form-detail-actions">
           <h3 className="ds-h4">Acciones</h3>
           <div className="form-action-stack">
-            <button type="button" className="btn btn-block" onClick={() => navigate(`/formularios/${form.id}/disenar`)}>
-              Editar
-            </button>
-            <button type="button" className="btn btn-block" onClick={handleNewVersion}>Nueva versión</button>
-            <button type="button" className="btn btn-block" onClick={handleDuplicate}>Clonar</button>
+            {canUpdateForm ? (
+              <button type="button" className="btn btn-block" onClick={() => navigate(`/formularios/${form.id}/disenar`)}>
+                Editar
+              </button>
+            ) : null}
+            {canUpdateForm ? (
+              <button type="button" className="btn btn-block" onClick={handleNewVersion}>Nueva versión</button>
+            ) : null}
+            {canCreateForm ? (
+              <button type="button" className="btn btn-block" onClick={handleDuplicate}>Clonar</button>
+            ) : null}
             {form.status === 'draft' && (
               <>
-                <button type="button" className="btn btn-primary btn-block" onClick={handlePublish}>Publicar</button>
-                <button type="button" className="btn btn-block" onClick={handleSubmitReview}>Enviar a revisión</button>
+                {canPublishForm ? (
+                  <button type="button" className="btn btn-primary btn-block" onClick={handlePublish}>Publicar</button>
+                ) : null}
+                {canApproveForm ? (
+                  <button type="button" className="btn btn-block" onClick={handleSubmitReview}>Enviar a revisión</button>
+                ) : null}
               </>
             )}
             {form.status === 'published' && (
               <>
-                <button type="button" className="btn btn-block" onClick={() => navigate(`/formularios/${form.id}/ejecutar`)}>
-                  Llenar en web
-                </button>
-                <button type="button" className="btn btn-block" onClick={handleUnpublish}>Despublicar</button>
-                <button
-                  type="button"
-                  className="btn btn-block"
-                  disabled={syncChecking}
-                  onClick={checkMobileSync}
-                >
-                  {syncChecking ? 'Verificando…' : 'Verificar disponibilidad en celular'}
-                </button>
+                {canReadForm ? (
+                  <button type="button" className="btn btn-block" onClick={() => navigate(`/formularios/${form.id}/ejecutar`)}>
+                    Llenar en web
+                  </button>
+                ) : null}
+                {canPublishForm ? (
+                  <button type="button" className="btn btn-block" onClick={handleUnpublish}>Despublicar</button>
+                ) : null}
+                {canReadForm ? (
+                  <button
+                    type="button"
+                    className="btn btn-block"
+                    disabled={syncChecking}
+                    onClick={checkMobileSync}
+                  >
+                    {syncChecking ? 'Verificando…' : 'Verificar disponibilidad en celular'}
+                  </button>
+                ) : null}
               </>
             )}
             {form.status === 'archived' ? (
-              <button type="button" className="btn btn-block" onClick={handleRestore}>Restaurar</button>
+              canAdminForm ? (
+                <button type="button" className="btn btn-block" onClick={handleRestore}>Restaurar</button>
+              ) : null
             ) : (
-              <button type="button" className="btn btn-block" onClick={handleArchive}>Archivar</button>
+              canAdminForm ? (
+                <button type="button" className="btn btn-block" onClick={handleArchive}>Archivar</button>
+              ) : null
             )}
-            <button type="button" className="btn btn-danger btn-block" onClick={handleDelete}>Eliminar</button>
+            {canDeleteForm ? (
+              <button type="button" className="btn btn-danger btn-block" onClick={handleDelete}>Eliminar</button>
+            ) : null}
           </div>
         </aside>
       </div>

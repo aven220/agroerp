@@ -11,6 +11,7 @@ import { getForm, renderForm, submitForm } from '../api/forms';
 import type { FormFieldDefinition } from '../api/forms';
 import { UDFE_LAYOUT_FIELD_TYPES } from '../api/forms';
 import { markProcessMilestone } from '../lib/processWorkspace';
+import { notifyEntityUpdated } from '../lib/entitySync';
 
 const LAYOUT = new Set<string>(UDFE_LAYOUT_FIELD_TYPES);
 
@@ -121,7 +122,7 @@ export function FormFillPage() {
   }, [data, id, dirty, draftId]);
 
   async function handleSubmit(draft = false) {
-    if (!id) return;
+    if (!id || saving) return;
     setSaving(true);
     setError(null);
     try {
@@ -133,7 +134,7 @@ export function FormFillPage() {
         const item = mobile.enqueueDraft({
           type: draft ? 'form_draft' : 'form_submit',
           label: `${name || 'Formulario'}${draft ? ' (borrador)' : ''}`,
-          route: `/formularios/${id}/llenar`,
+          route: `/formularios/${id}/ejecutar`,
           payload: { formId: id, data, draft, gpsLocation },
         });
         setDraftId(item.id);
@@ -141,7 +142,9 @@ export function FormFillPage() {
         return;
       }
 
-      await submitForm(id, { data, draft, gpsLocation, context: {} });
+      const result = await submitForm(id, { data, draft, gpsLocation, context: {} });
+      notifyEntityUpdated('capture', result.submission?.id ?? id);
+      notifyEntityUpdated('form', id);
       localStorage.removeItem(`agroerp_form_draft_${id}`);
       markProcessMilestone('forms', 'capture', {
         entityId: id,

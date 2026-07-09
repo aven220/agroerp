@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getProducerDashboard } from '../api/prm';
 import { getFarmDashboard } from '../api/ftip';
 import { getCoffeeCenter, listCoffeeDocuments } from '../api/coffee';
-import { getEimsCenter } from '../api/eims';
+import { listEimsStock } from '../api/eims';
 import type { DashboardStats } from '../types';
+import { useOnEntityUpdated } from '../lib/entitySync';
+import { useIsMounted } from './useIsMounted';
 
 interface CoffeeKpis {
   tickets?: number;
@@ -13,12 +15,12 @@ interface CoffeeKpis {
 }
 
 async function fetchDashboardStats(): Promise<DashboardStats> {
-  const [prm, ftip, coffee, eims, docs] = await Promise.allSettled([
+  const [prm, ftip, coffee, docs, stock] = await Promise.allSettled([
     getProducerDashboard(),
     getFarmDashboard(),
     getCoffeeCenter(),
-    getEimsCenter(),
     listCoffeeDocuments(),
+    listEimsStock(),
   ]);
 
   const producers =
@@ -39,9 +41,14 @@ async function fetchDashboardStats(): Promise<DashboardStats> {
     inventoryKg = Number(kpis?.inventoryKg ?? 0);
   }
 
-  if (eims.status === 'fulfilled' && inventoryKg === 0) {
-    const center = eims.value;
-    inventoryKg = Number(center.totalStockQty ?? center.lotsCount ?? 0);
+  if (stock.status === 'fulfilled') {
+    const eimsQty = (stock.value as Array<Record<string, unknown>>).reduce(
+      (sum, row) => sum + Number(row.onHandQty ?? row.availableQty ?? 0),
+      0,
+    );
+    if (inventoryKg === 0 && eimsQty > 0) {
+      inventoryKg = eimsQty;
+    }
   }
 
   const documents = docs.status === 'fulfilled' ? docs.value.length : 0;
@@ -58,6 +65,8 @@ async function fetchDashboardStats(): Promise<DashboardStats> {
 }
 
 export function useDashboardStats(enabled = true) {
+  const mounted = useIsMounted();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,24 +76,32 @@ export function useDashboardStats(enabled = true) {
     setLoading(true);
     setError(null);
     fetchDashboardStats()
-      .then(setStats)
+      .then((data) => {
+        if (mounted.current) setStats(data);
+      })
       .catch((e: unknown) => {
+        if (!mounted.current) return;
         setStats(null);
         setError(e instanceof Error ? e.message : 'Error al cargar indicadores');
       })
-      .finally(() => setLoading(false));
-  }, [enabled]);
+      .finally(() => {
+        if (mounted.current) setLoading(false);
+      });
+  }, [enabled, mounted]);
+
+  const scheduleReload = useCallback(() => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(reload, 200);
+  }, [reload]);
 
   useEffect(() => {
     if (!enabled) return;
     reload();
   }, [enabled, reload]);
 
-  useEffect(() => {
-    const onEntityUpdated = () => reload();
-    window.addEventListener('agroerp:entity-updated', onEntityUpdated);
-    return () => window.removeEventListener('agroerp:entity-updated', onEntityUpdated);
-  }, [reload]);
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
+
+  useOnEntityUpdated(scheduleReload);
 
   return { stats, loading, error, reload };
 }
