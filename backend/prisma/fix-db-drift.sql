@@ -1,6 +1,79 @@
 -- Pre-db-push fix: remove legacy EIMS tables that block enum migration (P1014).
 -- Safe when tables are empty (dev). Run: pnpm db:fix-drift && pnpm db:push
 
+-- RC3: deduplicate events before unique (aggregate_type, aggregate_id, version) — fixes P2002 on db push.
+WITH ranked_events AS (
+  SELECT
+    id,
+    ROW_NUMBER() OVER (
+      PARTITION BY aggregate_type, aggregate_id, version
+      ORDER BY global_sequence DESC, recorded_at DESC
+    ) AS rn,
+    FIRST_VALUE(id) OVER (
+      PARTITION BY aggregate_type, aggregate_id, version
+      ORDER BY global_sequence DESC, recorded_at DESC
+    ) AS keep_id
+  FROM events
+)
+UPDATE audit_logs al
+SET event_id = re.keep_id
+FROM ranked_events re
+WHERE al.event_id = re.id
+  AND re.rn > 1;
+
+WITH ranked_events AS (
+  SELECT
+    id,
+    ROW_NUMBER() OVER (
+      PARTITION BY aggregate_type, aggregate_id, version
+      ORDER BY global_sequence DESC, recorded_at DESC
+    ) AS rn,
+    FIRST_VALUE(id) OVER (
+      PARTITION BY aggregate_type, aggregate_id, version
+      ORDER BY global_sequence DESC, recorded_at DESC
+    ) AS keep_id
+  FROM events
+)
+UPDATE sync_queue sq
+SET event_id = re.keep_id
+FROM ranked_events re
+WHERE sq.event_id = re.id
+  AND re.rn > 1;
+
+DELETE FROM events e
+USING (
+  SELECT id
+  FROM (
+    SELECT
+      id,
+      ROW_NUMBER() OVER (
+        PARTITION BY aggregate_type, aggregate_id, version
+        ORDER BY global_sequence DESC, recorded_at DESC
+      ) AS rn
+    FROM events
+  ) ranked
+  WHERE rn > 1
+) dup
+WHERE e.id = dup.id;
+
+-- RC3: deduplicate form submission external ids (nullable — only non-null pairs).
+DELETE FROM form_submissions fs
+USING (
+  SELECT id
+  FROM (
+    SELECT
+      id,
+      ROW_NUMBER() OVER (
+        PARTITION BY organization_id, external_id
+        ORDER BY created_at DESC
+      ) AS rn
+    FROM form_submissions
+    WHERE external_id IS NOT NULL
+  ) ranked
+  WHERE rn > 1
+) dup
+WHERE fs.id = dup.id;
+
 DROP TABLE IF EXISTS "eims_replenishment_suggestions" CASCADE;
 DROP TABLE IF EXISTS "eims_supply_calendar_entries" CASCADE;
 DROP TABLE IF EXISTS "eims_demand_histories" CASCADE;
