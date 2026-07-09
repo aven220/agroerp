@@ -6,7 +6,9 @@ import { FlowProgress } from '../components/flow/FlowProgress';
 import { LoadingState } from '../components/ux/LoadingState';
 import { FormAvailabilityBadges } from '../components/forms/FormAvailabilityBadges';
 import { FormLifecycleStepper } from '../components/forms/FormLifecycleStepper';
+import { PinRecordButton } from '../components/guided-workspace/PinRecordButton';
 import { useAuth } from '../context/AuthContext';
+import { updateWorkEntityLabel } from '../lib/workEntityHistory';
 import { useToast } from '../context/ToastContext';
 import {
   archiveForm,
@@ -57,6 +59,11 @@ export function FormDetailPage() {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!id || !form) return;
+    updateWorkEntityLabel(user?.id, 'form', id, form.name);
+  }, [id, form?.name, user?.id]);
 
   async function checkMobileSync() {
     if (!form) return;
@@ -208,6 +215,12 @@ export function FormDetailPage() {
         subtitle={`${FORM_STATUS_LABELS[form.status] ?? form.status} · versión ${form.version}`}
         actions={
           <div className="row-actions">
+            <PinRecordButton
+              kind="form"
+              id={form.id}
+              label={form.name}
+              to={`/formularios/${form.id}`}
+            />
             <Link to="/formularios" className="btn">← Mis Formularios</Link>
             <button type="button" className="btn" onClick={() => navigate(`/formularios/${form.id}/disenar`)}>
               Editar diseño

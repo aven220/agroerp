@@ -4,8 +4,10 @@ import { Header } from '../components/layout/Header';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { ProcessWorkspacePanel } from '../components/process/ProcessWorkspacePanel';
+import { PinRecordButton } from '../components/guided-workspace/PinRecordButton';
 import { LoadingState } from '../components/ux/LoadingState';
 import { useAuth } from '../context/AuthContext';
+import { updateWorkEntityLabel } from '../lib/workEntityHistory';
 import { buildRecordExplorerPath } from '../record-explorer/types';
 import {
   addProducerNote,
@@ -31,7 +33,7 @@ type Tab = 'perfil' | 'contactos' | 'fincas' | 'certificaciones' | 'documentos' 
 export function ProducerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [producer, setProducer] = useState<Producer | null>(null);
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
   const [tab, setTab] = useState<Tab>('perfil');
@@ -54,6 +56,11 @@ export function ProducerDetailPage() {
       .catch((err) => setError(err instanceof Error ? err.message : 'Error'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !producer) return;
+    updateWorkEntityLabel(user?.id, 'producer', id, producer.legalName);
+  }, [id, producer?.legalName, user?.id]);
 
   async function handleAddNote(e: React.FormEvent) {
     e.preventDefault();
@@ -107,6 +114,14 @@ export function ProducerDetailPage() {
         subtitle={`${producer.producerNumber} · ${LIFECYCLE_LABELS[producer.lifecycleStatus] ?? producer.lifecycleStatus}`}
         actions={
           <div className="row-actions">
+            {id ? (
+              <PinRecordButton
+                kind="producer"
+                id={id}
+                label={producer.legalName}
+                to={`/productores/${id}`}
+              />
+            ) : null}
             <button type="button" className="btn" onClick={() => navigate('/productores')}>
               Volver
             </button>

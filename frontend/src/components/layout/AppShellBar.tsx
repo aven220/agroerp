@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useKeyboardShortcuts } from '../../context/KeyboardShortcutsContext';
+import { useGuidedWorkspaceOptional } from '../../context/GuidedWorkspaceContext';
 import { Breadcrumbs } from './Breadcrumbs';
 import { ThemeToggle } from './ThemeToggle';
 import { Tooltip } from '../ui/Tooltip';
@@ -10,6 +11,10 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
   const { user, logout } = useAuth();
   const { setSearchOpen, navHistory } = useNavigation();
   const { setHelpOpen, setPrefsOpen } = useKeyboardShortcuts();
+  const gw = useGuidedWorkspaceOptional();
+  const workspaceBadge = gw
+    ? gw.pinned.length + gw.tasks.filter((t) => !t.done).length
+    : 0;
 
   return (
     <header className={`app-shell-bar${compact ? ' compact' : ''}`} role="banner">
@@ -29,6 +34,23 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
         </button>
       </div>
       <div className="app-shell-bar-right">
+        {gw ? (
+          <Tooltip content="Mi espacio de trabajo — fijados, pendientes y recientes">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm gwp-shell-toggle"
+              onClick={() => gw.togglePanel()}
+              aria-pressed={gw.panelOpen}
+              aria-label="Abrir mi espacio de trabajo"
+            >
+              <span aria-hidden>📋</span>
+              {!compact ? <span>Mi jornada</span> : null}
+              {workspaceBadge > 0 ? (
+                <span className="gwp-toggle-badge" aria-hidden>{workspaceBadge}</span>
+              ) : null}
+            </button>
+          </Tooltip>
+        ) : null}
         <Tooltip content="Atajos de teclado (?)">
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setHelpOpen(true)} aria-label="Ayuda de atajos">
             ?

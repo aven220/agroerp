@@ -4,8 +4,10 @@ import { Header } from '../components/layout/Header';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { ProcessWorkspacePanel } from '../components/process/ProcessWorkspacePanel';
+import { PinRecordButton } from '../components/guided-workspace/PinRecordButton';
 import { LoadingState } from '../components/ux/LoadingState';
 import { useAuth } from '../context/AuthContext';
+import { updateWorkEntityLabel } from '../lib/workEntityHistory';
 import { buildRecordExplorerPath } from '../record-explorer/types';
 import {
   addFieldOperation,
@@ -33,7 +35,7 @@ type Tab = 'perfil' | 'twin' | 'labores' | 'costos' | 'cosechas' | 'geometria' |
 export function LotDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [lot, setLot] = useState<FieldLotProfile | null>(null);
   const [twin, setTwin] = useState<LotDigitalTwin | null>(null);
   const [timeline, setTimeline] = useState<Array<{
@@ -74,6 +76,11 @@ export function LotDetailPage() {
       .catch((err) => setError(err instanceof Error ? err.message : 'Error'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !lot) return;
+    updateWorkEntityLabel(user?.id, 'lot', id, lot.lotName);
+  }, [id, lot?.lotName, user?.id]);
 
   async function handleLifecycle(e: React.FormEvent) {
     e.preventDefault();
@@ -126,6 +133,14 @@ export function LotDetailPage() {
         subtitle={`${lot.lotCode} · ${STATUS_LABELS[lot.status] ?? lot.status}`}
         actions={
           <div className="row-actions">
+            {id ? (
+              <PinRecordButton
+                kind="lot"
+                id={id}
+                label={lot.lotName}
+                to={`/lotes/${id}`}
+              />
+            ) : null}
             <button type="button" className="btn" onClick={() => navigate('/lotes')}>
               Volver
             </button>

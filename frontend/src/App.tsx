@@ -6,6 +6,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
 import { MobileProvider } from './context/MobileContext';
 import { WorkspaceProvider } from './context/WorkspaceContext';
+import { GuidedWorkspaceProvider } from './context/GuidedWorkspaceContext';
 import { UxProviders } from './components/ux/UxProviders';
 import { ModuleLoadingFallback } from './components/ux/LoadingState';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
@@ -616,6 +617,7 @@ export function App() {
         <NavigationProvider>
         <MobileProvider>
         <WorkspaceProvider>
+        <GuidedWorkspaceProvider>
         <UxProviders>
         <Suspense fallback={<ModuleLoadingFallback />}>
         <Routes>
@@ -1154,6 +1156,7 @@ export function App() {
         </Routes>
         </Suspense>
         </UxProviders>
+        </GuidedWorkspaceProvider>
         </WorkspaceProvider>
         </MobileProvider>
         </NavigationProvider>

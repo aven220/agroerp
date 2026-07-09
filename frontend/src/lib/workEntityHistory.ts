@@ -4,7 +4,9 @@ export type WorkEntityKind =
   | 'lot'
   | 'form'
   | 'process'
-  | 'purchase';
+  | 'purchase'
+  | 'inventory'
+  | 'report';
 
 export interface WorkEntityVisit {
   kind: WorkEntityKind;
@@ -21,6 +23,8 @@ const KIND_META: Record<WorkEntityKind, { icon: string; fallback: string }> = {
   form: { icon: '📝', fallback: 'Formulario' },
   process: { icon: '⚙', fallback: 'Proceso' },
   purchase: { icon: '☕', fallback: 'Compra' },
+  inventory: { icon: '📦', fallback: 'Inventario' },
+  report: { icon: '📊', fallback: 'Reportes' },
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -75,6 +79,19 @@ export function kindFallbackLabel(kind: WorkEntityKind): string {
   return KIND_META[kind].fallback;
 }
 
+export function updateWorkEntityLabel(
+  userId: string | undefined,
+  kind: WorkEntityKind,
+  id: string,
+  label: string,
+) {
+  const visits = loadWorkEntityHistory(userId);
+  const idx = visits.findIndex((v) => v.kind === kind && v.id === id);
+  if (idx < 0) return;
+  visits[idx] = { ...visits[idx], label };
+  saveWorkEntityHistory(userId, visits);
+}
+
 /** Detecta visitas a entidades desde la ruta actual */
 export function parseEntityFromPath(pathname: string): Omit<WorkEntityVisit, 'visitedAt'> | null {
   const segments = pathname.split('/').filter(Boolean);
@@ -97,6 +114,15 @@ export function parseEntityFromPath(pathname: string): Omit<WorkEntityVisit, 'vi
   }
   if (segments[0] === 'procesos' && segments[1] === 'instancias' && segments[2] && isUuid(segments[2])) {
     return { kind: 'process', id: segments[2], label: 'Solicitud', to: pathname };
+  }
+  if (segments[0] === 'procesos' && segments[1] === 'bandeja') {
+    return { kind: 'process', id: 'inbox', label: 'Bandeja de tareas', to: pathname };
+  }
+  if (segments[0] === 'inventario') {
+    return { kind: 'inventory', id: segments[1] ?? 'hub', label: 'Inventario', to: pathname };
+  }
+  if (segments[0] === 'bi') {
+    return { kind: 'report', id: segments[1] ?? 'hub', label: 'Reportes', to: pathname };
   }
   if (segments[0] === 'compras' && segments[1] === 'wizard') {
     return { kind: 'purchase', id: 'wizard', label: 'Compra en curso', to: pathname };

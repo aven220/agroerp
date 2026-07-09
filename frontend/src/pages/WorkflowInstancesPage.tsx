@@ -4,6 +4,9 @@ import { Header } from '../components/layout/Header';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { LoadingState } from '../components/ux/LoadingState';
+import { useAuth } from '../context/AuthContext';
+import { useGuidedWorkspaceOptional } from '../context/GuidedWorkspaceContext';
+import { updateWorkEntityLabel } from '../lib/workEntityHistory';
 import {
   cancelWorkflowInstance,
   getWorkflowHistory,
@@ -26,6 +29,8 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function WorkflowInstancesPage() {
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const gw = useGuidedWorkspaceOptional();
   const [items, setItems] = useState<WorkflowInstance[]>([]);
   const [status, setStatus] = useState('');
   const [selected, setSelected] = useState<WorkflowInstance | null>(null);
@@ -58,6 +63,13 @@ export function WorkflowInstancesPage() {
     ]);
     setSelected(inst);
     setHistory(hist);
+    const label = inst.workflowDefinition?.name ?? inst.workflowKey ?? `Solicitud ${id.slice(0, 8)}`;
+    updateWorkEntityLabel(user?.id, 'process', id, label);
+    gw?.trackOpenProcess({
+      id: inst.id,
+      label,
+      to: `/procesos/instancias?id=${inst.id}`,
+    });
   }
 
   async function handleSuspend(id: string) {

@@ -4,8 +4,10 @@ import { Header } from '../components/layout/Header';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { ProcessWorkspacePanel } from '../components/process/ProcessWorkspacePanel';
+import { PinRecordButton } from '../components/guided-workspace/PinRecordButton';
 import { LoadingState } from '../components/ux/LoadingState';
 import { useAuth } from '../context/AuthContext';
+import { updateWorkEntityLabel } from '../lib/workEntityHistory';
 import { buildRecordExplorerPath } from '../record-explorer/types';
 import {
   addFarmDocument,
@@ -32,7 +34,7 @@ type Tab = 'perfil' | 'twin' | 'lotes' | 'geometria' | 'documentos' | 'galeria' 
 export function FarmDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [farm, setFarm] = useState<FarmUnit | null>(null);
   const [twin, setTwin] = useState<FarmDigitalTwin | null>(null);
   const [timeline, setTimeline] = useState<Array<{
@@ -71,6 +73,11 @@ export function FarmDetailPage() {
       .catch((err) => setError(err instanceof Error ? err.message : 'Error'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !farm) return;
+    updateWorkEntityLabel(user?.id, 'farm', id, farm.farmName);
+  }, [id, farm?.farmName, user?.id]);
 
   async function handleLifecycle(e: React.FormEvent) {
     e.preventDefault();
@@ -118,6 +125,14 @@ export function FarmDetailPage() {
         subtitle={`${farm.farmCode} · ${STATUS_LABELS[farm.status] ?? farm.status}`}
         actions={
           <div className="row-actions">
+            {id ? (
+              <PinRecordButton
+                kind="farm"
+                id={id}
+                label={farm.farmName}
+                to={`/fincas/${id}`}
+              />
+            ) : null}
             <button type="button" className="btn" onClick={() => navigate('/fincas')}>
               Volver
             </button>

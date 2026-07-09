@@ -184,6 +184,8 @@ function ContinueWorkCard({ item }: { item: WorkEntityVisit }) {
     form: 'Último formulario',
     process: 'Último proceso',
     purchase: 'Última compra',
+    inventory: 'Último inventario',
+    report: 'Último reporte',
   };
 
   return (

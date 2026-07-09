@@ -2816,6 +2816,7 @@ a:hover {
 @import './design-system/admin-experience.css';
 @import './design-system/flow-experience.css';
 @import './design-system/process-workspace.css';
+@import './design-system/guided-workspace.css';
 @import './design-system/form-studio-enterprise.css';
 
 
