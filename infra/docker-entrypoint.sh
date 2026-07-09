@@ -13,6 +13,9 @@ fi
 echo "⏳ Waiting for database (10s)..."
 sleep 10
 
+echo "🗄️  Applying drift fix..."
+pnpm db:fix-drift
+
 echo "🗄️  Pushing schema..."
 pnpm exec prisma db push --accept-data-loss --skip-generate
 
