@@ -1,8 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
+import { useCommandPaletteOptional } from '../../context/CommandProvider';
 import { useKeyboardShortcuts } from '../../context/KeyboardShortcutsContext';
 import { useGuidedWorkspaceOptional } from '../../context/GuidedWorkspaceContext';
+import { useSmartAssistantOptional } from '../../context/SmartAssistantProvider';
+import { useAdaptiveWorkspaceOptional } from '../../context/AdaptiveWorkspaceProvider';
+import { SmartAssistantTrigger } from '../smart-assistant/RecommendationCenter';
+import { FocusModeToggle } from '../adaptive-workspace/AdaptiveToolbar';
 import { Breadcrumbs } from './Breadcrumbs';
 import { ThemeToggle } from './ThemeToggle';
 import { Tooltip } from '../ui/Tooltip';
@@ -10,8 +15,12 @@ import { Tooltip } from '../ui/Tooltip';
 export function AppShellBar({ compact = false }: { compact?: boolean }) {
   const { user, logout } = useAuth();
   const { setSearchOpen, navHistory } = useNavigation();
+  const command = useCommandPaletteOptional();
   const { setHelpOpen, setPrefsOpen } = useKeyboardShortcuts();
   const gw = useGuidedWorkspaceOptional();
+  const assistant = useSmartAssistantOptional();
+  const adaptive = useAdaptiveWorkspaceOptional();
+  const focusMode = adaptive?.focusMode ?? false;
   const workspaceBadge = gw
     ? gw.pinned.length + gw.tasks.filter((t) => !t.done).length
     : 0;
@@ -25,7 +34,7 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
         <button
           type="button"
           className="global-search-trigger"
-          onClick={() => setSearchOpen(true)}
+          onClick={() => (command ? command.openPalette('launcher') : setSearchOpen(true))}
           aria-label="Abrir búsqueda global"
         >
           <span aria-hidden>⌕</span>
@@ -34,7 +43,7 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
         </button>
       </div>
       <div className="app-shell-bar-right">
-        {gw ? (
+        {gw && !focusMode ? (
           <Tooltip content="Mi espacio de trabajo — fijados, pendientes y recientes">
             <button
               type="button"
@@ -51,6 +60,16 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
             </button>
           </Tooltip>
         ) : null}
+        {adaptive && !focusMode ? (
+          <Tooltip content="Modo concentración — oculta elementos secundarios">
+            <FocusModeToggle />
+          </Tooltip>
+        ) : adaptive && focusMode ? <FocusModeToggle /> : null}
+        {assistant && !focusMode ? (
+          <Tooltip content="Asistente de trabajo — sugerencias proactivas">
+            <SmartAssistantTrigger />
+          </Tooltip>
+        ) : null}
         <Tooltip content="Atajos de teclado (?)">
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setHelpOpen(true)} aria-label="Ayuda de atajos">
             ?
@@ -62,7 +81,7 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
           </button>
         </Tooltip>
         <ThemeToggle />
-        {navHistory.length > 0 ? (
+        {navHistory.length > 0 && !focusMode ? (
           <div className="recent-nav" aria-label="Navegación reciente">
             {navHistory.slice(0, 3).map((h) => (
               <Link key={h.id} to={h.to} className="recent-nav-chip" title={h.label}>

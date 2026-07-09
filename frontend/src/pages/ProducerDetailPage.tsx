@@ -17,6 +17,8 @@ import {
   type Producer,
   type TimelineItem,
 } from '../api/prm';
+import { startProducerApprovalWorkflow } from '../lib/workflowIntegration';
+import { notifyEntityUpdated } from '../lib/entitySync';
 
 const LIFECYCLE_LABELS: Record<string, string> = {
   draft: 'Borrador',
@@ -94,6 +96,13 @@ export function ProducerDetailPage() {
         toStatus: lifecycleStatus,
         reasonNotes: lifecycleReason,
       });
+      if (lifecycleStatus === 'pending_approval') {
+        await startProducerApprovalWorkflow(id, {
+          legalName: producer?.legalName,
+          producerNumber: producer?.producerNumber,
+        });
+      }
+      notifyEntityUpdated('producer', id);
       setLifecycleOpen(false);
       const [p, tl] = await Promise.all([getProducer(id), getProducerTimeline(id)]);
       setProducer(p);

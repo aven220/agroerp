@@ -20,6 +20,8 @@ import {
   type FieldLotProfile,
   type LotDigitalTwin,
 } from '../api/fmdt';
+import { startLotApprovalWorkflow } from '../lib/workflowIntegration';
+import { notifyEntityUpdated } from '../lib/entitySync';
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Borrador',
@@ -89,6 +91,13 @@ export function LotDetailPage() {
       toStatus: lifecycleStatus,
       reasonNotes: lifecycleReason,
     });
+    if (lifecycleStatus === 'active' && lot?.status !== 'active') {
+      await startLotApprovalWorkflow(id, {
+        lotName: lot?.lotName,
+        lotCode: lot?.lotCode,
+      });
+    }
+    notifyEntityUpdated('lot', id);
     setLifecycleOpen(false);
     await reload();
   }

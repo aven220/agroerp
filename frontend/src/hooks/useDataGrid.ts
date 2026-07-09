@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import type {
   ColumnState,
@@ -8,6 +8,20 @@ import type {
   SortRule,
 } from '../lib/data-grid/types';
 import { processGridData } from '../lib/data-grid/processData';
+import {
+  deleteFilterPreset,
+  loadGridProductivity,
+  recordGridSearch,
+  saveFilterPreset,
+  saveGridLayout,
+  saveServerFilterPreset,
+  deleteServerFilterPreset,
+  toggleFavoriteSearch,
+  togglePinFilterPreset,
+  togglePinServerFilterPreset,
+  type SavedFilterPreset,
+  type ServerFilterPreset,
+} from '../lib/gridProductivity';
 
 export type GridDensity = 'compact' | 'default' | 'comfortable';
 
@@ -39,6 +53,17 @@ function defaultView<T>(columns: GridColumnDef<T>[]): SavedGridView {
   };
 }
 
+function loadViews(userId: string | undefined, gridId: string, columns: GridColumnDef<unknown>[]) {
+  try {
+    const raw = localStorage.getItem(storageKey(userId, gridId));
+    if (raw) {
+      const parsed = JSON.parse(raw) as { views: SavedGridView[] };
+      if (parsed.views?.length) return parsed.views;
+    }
+  } catch { /* ignore */ }
+  return [defaultView(columns)];
+}
+
 interface UseDataGridOptions<T> {
   gridId: string;
   columns: GridColumnDef<T>[];
@@ -57,38 +82,71 @@ export function useDataGrid<T extends { id: string }>({
   const { user } = useAuth();
   const userId = user?.id;
 
-  const [views, setViews] = useState<SavedGridView[]>(() => {
-    try {
-      const raw = localStorage.getItem(storageKey(userId, gridId));
-      if (raw) {
-        const parsed = JSON.parse(raw) as { views: SavedGridView[] };
-        if (parsed.views?.length) return parsed.views;
-      }
-    } catch { /* ignore */ }
-    return [defaultView(columns)];
-  });
+  const productivityInit = useMemo(() => loadGridProductivity(userId, gridId), [userId, gridId]);
+
+  const [views, setViews] = useState<SavedGridView[]>(() => loadViews(userId, gridId, columns as GridColumnDef<unknown>[]));
+  const [filterPresets, setFilterPresets] = useState<SavedFilterPreset[]>(productivityInit.filterPresets);
+  const [serverFilterPresets, setServerFilterPresets] = useState<ServerFilterPreset[]>(productivityInit.serverFilterPresets);
+  const [recentSearches, setRecentSearches] = useState<string[]>(productivityInit.recentSearches);
+  const [favoriteSearches, setFavoriteSearches] = useState<string[]>(productivityInit.favoriteSearches);
 
   const activeView = useMemo(
     () => views.find((v) => v.isDefault) ?? views[0],
     [views],
   );
 
-  const [sorts, setSorts] = useState<SortRule[]>(activeView.sorts);
+  const layoutPrefs = productivityInit.layout;
+
+  const [sorts, setSorts] = useState<SortRule[]>(layoutPrefs?.sorts ?? activeView.sorts);
   const [filters, setFilters] = useState<FilterRule[]>(activeView.filters);
   const [groupBy, setGroupBy] = useState<string | null>(activeView.groupBy);
-  const [quickSearch, setQuickSearch] = useState(activeView.quickSearch);
-  const [density, setDensity] = useState<GridDensity>(activeView.density);
-  const [columnState, setColumnState] = useState<ColumnState>(activeView.columnState);
+  const [quickSearch, setQuickSearchState] = useState(activeView.quickSearch);
+  const [density, setDensity] = useState<GridDensity>(layoutPrefs?.density ?? activeView.density);
+  const [columnState, setColumnState] = useState<ColumnState>(
+    layoutPrefs?.columnState ?? activeView.columnState,
+  );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['__all__']));
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(initialPageSize);
-  const [filterHistory, setFilterHistory] = useState<FilterRule[][]>([]);
+  const [pageSize, setPageSize] = useState(layoutPrefs?.pageSize ?? initialPageSize);
+  const [filterHistory, setFilterHistory] = useState<Array<{ filters: FilterRule[]; quickSearch: string }>>([]);
+
+  const layoutSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const loadedViews = loadViews(userId, gridId, columns as GridColumnDef<unknown>[]);
+    const prod = loadGridProductivity(userId, gridId);
+    const active = loadedViews.find((v) => v.isDefault) ?? loadedViews[0];
+    setViews(loadedViews);
+    setFilterPresets(prod.filterPresets);
+    setServerFilterPresets(prod.serverFilterPresets);
+    setRecentSearches(prod.recentSearches);
+    setFavoriteSearches(prod.favoriteSearches);
+    setSorts(prod.layout?.sorts ?? active.sorts);
+    setFilters(active.filters);
+    setGroupBy(active.groupBy);
+    setQuickSearchState(active.quickSearch);
+    setDensity(prod.layout?.density ?? active.density);
+    setColumnState(prod.layout?.columnState ?? active.columnState);
+    setPageSize(prod.layout?.pageSize ?? initialPageSize);
+    setPage(0);
+    setSelectedIds(new Set());
+  }, [userId, gridId, columns, initialPageSize]);
 
   useEffect(() => {
     localStorage.setItem(storageKey(userId, gridId), JSON.stringify({ views }));
   }, [views, userId, gridId]);
+
+  useEffect(() => {
+    if (layoutSaveTimer.current) clearTimeout(layoutSaveTimer.current);
+    layoutSaveTimer.current = setTimeout(() => {
+      saveGridLayout(userId, gridId, { columnState, density, pageSize, sorts });
+    }, 400);
+    return () => {
+      if (layoutSaveTimer.current) clearTimeout(layoutSaveTimer.current);
+    };
+  }, [columnState, density, pageSize, sorts, userId, gridId]);
 
   const visibleColumns = useMemo(() => {
     const map = new Map(columns.map((c) => [c.key, c]));
@@ -113,6 +171,14 @@ export function useDataGrid<T extends { id: string }>({
 
   const totalPages = Math.max(1, Math.ceil(processed.filteredCount / pageSize));
 
+  const setQuickSearch = useCallback((q: string) => {
+    setQuickSearchState(q);
+    setPage(0);
+    if (q.trim()) {
+      setRecentSearches(recordGridSearch(userId, gridId, q));
+    }
+  }, [userId, gridId]);
+
   const toggleSort = useCallback((key: string, multi = false) => {
     setSorts((prev) => {
       const existing = prev.find((s) => s.key === key);
@@ -133,11 +199,11 @@ export function useDataGrid<T extends { id: string }>({
   const addFilter = useCallback((rule: Omit<FilterRule, 'id'>) => {
     setFilters((prev) => {
       const next = [...prev, { ...rule, id: `f-${Date.now()}` }];
-      setFilterHistory((h) => [prev, ...h].slice(0, 10));
+      setFilterHistory((h) => [{ filters: prev, quickSearch }, ...h].slice(0, 10));
       return next;
     });
     setPage(0);
-  }, []);
+  }, [quickSearch]);
 
   const removeFilter = useCallback((id: string) => {
     setFilters((prev) => prev.filter((f) => f.id !== id));
@@ -146,7 +212,13 @@ export function useDataGrid<T extends { id: string }>({
 
   const clearFilters = useCallback(() => {
     setFilters([]);
-    setQuickSearch('');
+    setQuickSearchState('');
+    setPage(0);
+  }, []);
+
+  const applyFilters = useCallback((next: FilterRule[], search: string) => {
+    setFilters(next);
+    setQuickSearchState(search);
     setPage(0);
   }, []);
 
@@ -187,6 +259,24 @@ export function useDataGrid<T extends { id: string }>({
     }));
   }, []);
 
+  const persistCurrentAsDefault = useCallback(() => {
+    setViews((prev) =>
+      prev.map((v) =>
+        v.isDefault
+          ? {
+              ...v,
+              columnState,
+              sorts,
+              filters,
+              groupBy,
+              density,
+              quickSearch,
+            }
+          : v,
+      ),
+    );
+  }, [columnState, sorts, filters, groupBy, density, quickSearch]);
+
   const saveView = useCallback((name: string, shared = false) => {
     const view: SavedGridView = {
       id: `view-${Date.now()}`,
@@ -210,9 +300,24 @@ export function useDataGrid<T extends { id: string }>({
     setFilters(view.filters);
     setGroupBy(view.groupBy);
     setDensity(view.density);
-    setQuickSearch(view.quickSearch);
+    setQuickSearchState(view.quickSearch);
     setViews((prev) => prev.map((v) => ({ ...v, isDefault: v.id === view.id })));
     setPage(0);
+  }, []);
+
+  const deleteView = useCallback((id: string) => {
+    if (id === 'default') return;
+    setViews((prev) => {
+      const next = prev.filter((v) => v.id !== id);
+      if (!next.some((v) => v.isDefault) && next.length) {
+        next[0] = { ...next[0], isDefault: true };
+      }
+      return next.length ? next : [defaultView(columns)];
+    });
+  }, [columns]);
+
+  const renameView = useCallback((id: string, name: string) => {
+    setViews((prev) => prev.map((v) => (v.id === id ? { ...v, name: name.trim() } : v)));
   }, []);
 
   const resetView = useCallback(() => {
@@ -220,6 +325,40 @@ export function useDataGrid<T extends { id: string }>({
     loadView(d);
     setViews([d]);
   }, [columns, loadView]);
+
+  const saveCurrentFilters = useCallback((name: string, pinned = false) => {
+    const next = saveFilterPreset(userId, gridId, name, filters, quickSearch, pinned);
+    setFilterPresets(next);
+  }, [userId, gridId, filters, quickSearch]);
+
+  const applyFilterPreset = useCallback((preset: SavedFilterPreset) => {
+    applyFilters(preset.filters.map((f) => ({ ...f })), preset.quickSearch);
+  }, [applyFilters]);
+
+  const removeFilterPreset = useCallback((id: string) => {
+    setFilterPresets(deleteFilterPreset(userId, gridId, id));
+  }, [userId, gridId]);
+
+  const pinFilterPreset = useCallback((id: string) => {
+    setFilterPresets(togglePinFilterPreset(userId, gridId, id));
+  }, [userId, gridId]);
+
+  const saveCurrentServerFilters = useCallback((name: string, state: Record<string, unknown>, pinned = false) => {
+    const next = saveServerFilterPreset(userId, gridId, name, state, pinned);
+    setServerFilterPresets(next);
+  }, [userId, gridId]);
+
+  const removeServerFilterPreset = useCallback((id: string) => {
+    setServerFilterPresets(deleteServerFilterPreset(userId, gridId, id));
+  }, [userId, gridId]);
+
+  const pinServerFilterPreset = useCallback((id: string) => {
+    setServerFilterPresets(togglePinServerFilterPreset(userId, gridId, id));
+  }, [userId, gridId]);
+
+  const toggleSearchFavorite = useCallback((query: string) => {
+    setFavoriteSearches(toggleFavoriteSearch(userId, gridId, query));
+  }, [userId, gridId]);
 
   const toggleRow = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -264,9 +403,13 @@ export function useDataGrid<T extends { id: string }>({
     pageSize,
     totalPages,
     filterHistory,
+    filterPresets,
+    serverFilterPresets,
+    recentSearches,
+    favoriteSearches,
     views,
     activeView,
-    setQuickSearch: (q: string) => { setQuickSearch(q); setPage(0); },
+    setQuickSearch,
     setGroupBy: (g: string | null) => { setGroupBy(g); setPage(0); },
     setDensity,
     setPage,
@@ -275,13 +418,25 @@ export function useDataGrid<T extends { id: string }>({
     addFilter,
     removeFilter,
     clearFilters,
+    applyFilters,
     toggleColumn,
     reorderColumn,
     resizeColumn,
     toggleFreeze,
     saveView,
     loadView,
+    deleteView,
+    renameView,
     resetView,
+    persistCurrentAsDefault,
+    saveCurrentFilters,
+    applyFilterPreset,
+    removeFilterPreset,
+    pinFilterPreset,
+    saveCurrentServerFilters,
+    removeServerFilterPreset,
+    pinServerFilterPreset,
+    toggleSearchFavorite,
     toggleRow,
     toggleAllPage,
     setSelectedIds,

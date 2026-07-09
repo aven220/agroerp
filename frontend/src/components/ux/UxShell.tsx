@@ -2,6 +2,7 @@ import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 import { UserPreferencesDrawer } from './UserPreferencesDrawer';
 import { OnboardingTour } from './OnboardingTour';
 import { AutoOnboarding } from './AutoOnboarding';
+import { RecommendationCenter } from '../smart-assistant/RecommendationCenter';
 
 export function UxShell() {
   return (
@@ -10,6 +11,7 @@ export function UxShell() {
       <UserPreferencesDrawer />
       <OnboardingTour />
       <AutoOnboarding />
+      <RecommendationCenter />
     </>
   );
 }

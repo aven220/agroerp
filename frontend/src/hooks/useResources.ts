@@ -1,47 +1,77 @@
 import { useCallback, useEffect, useState } from 'react';
-import { listResources } from '../api/resources';
-import { RESOURCE_TYPES, type DashboardStats, type Resource } from '../types';
+import { getProducerDashboard } from '../api/prm';
+import { getFarmDashboard } from '../api/ftip';
+import { getCoffeeCenter, listCoffeeDocuments } from '../api/coffee';
+import { getEimsCenter } from '../api/eims';
+import type { DashboardStats } from '../types';
+
+interface CoffeeKpis {
+  tickets?: number;
+  kgTotal?: number;
+  amountTotal?: number;
+  inventoryKg?: number;
+}
 
 async function fetchDashboardStats(): Promise<DashboardStats> {
-  const [producers, farms, purchases, inventory, files] = await Promise.all([
-    listResources(RESOURCE_TYPES.PRODUCER),
-    listResources(RESOURCE_TYPES.FARM),
-    listResources(RESOURCE_TYPES.PURCHASE),
-    listResources(RESOURCE_TYPES.INVENTORY),
-    listResources(RESOURCE_TYPES.FILE),
+  const [prm, ftip, coffee, eims, docs] = await Promise.allSettled([
+    getProducerDashboard(),
+    getFarmDashboard(),
+    getCoffeeCenter(),
+    getEimsCenter(),
+    listCoffeeDocuments(),
   ]);
-  const totalKg = purchases.reduce(
-    (s, p) => s + Number((p.data as { weight_kg?: number }).weight_kg ?? 0),
-    0,
-  );
-  const totalValue = purchases.reduce((s, p) => {
-    const d = p.data as { weight_kg?: number; price_per_kg?: number };
-    return s + (d.weight_kg ?? 0) * (d.price_per_kg ?? 0);
-  }, 0);
-  const inventoryKg = inventory.reduce(
-    (s, i) => s + Number((i.data as { stock_kg?: number }).stock_kg ?? 0),
-    0,
-  );
+
+  const producers =
+    prm.status === 'fulfilled' ? prm.value.kpis.total : 0;
+  const farms =
+    ftip.status === 'fulfilled' ? ftip.value.kpis.total : 0;
+
+  let purchases = 0;
+  let totalKg = 0;
+  let totalValue = 0;
+  let inventoryKg = 0;
+
+  if (coffee.status === 'fulfilled') {
+    const kpis = coffee.value.kpis as CoffeeKpis | undefined;
+    purchases = Number(kpis?.tickets ?? coffee.value.ticketsToday ?? 0);
+    totalKg = Number(kpis?.kgTotal ?? coffee.value.kgToday ?? 0);
+    totalValue = Number(kpis?.amountTotal ?? coffee.value.amountToday ?? 0);
+    inventoryKg = Number(kpis?.inventoryKg ?? 0);
+  }
+
+  if (eims.status === 'fulfilled' && inventoryKg === 0) {
+    const center = eims.value;
+    inventoryKg = Number(center.totalStockQty ?? center.lotsCount ?? 0);
+  }
+
+  const documents = docs.status === 'fulfilled' ? docs.value.length : 0;
+
   return {
-    producers: producers.length,
-    farms: farms.length,
-    purchases: purchases.length,
+    producers,
+    farms,
+    purchases,
     totalKg,
     totalValue,
     inventoryKg,
-    documents: files.length,
+    documents,
   };
 }
 
 export function useDashboardStats(enabled = true) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(() => {
     if (!enabled) return;
     setLoading(true);
+    setError(null);
     fetchDashboardStats()
       .then(setStats)
+      .catch((e: unknown) => {
+        setStats(null);
+        setError(e instanceof Error ? e.message : 'Error al cargar indicadores');
+      })
       .finally(() => setLoading(false));
   }, [enabled]);
 
@@ -50,27 +80,11 @@ export function useDashboardStats(enabled = true) {
     reload();
   }, [enabled, reload]);
 
-  return { stats, loading, reload };
-}
-
-export function useResources(type: string, refreshKey = 0) {
-  const [items, setItems] = useState<Resource[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const reload = () => {
-    setLoading(true);
-    setError(null);
-    listResources(type)
-      .then(setItems)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  };
-
   useEffect(() => {
-    reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, refreshKey]);
+    const onEntityUpdated = () => reload();
+    window.addEventListener('agroerp:entity-updated', onEntityUpdated);
+    return () => window.removeEventListener('agroerp:entity-updated', onEntityUpdated);
+  }, [reload]);
 
-  return { items, loading, error, reload };
+  return { stats, loading, error, reload };
 }

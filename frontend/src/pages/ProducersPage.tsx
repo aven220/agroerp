@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
-import { DataTable } from '../components/ui/DataTable';
+import { DataTable, type RowAction } from '../components/ui/DataTable';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useAuth } from '../context/AuthContext';
+import { createStandardBulkActions } from '../lib/gridBulkActions';
+import type { GridColumnDef } from '../lib/data-grid/types';
 import {
   deleteProducer,
   exportProducers,
@@ -88,6 +90,15 @@ export function ProducersPage() {
     loadMeta();
   }, [loadMeta]);
 
+  useEffect(() => {
+    const raw = sessionStorage.getItem('agroerp_cmd_filter_producers');
+    if (!raw) return;
+    sessionStorage.removeItem('agroerp_cmd_filter_producers');
+    try {
+      setFilters((f) => ({ ...f, ...JSON.parse(raw), page: 1 }));
+    } catch { /* ignore */ }
+  }, []);
+
   const handleExport = useCallback(async () => {
     const result = await exportProducers(filters);
     const blob = new Blob([result.csv], { type: 'text/csv' });
@@ -121,6 +132,37 @@ export function ProducersPage() {
   const handlePageSizeChange = useCallback((limit: number) => {
     setFilters((f) => ({ ...f, limit, page: 1 }));
   }, []);
+
+  const exportColumns = useMemo<GridColumnDef<Producer>[]>(() => [
+    { key: 'code', label: 'Código', getValue: (r) => r.producerNumber },
+    { key: 'name', label: 'Nombre', getValue: (r) => r.legalName },
+    {
+      key: 'doc',
+      label: 'Documento',
+      getValue: (r) => `${DOCUMENT_TYPE_LABELS[r.documentTypeCode] ?? r.documentTypeCode} ${r.documentNumber}`,
+    },
+    { key: 'muni', label: 'Municipio', getValue: (r) => r.municipalityCode ?? '' },
+    { key: 'status', label: 'Estado', getValue: (r) => LIFECYCLE_LABELS[r.lifecycleStatus] ?? r.lifecycleStatus },
+    { key: 'quality', label: 'Índice de calidad', getValue: (r) => r.qualityScore ?? '' },
+  ], []);
+
+  const bulkActions = useMemo(
+    () => createStandardBulkActions(exportColumns, 'productores', (r) => `/productores/${r.id}`),
+    [exportColumns],
+  );
+
+  const rowActions = useMemo((): RowAction<Producer>[] => {
+    const actions: RowAction<Producer>[] = [
+      { id: 'view', label: 'Ver', onAction: (r) => navigate(`/productores/${r.id}`) },
+    ];
+    if (canUpdate) {
+      actions.push({ id: 'edit', label: 'Editar', onAction: (r) => navigate(`/productores/${r.id}/editar`) });
+    }
+    if (canDelete) {
+      actions.push({ id: 'archive', label: 'Archivar', variant: 'danger', onAction: handleDelete });
+    }
+    return actions;
+  }, [canUpdate, canDelete, navigate, handleDelete]);
 
   const serverFilters = useMemo(() => (
     <>
@@ -222,49 +264,7 @@ export function ProducersPage() {
           ? new Date(r.lastActivityAt).toLocaleDateString('es-CO')
           : '—',
     },
-    {
-      key: 'actions',
-      label: 'Acciones',
-      render: (r: Producer) => (
-        <div className="row-actions">
-          <button
-            type="button"
-            className="btn btn-sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/productores/${r.id}`);
-            }}
-          >
-            Ver
-          </button>
-          {canUpdate ? (
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/productores/${r.id}/editar`);
-              }}
-            >
-              Editar
-            </button>
-          ) : null}
-          {canDelete ? (
-            <button
-              type="button"
-              className="btn btn-sm btn-danger"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete(r);
-              }}
-            >
-              Archivar
-            </button>
-          ) : null}
-        </div>
-      ),
-    },
-  ], [canUpdate, canDelete, navigate, handleDelete]);
+  ], []);
 
   return (
     <>
@@ -339,6 +339,12 @@ export function ProducersPage() {
         onExport={handleExport}
         onRowClick={handleRowClick}
         toolbar={serverFilters}
+        bulkActions={bulkActions}
+        rowActions={rowActions}
+        serverFilterState={filters as unknown as Record<string, unknown>}
+        onServerFilterStateApply={(state) => {
+          setFilters({ ...(state as ProducerFilters), page: 1 });
+        }}
         columns={columns}
         emptyMessage="No se encontraron productores con los filtros aplicados."
       />

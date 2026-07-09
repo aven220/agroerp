@@ -19,6 +19,7 @@ import { useDashboardStats } from '../../hooks/useResources';
 import { useAutoRefresh, useInView } from '../../hooks/useInView';
 import { useNavigation } from '../../context/NavigationContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useAdaptiveWorkspaceOptional } from '../../context/AdaptiveWorkspaceProvider';
 import { getQuickActionsForRole } from '../../config/widgetRegistry';
 import type { WidgetDefinition, WidgetKind } from '../../config/widgetRegistry';
 import type { AuditLog } from '../../types';
@@ -124,7 +125,10 @@ function KpiBiWidget() {
 function QuickActionsWidget() {
   const { dashboardRole } = useWorkspace();
   const { hasPermission } = useAuth();
-  const actions = getQuickActionsForRole(dashboardRole, hasPermission);
+  const adaptive = useAdaptiveWorkspaceOptional();
+  const actions = adaptive?.prefs.adaptiveEnabled
+    ? adaptive.adaptiveQuickActions
+    : getQuickActionsForRole(dashboardRole, hasPermission);
 
   if (!actions.length) {
     return (
@@ -140,8 +144,13 @@ function QuickActionsWidget() {
   return (
     <div className="ws-quick-actions-wrap">
       <div className="ws-quick-actions">
-        {actions.map((a) => (
-          <Link key={a.id} to={a.to} className="ws-quick-action">
+        {actions.map((a, idx) => (
+          <Link
+            key={a.id}
+            to={a.to}
+            className={`ws-quick-action${idx === 0 && adaptive?.prefs.adaptiveEnabled ? ' adaptive-highlight' : ''}`}
+            onClick={() => adaptive?.recordQuickAction(a.id)}
+          >
             <span aria-hidden>{a.icon}</span>
             {a.label}
           </Link>

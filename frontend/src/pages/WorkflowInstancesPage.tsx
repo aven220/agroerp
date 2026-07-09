@@ -36,11 +36,16 @@ export function WorkflowInstancesPage() {
   const [selected, setSelected] = useState<WorkflowInstance | null>(null);
   const [history, setHistory] = useState<WorkflowHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       setItems(await listWorkflowInstances({ status: status || undefined }));
+    } catch (e: unknown) {
+      setItems([]);
+      setError(e instanceof Error ? e.message : 'Error al cargar instancias');
     } finally {
       setLoading(false);
     }
@@ -119,6 +124,7 @@ export function WorkflowInstancesPage() {
 
       <div className="split-layout">
         <div className="data-table-wrap">
+          {error ? <div className="alert alert-error">{error}</div> : null}
           {loading ? (
             <LoadingState variant="page" message="Cargando..." />
           ) : (

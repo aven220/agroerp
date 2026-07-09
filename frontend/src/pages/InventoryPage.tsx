@@ -1,187 +1,193 @@
-import { useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { LoadingState } from '../components/ux/LoadingState';
 import { Header } from '../components/layout/Header';
 import { DataTable } from '../components/ui/DataTable';
 import { Modal } from '../components/ui/Modal';
-import { useResources } from '../hooks/useResources';
-import {
-  createResource,
-  deleteResource,
-  updateResource,
-} from '../api/resources';
-import { RESOURCE_TYPES, resourceData, type InventoryData, type Resource } from '../types';
+import { listEimsStock, postEimsMovement, listEimsWarehouses } from '../api/eims';
+import { createBulkExportAction, createBulkCopyIdsAction } from '../lib/gridBulkActions';
+import type { GridColumnDef } from '../lib/data-grid/types';
+import { notifyEntityUpdated } from '../lib/entitySync';
+
+interface EimsStockRow {
+  id: string;
+  itemKey: string;
+  itemName: string;
+  warehouseKey: string;
+  warehouseName: string;
+  onHandQty: number;
+  uomKey: string;
+}
+
+function mapStockRow(raw: Record<string, unknown>): EimsStockRow {
+  const item = raw.item as Record<string, unknown> | undefined;
+  const warehouse = raw.warehouse as Record<string, unknown> | undefined;
+  const itemKey = String(item?.itemKey ?? raw.itemKey ?? '');
+  const warehouseKey = String(warehouse?.warehouseKey ?? raw.warehouseKey ?? '');
+  return {
+    id: `${itemKey}:${warehouseKey}`,
+    itemKey,
+    itemName: String(item?.name ?? itemKey),
+    warehouseKey,
+    warehouseName: String(warehouse?.name ?? warehouseKey),
+    onHandQty: Number(raw.onHandQty ?? raw.availableQty ?? 0),
+    uomKey: String(item?.uomKey ?? ''),
+  };
+}
 
 export function InventoryPage() {
   const [refresh, setRefresh] = useState(0);
-  const { items, loading } = useResources(RESOURCE_TYPES.INVENTORY, refresh);
+  const [items, setItems] = useState<EimsStockRow[]>([]);
+  const [warehouses, setWarehouses] = useState<Array<{ warehouseKey: string; name: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Resource | null>(null);
-  const [form, setForm] = useState<InventoryData>({
-    name: '',
-    stock_kg: 0,
-    warehouse: 'Acopio principal',
-    quality_grade: '',
-  });
+  const [form, setForm] = useState({ itemKey: '', warehouseKey: '', quantity: 0, notes: '' });
   const [saving, setSaving] = useState(false);
 
-  const totalStock = items.reduce(
-    (s, i) => s + Number(resourceData<InventoryData>(i).stock_kg ?? 0),
-    0,
-  );
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    Promise.all([listEimsStock(), listEimsWarehouses()])
+      .then(([stock, wh]) => {
+        setItems((stock as Array<Record<string, unknown>>).map(mapStockRow));
+        setWarehouses(
+          (wh as Array<Record<string, unknown>>).map((w) => ({
+            warehouseKey: String(w.warehouseKey ?? ''),
+            name: String(w.name ?? w.warehouseKey ?? ''),
+          })),
+        );
+      })
+      .catch((e: unknown) => {
+        setItems([]);
+        setError(e instanceof Error ? e.message : 'Error al cargar inventario EIMS');
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
-  function openEdit(row: Resource) {
-    const d = resourceData<InventoryData>(row);
-    setEditing(row);
-    setForm({
-      name: d.name ?? '',
-      stock_kg: d.stock_kg ?? 0,
-      warehouse: d.warehouse ?? '',
-      quality_grade: String(d.quality_grade ?? ''),
-    });
-    setModalOpen(true);
-  }
+  useEffect(() => {
+    load();
+  }, [load, refresh]);
+
+  const totalStock = items.reduce((s, i) => s + i.onHandQty, 0);
 
   function openCreate() {
-    setEditing(null);
-    setForm({ name: '', stock_kg: 0, warehouse: 'Acopio principal', quality_grade: '' });
+    setForm({
+      itemKey: '',
+      warehouseKey: warehouses[0]?.warehouseKey ?? '',
+      quantity: 0,
+      notes: '',
+    });
     setModalOpen(true);
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.itemKey.trim() || !form.warehouseKey) return;
     setSaving(true);
     try {
-      if (editing) {
-        await updateResource(editing.id, {
-          data: form as unknown as Record<string, unknown>,
-        });
-      } else {
-        await createResource({
-          resourceType: RESOURCE_TYPES.INVENTORY,
-          data: form as unknown as Record<string, unknown>,
-        });
-      }
+      await postEimsMovement({
+        movementType: 'receipt',
+        itemKey: form.itemKey.trim(),
+        warehouseKey: form.warehouseKey,
+        quantity: form.quantity,
+        notes: form.notes || 'Entrada desde vista de inventario',
+      });
       setModalOpen(false);
       setRefresh((r) => r + 1);
+      notifyEntityUpdated('inventory', form.itemKey);
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleDelete(row: Resource) {
-    if (!confirm('¿Eliminar lote de inventario?')) return;
-    await deleteResource(row.id);
-    setRefresh((r) => r + 1);
-  }
+  const exportColumns = useMemo<GridColumnDef<EimsStockRow>[]>(() => [
+    { key: 'name', label: 'Artículo', getValue: (r) => r.itemName },
+    { key: 'warehouse', label: 'Bodega', getValue: (r) => r.warehouseName },
+    { key: 'qty', label: 'Existencia', getValue: (r) => r.onHandQty },
+    { key: 'uom', label: 'UOM', getValue: (r) => r.uomKey },
+  ], []);
+
+  const bulkActions = useMemo(
+    () => [
+      createBulkExportAction(exportColumns, 'inventario-eims'),
+      createBulkCopyIdsAction<EimsStockRow>(),
+    ],
+    [exportColumns],
+  );
+
+  const columns = useMemo(() => [
+    { key: 'name', label: 'Artículo', render: (r: EimsStockRow) => r.itemName },
+    { key: 'warehouse', label: 'Bodega', render: (r: EimsStockRow) => r.warehouseName },
+    { key: 'qty', label: 'Existencia', render: (r: EimsStockRow) => r.onHandQty.toLocaleString('es-CO') },
+    { key: 'uom', label: 'UOM', render: (r: EimsStockRow) => r.uomKey || '—' },
+  ], []);
 
   return (
     <>
       <Header
         title="Inventario"
-        subtitle={`Stock total: ${totalStock.toLocaleString('es-CO')} kg`}
+        subtitle={`Existencias EIMS · ${totalStock.toLocaleString('es-CO')} unidades en vista`}
         actions={
           <button type="button" className="btn btn-primary" onClick={openCreate}>
-            + Ajuste manual
+            + Entrada de inventario
           </button>
         }
       />
 
+      {error ? <div className="alert alert-error">{error}</div> : null}
+
       {loading ? (
         <LoadingState variant="table" />
       ) : (
-        <DataTable<Resource>
+        <DataTable<EimsStockRow>
           gridId="inventory"
           data={items}
-          columns={[
-            {
-              key: 'name',
-              label: 'Lote',
-              render: (r) => resourceData<InventoryData>(r)?.name ?? '—',
-            },
-            {
-              key: 'stock',
-              label: 'Stock (kg)',
-              render: (r) => resourceData<InventoryData>(r)?.stock_kg ?? '—',
-            },
-            {
-              key: 'warehouse',
-              label: 'Bodega',
-              render: (r) => resourceData<InventoryData>(r)?.warehouse ?? '—',
-            },
-            {
-              key: 'quality',
-              label: 'Calidad',
-              render: (r) => resourceData<InventoryData>(r)?.quality_grade ?? '—',
-            },
-            {
-              key: 'actions',
-              label: 'Acciones',
-              render: (r) => (
-                <div className="row-actions">
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEdit(r);
-                    }}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-danger"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(r);
-                    }}
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              ),
-            },
-          ]}
+          bulkActions={bulkActions}
+          columns={columns}
         />
       )}
 
-      <Modal
-        open={modalOpen}
-        title={editing ? 'Editar lote' : 'Nuevo lote'}
-        onClose={() => setModalOpen(false)}
-      >
+      <Modal open={modalOpen} title="Registrar entrada" onClose={() => setModalOpen(false)}>
         <form onSubmit={handleSave} className="form-grid">
           <label>
-            Nombre *
+            Código de artículo *
             <input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              value={form.itemKey}
+              onChange={(e) => setForm({ ...form, itemKey: e.target.value })}
               required
             />
           </label>
           <label>
-            Stock (kg) *
+            Bodega *
+            <select
+              value={form.warehouseKey}
+              onChange={(e) => setForm({ ...form, warehouseKey: e.target.value })}
+              required
+            >
+              {warehouses.map((w) => (
+                <option key={w.warehouseKey} value={w.warehouseKey}>{w.name}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Cantidad *
             <input
               type="number"
               min="0"
-              value={form.stock_kg}
-              onChange={(e) => setForm({ ...form, stock_kg: Number(e.target.value) })}
+              step="0.01"
+              value={form.quantity}
+              onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
               required
             />
           </label>
           <label>
-            Bodega
-            <input
-              value={form.warehouse}
-              onChange={(e) => setForm({ ...form, warehouse: e.target.value })}
-            />
+            Notas
+            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
           </label>
           <div className="form-actions">
-            <button type="button" className="btn" onClick={() => setModalOpen(false)}>
-              Cancelar
-            </button>
+            <button type="button" className="btn" onClick={() => setModalOpen(false)}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
-              Guardar
+              {saving ? 'Guardando...' : 'Registrar'}
             </button>
           </div>
         </form>

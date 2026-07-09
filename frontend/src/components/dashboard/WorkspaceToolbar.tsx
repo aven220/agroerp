@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useAdaptiveWorkspaceOptional } from '../../context/AdaptiveWorkspaceProvider';
 import { WidgetPicker } from './WidgetPicker';
 
 export function WorkspaceToolbar() {
@@ -15,6 +16,7 @@ export function WorkspaceToolbar() {
     resetWorkspace,
     dashboardRole,
   } = useWorkspace();
+  const adaptive = useAdaptiveWorkspaceOptional();
 
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -76,6 +78,18 @@ export function WorkspaceToolbar() {
         </p>
       </div>
       <div className="ws-toolbar-right">
+        {adaptive?.showWidgetSuggestion ? (
+          <div className="ws-toolbar-adaptive">
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={adaptive.applyWidgetOrderSuggestion}
+              title={`Orden sugerido para ${adaptive.profile.contextLabel.toLowerCase()}`}
+            >
+              ✦ Orden sugerido
+            </button>
+          </div>
+        ) : null}
         {editMode ? <WidgetPicker /> : null}
         <button
           type="button"

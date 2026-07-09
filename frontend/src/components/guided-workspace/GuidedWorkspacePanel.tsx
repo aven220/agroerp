@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useNavigation } from '../../context/NavigationContext';
 import { useGuidedWorkspace } from '../../context/GuidedWorkspaceContext';
+import { useAdaptiveWorkspaceOptional } from '../../context/AdaptiveWorkspaceProvider';
 import { useAuth } from '../../context/AuthContext';
 import { getContinueWorkItems, loadWorkEntityHistory } from '../../lib/workEntityHistory';
 import { getProcessNextStep, getLatestMilestone } from '../../lib/processWorkspace';
@@ -53,6 +54,7 @@ export function GuidedWorkspacePanel() {
     dismissOpenProcess,
     recordIcon,
   } = useGuidedWorkspace();
+  const adaptive = useAdaptiveWorkspaceOptional();
 
   const [taskInput, setTaskInput] = useState('');
   const [noteInput, setNoteInput] = useState('');
@@ -60,6 +62,12 @@ export function GuidedWorkspacePanel() {
   const [shortcutTo, setShortcutTo] = useState('');
   const [setName, setSetName] = useState('');
   const [activeTab, setActiveTab] = useState<'work' | 'lists' | 'notes'>('work');
+
+  useEffect(() => {
+    if (panelOpen && adaptive?.prefs.adaptiveEnabled) {
+      setActiveTab(adaptive.profile.guidedPanelTab);
+    }
+  }, [panelOpen, adaptive?.prefs.adaptiveEnabled, adaptive?.profile.guidedPanelTab]);
 
   const continueItems = useMemo(
     () => getContinueWorkItems(user?.id, 5),

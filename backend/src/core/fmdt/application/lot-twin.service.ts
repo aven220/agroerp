@@ -24,24 +24,27 @@ export class LotTwinService {
     });
     if (!lot) return null;
 
-    const purchases = await this.prisma.resource.findMany({
-      where: { organizationId, resourceType: 'coffee_purchase', deletedAt: null },
-      take: 300,
-    });
-    const lotPurchases = purchases.filter((p) => {
-      const d = p.data as Record<string, unknown>;
-      return d.field_lot_id === fieldLotId || d.fieldLotId === fieldLotId;
+    const lotTickets = await this.prisma.cpepReceptionTicket.findMany({
+      where: { organizationId, lotId: fieldLotId },
+      include: { quality: true, settlement: true },
+      orderBy: { createdAt: 'desc' },
     });
 
-    const productionYtdKg = lotPurchases.reduce((sum, p) => {
-      const d = p.data as Record<string, unknown>;
-      return sum + Number(d.weight_kg ?? d.weightKg ?? 0);
+    const productionYtdKg = lotTickets.reduce((sum, t) => {
+      return sum + Number(t.netWeightKg ?? t.settlement?.netWeightKg ?? 0);
     }, 0);
 
-    const revenueYtd = lotPurchases.reduce((sum, p) => {
-      const d = p.data as Record<string, unknown>;
-      return sum + Number(d.total_amount ?? d.totalAmount ?? 0);
+    const revenueYtd = lotTickets.reduce((sum, t) => {
+      return sum + Number(t.settlement?.totalAmount ?? 0);
     }, 0);
+
+    const qualityScores = lotTickets
+      .map((t) => t.quality?.qualityScore)
+      .filter((s): s is number => s != null);
+    const qualityAvgScore =
+      qualityScores.length > 0
+        ? qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length
+        : null;
 
     const totalCostYtd = lot.costEntries.reduce((sum, c) => sum + Number(c.amount), 0)
       + lot.operations.reduce((sum, o) => sum + Number(o.totalCost ?? 0), 0);
@@ -52,6 +55,20 @@ export class LotTwinService {
     const costPerKg = productionYtdKg > 0 ? totalCostYtd / productionYtdKg : 0;
     const marginPct = revenueYtd > 0 ? ((revenueYtd - totalCostYtd) / revenueYtd) * 100 : 0;
 
+    const requiredDocs = ['escritura', 'plano', 'foto'];
+    const presentTypes = new Set(lot.documents.map((d) => d.documentTypeCode));
+    const compliancePct =
+      requiredDocs.length > 0
+        ? Math.round(
+            (requiredDocs.filter((t) => presentTypes.has(t)).length / requiredDocs.length) *
+              100,
+          )
+        : 0;
+
+    const harvestForecastKg = lot.harvestRecords.reduce(
+      (sum, h) => sum + Number(h.actualKg ?? h.estimatedKg ?? 0),
+      0,
+    );
     const agState = lot.agronomicStates[0];
     const expectedYield = Number(agState?.expectedYieldKgHa ?? 0);
     const riskFlags: string[] = [];
@@ -78,12 +95,12 @@ export class LotTwinService {
       revenueYtd,
       marginPct,
       marginTrend: marginPct >= 0 ? 'stable' : 'down',
-      qualityAvgScore: lotPurchases.length > 0 ? 75 : null,
+      qualityAvgScore,
       operationsCountYtd: lot.operations.length,
       lastOperationType: lastOp?.operationTypeCode ?? null,
       pendingOperationsCount: 0,
       riskFlags,
-      compliancePct: lot.documents.length > 0 ? 80 : 40,
+      compliancePct,
       thematicIndicators: {
         plantedAreaHa: plantedArea,
         operationsCost: lot.operations.reduce((s, o) => s + Number(o.totalCost ?? 0), 0),
@@ -94,8 +111,8 @@ export class LotTwinService {
         date: o.operationDate,
       })),
       aiProjection: {
-        harvestForecastKg: productionYtdKg * 1.08,
-        phytosanitaryRiskScore: riskFlags.length * 15,
+        harvestForecastKg: harvestForecastKg > 0 ? harvestForecastKg : null,
+        phytosanitaryRiskScore: riskFlags.length > 0 ? riskFlags.length : null,
         recommendations: lot.recommendations.map((r) => r.title),
       },
     };

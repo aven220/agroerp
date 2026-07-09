@@ -10,6 +10,7 @@ import {
   updateProducer,
   type CreateProducerPayload,
 } from '../api/prm';
+import { notifyEntityUpdated } from '../lib/entitySync';
 import { markProcessMilestone } from '../lib/processWorkspace';
 
 const emptyForm: CreateProducerPayload = {
@@ -99,9 +100,11 @@ export function ProducerFormPage() {
     try {
       if (isEdit && id) {
         await updateProducer(id, { ...form, version });
+        notifyEntityUpdated('producer', id);
         navigate(`/productores/${id}`);
       } else {
         const created = await createProducer(form);
+        notifyEntityUpdated('producer', created.id);
         markProcessMilestone('agricultural', 'producer', {
           entityId: created.id,
           entityName: form.legalName,

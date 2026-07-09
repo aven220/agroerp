@@ -8,7 +8,6 @@ import {
   type ReactNode,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useNavigation } from './NavigationContext';
 
 export interface ShortcutDef {
   id: string;
@@ -18,7 +17,8 @@ export interface ShortcutDef {
 }
 
 const SHORTCUTS: ShortcutDef[] = [
-  { id: 'search', keys: ['⌘', 'K'], label: 'Búsqueda global', category: 'Navegación' },
+  { id: 'search', keys: ['⌘', 'K'], label: 'Launcher de comandos', category: 'Comandos' },
+  { id: 'commands', keys: ['⌘', 'Shift', 'P'], label: 'Paleta de comandos', category: 'Comandos' },
   { id: 'help', keys: ['?'], label: 'Atajos de teclado', category: 'Ayuda' },
   { id: 'home', keys: ['⌘', 'H'], label: 'Ir al inicio', category: 'Navegación' },
   { id: 'notifications', keys: ['⌘', 'Shift', 'N'], label: 'Notificaciones', category: 'Navegación' },
@@ -44,9 +44,12 @@ function isMod(e: KeyboardEvent) {
 
 export function KeyboardShortcutsProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const { setSearchOpen } = useNavigation();
   const [helpOpen, setHelpOpen] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
+
+  const openCommandPalette = useCallback((mode: 'launcher' | 'commands') => {
+    window.dispatchEvent(new CustomEvent('agroerp:command-palette', { detail: { mode } }));
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -59,9 +62,15 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
         return;
       }
 
+      if (isMod(e) && e.shiftKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        openCommandPalette('commands');
+        return;
+      }
+
       if (isMod(e) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setSearchOpen(true);
+        openCommandPalette('launcher');
         return;
       }
 
@@ -79,7 +88,7 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
 
       if (isMod(e) && e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault();
-        setSearchOpen(true);
+        openCommandPalette('launcher');
         return;
       }
 
@@ -97,7 +106,7 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [navigate, setSearchOpen]);
+  }, [navigate, openCommandPalette]);
 
   const value = useMemo(
     () => ({ shortcuts: SHORTCUTS, helpOpen, setHelpOpen, prefsOpen, setPrefsOpen }),

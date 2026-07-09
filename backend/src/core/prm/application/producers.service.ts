@@ -480,48 +480,31 @@ export class ProducersService {
         orderBy: { capturedAt: 'desc' },
         take: 12,
       }),
-      this.prisma.resource.findMany({
-        where: {
-          organizationId,
-          resourceType: 'coffee_purchase',
-          deletedAt: null,
-        },
+      this.prisma.cpepReceptionTicket.findMany({
+        where: { organizationId, producerId: id },
         orderBy: { createdAt: 'desc' },
-        take: 50,
-      }).then((items) =>
-        items.filter((r) => {
-          const data = r.data as Record<string, unknown>;
-          return data.producer_id === id || data.producerId === id;
-        }).slice(0, 10),
-      ),
-      producer.farmLinks.length > 0 || producer.territoryLinks.length > 0
-        ? Promise.all([
-            producer.farmLinks.length > 0
-              ? this.prisma.resource.findMany({
-                  where: {
-                    id: { in: producer.farmLinks.map((f) => f.farmResourceId) },
-                    organizationId,
-                  },
-                })
-              : Promise.resolve([]),
-            producer.territoryLinks.length > 0
-              ? this.prisma.farmUnit.findMany({
-                  where: {
-                    id: { in: producer.territoryLinks.map((t) => t.farmUnitId) },
-                    organizationId,
-                    deletedAt: null,
-                  },
-                  select: {
-                    id: true,
-                    farmCode: true,
-                    farmName: true,
-                    status: true,
-                    totalAreaHa: true,
-                    municipalityCode: true,
-                  },
-                })
-              : Promise.resolve([]),
-          ]).then(([legacy, ftipFarms]) => [...legacy, ...ftipFarms])
+        take: 10,
+        include: {
+          quality: { select: { qualityScore: true, grade: true } },
+          settlement: { select: { totalAmount: true, netWeightKg: true } },
+        },
+      }),
+      producer.territoryLinks.length > 0
+        ? this.prisma.farmUnit.findMany({
+            where: {
+              id: { in: producer.territoryLinks.map((t) => t.farmUnitId) },
+              organizationId,
+              deletedAt: null,
+            },
+            select: {
+              id: true,
+              farmCode: true,
+              farmName: true,
+              status: true,
+              totalAreaHa: true,
+              municipalityCode: true,
+            },
+          })
         : Promise.resolve([]),
     ]);
 

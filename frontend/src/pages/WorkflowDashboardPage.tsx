@@ -6,12 +6,30 @@ import { LoadingState } from '../components/ux/LoadingState';
 
 export function WorkflowDashboardPage() {
   const [dashboard, setDashboard] = useState<WorkflowDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getWorkflowDashboard().then(setDashboard);
+    setLoading(true);
+    setError(null);
+    getWorkflowDashboard()
+      .then(setDashboard)
+      .catch((e: unknown) => {
+        setDashboard(null);
+        setError(e instanceof Error ? e.message : 'Error al cargar dashboard BPM');
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  if (!dashboard) return <LoadingState variant="dashboard" message="Cargando dashboard BPM..." />;
+  if (loading) return <LoadingState variant="dashboard" message="Cargando dashboard BPM..." />;
+  if (error || !dashboard) {
+    return (
+      <>
+        <Header title="Dashboard BPM" subtitle="KPIs · cuellos de botella · carga de trabajo" />
+        <div className="alert alert-error">{error ?? 'No hay datos disponibles'}</div>
+      </>
+    );
+  }
 
   const { summary, bottlenecks, workloadByUser, sla } = dashboard;
 

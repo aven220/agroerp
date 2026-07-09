@@ -12,6 +12,8 @@
 @import './polish.css';
 @import './ux-stabilization.css';
 @import './accessibility.css';
+@import './smart-assistant.css';
+@import './adaptive-workspace.css';
 
 /* enterprise-ui-polish.css is imported at the end of src/index.css
    so it wins over legacy module styles. */

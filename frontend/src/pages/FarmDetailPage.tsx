@@ -20,6 +20,8 @@ import {
   type FarmUnit,
   type TerritoryDocument,
 } from '../api/ftip';
+import { startFarmApprovalWorkflow } from '../lib/workflowIntegration';
+import { notifyEntityUpdated } from '../lib/entitySync';
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Borrador',
@@ -86,6 +88,13 @@ export function FarmDetailPage() {
       toStatus: lifecycleStatus,
       reasonNotes: lifecycleReason,
     });
+    if (lifecycleStatus === 'under_validation') {
+      await startFarmApprovalWorkflow(id, {
+        farmName: farm?.farmName,
+        farmCode: farm?.farmCode,
+      });
+    }
+    notifyEntityUpdated('farm', id);
     setLifecycleOpen(false);
     await reload();
   }

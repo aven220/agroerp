@@ -17,6 +17,10 @@ import { FilterPanel } from './FilterPanel';
 import { ColumnManager } from './ColumnManager';
 import { SavedViewsMenu } from './SavedViewsMenu';
 import { DetailPanel } from './DetailPanel';
+import { FilterChipsBar } from './FilterChipsBar';
+import { RecentFiltersMenu } from './RecentFiltersMenu';
+import { ServerFilterPresetsMenu } from './ServerFilterPresetsMenu';
+import { BulkActionsToolbar } from './BulkActionsToolbar';
 import { getCellValue } from '../../lib/data-grid/types';
 
 const ROW_HEIGHT = 44;
@@ -48,6 +52,8 @@ export interface EnterpriseDataGridProps<T extends { id: string }> {
   enableVirtualization?: boolean;
   detailRender?: (row: T) => ReactNode;
   toolbarExtra?: ReactNode;
+  serverFilterState?: Record<string, unknown>;
+  onServerFilterStateApply?: (state: Record<string, unknown>) => void;
 }
 
 export function EnterpriseDataGrid<T extends { id: string }>({
@@ -76,6 +82,8 @@ export function EnterpriseDataGrid<T extends { id: string }>({
   enableVirtualization = true,
   detailRender,
   toolbarExtra,
+  serverFilterState,
+  onServerFilterStateApply,
 }: EnterpriseDataGridProps<T>) {
   const grid = useDataGrid({
     gridId,
@@ -258,6 +266,25 @@ export function EnterpriseDataGrid<T extends { id: string }>({
               Filtros{grid.filters.length ? ` (${grid.filters.length})` : ''}
             </button>
           ) : null}
+          {!serverSide ? (
+            <RecentFiltersMenu
+              presets={grid.filterPresets}
+              filterHistory={grid.filterHistory}
+              onApply={grid.applyFilterPreset}
+              onApplySnapshot={(f, q) => grid.applyFilters(f.map((x) => ({ ...x })), q)}
+              onPin={grid.pinFilterPreset}
+              onDelete={grid.removeFilterPreset}
+              onSaveCurrent={grid.saveCurrentFilters}
+            />
+          ) : onServerFilterStateApply && serverFilterState ? (
+            <ServerFilterPresetsMenu
+              presets={grid.serverFilterPresets}
+              onApply={onServerFilterStateApply}
+              onSave={(name, pinned) => grid.saveCurrentServerFilters(name, serverFilterState, pinned)}
+              onPin={grid.pinServerFilterPreset}
+              onDelete={grid.removeServerFilterPreset}
+            />
+          ) : null}
           <button type="button" className="btn btn-sm" onClick={() => setColumnsOpen(true)}>Columnas</button>
           <select
             className="ds-input edw-density-select"
@@ -275,9 +302,53 @@ export function EnterpriseDataGrid<T extends { id: string }>({
             onLoad={grid.loadView}
             onSave={grid.saveView}
             onReset={grid.resetView}
+            onDelete={grid.deleteView}
+            onRename={grid.renameView}
+            onPersistDefault={grid.persistCurrentAsDefault}
           />
         </div>
         <div className="edw-toolbar-right">
+          {grid.favoriteSearches.length > 0 ? (
+            <select
+              className="ds-input edw-density-select"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) grid.setQuickSearch(e.target.value);
+              }}
+              aria-label="Búsquedas favoritas"
+            >
+              <option value="">★ Favoritas</option>
+              {grid.favoriteSearches.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          ) : null}
+          {grid.recentSearches.length > 0 ? (
+            <select
+              className="ds-input edw-density-select"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) grid.setQuickSearch(e.target.value);
+              }}
+              aria-label="Búsquedas recientes"
+            >
+              <option value="">Recientes</option>
+              {grid.recentSearches.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          ) : null}
+          {grid.quickSearch ? (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => grid.toggleSearchFavorite(grid.quickSearch)}
+              title="Marcar búsqueda como favorita"
+              aria-label="Favorito"
+            >
+              {grid.favoriteSearches.includes(grid.quickSearch) ? '★' : '☆'}
+            </button>
+          ) : null}
           {toolbarExtra}
           {onExport ? (
             <button type="button" className="btn btn-sm" onClick={onExport}>Exportar</button>
@@ -295,22 +366,23 @@ export function EnterpriseDataGrid<T extends { id: string }>({
         </div>
       </div>
 
-      {grid.selectedIds.size > 0 && bulkActions?.length ? (
-        <div className="edw-bulk-bar" role="toolbar" aria-label="Acciones masivas">
-          <span>{grid.selectedIds.size} seleccionados</span>
-          {bulkActions.map((a) => (
-            <button
-              key={a.id}
-              type="button"
-              className={`btn btn-sm${a.variant === 'danger' ? ' btn-danger' : ''}`}
-              onClick={() => a.onAction(grid.selectedRows)}
-            >
-              {a.icon ? `${a.icon} ` : ''}{a.label}
-            </button>
-          ))}
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => grid.setSelectedIds(new Set())}>Limpiar</button>
-        </div>
+      {!serverSide ? (
+        <FilterChipsBar
+          columns={columnDefs}
+          filters={grid.filters}
+          quickSearch={grid.quickSearch}
+          onRemoveFilter={grid.removeFilter}
+          onClear={grid.clearFilters}
+          onClearSearch={() => grid.setQuickSearch('')}
+        />
       ) : null}
+
+      <BulkActionsToolbar
+        selectedCount={grid.selectedIds.size}
+        bulkActions={bulkActions ?? []}
+        selectedRows={grid.selectedRows}
+        onClear={() => grid.setSelectedIds(new Set())}
+      />
 
       {loading ? (
         <LoadingState variant="table" rows={8} />

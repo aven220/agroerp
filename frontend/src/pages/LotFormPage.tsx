@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { createLot, getEligibleFtipLots, getLot, setLotGeometry, updateLot } from '../api/fmdt';
+import { notifyEntityUpdated } from '../lib/entitySync';
 import { listFarms } from '../api/ftip';
 import { listProducers } from '../api/prm';
 import { markProcessMilestone } from '../lib/processWorkspace';
@@ -144,10 +145,12 @@ export function LotFormPage() {
           const geometry = JSON.parse(form.boundaryGeoJson);
           await setLotGeometry(id, { applicationGeo: geometry, source: 'web_form' });
         }
+        notifyEntityUpdated('lot', id);
         navigate(`/lotes/${id}`);
       } else {
         if (!form.ftipLotUnitId) throw new Error('Seleccione la finca y la parcela donde registrará el lote');
         const created = await createLot({ ...payload, ftipLotUnitId: form.ftipLotUnitId });
+        notifyEntityUpdated('lot', created.id);
         markProcessMilestone('agricultural', 'lot', {
           entityId: created.id,
           entityName: form.lotName,

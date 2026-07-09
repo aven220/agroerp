@@ -6,6 +6,7 @@ import { ROLE_LABELS } from '../../config/mobileNavigation';
 import { getQuickActionsForRole } from '../../config/widgetRegistry';
 import { NAV_CATEGORIES } from '../../config/navigation';
 import { getContinueWorkItems, kindIcon } from '../../lib/workEntityHistory';
+import { useAdaptiveWorkspaceOptional } from '../../context/AdaptiveWorkspaceProvider';
 import { useDeviceCapabilities } from '../../hooks/useDeviceCapabilities';
 import { useToast } from '../../context/ToastContext';
 
@@ -15,7 +16,10 @@ export function MobileHome() {
   const { quickTiles, pendingCount, online, queueItems } = useMobile();
   const device = useDeviceCapabilities();
   const toast = useToast();
-  const quickActions = getQuickActionsForRole(dashboardRole, hasPermission);
+  const adaptive = useAdaptiveWorkspaceOptional();
+  const quickActions = adaptive?.prefs.adaptiveEnabled
+    ? adaptive.adaptiveQuickActions
+    : getQuickActionsForRole(dashboardRole, hasPermission);
   const continueItems = getContinueWorkItems(user?.id, 4);
 
   async function handleDeviceAction(action: string) {
@@ -58,8 +62,13 @@ export function MobileHome() {
       <section className="mobile-home-section">
         <h2 className="mobile-section-title">¿Qué desea hacer hoy?</h2>
         <div className="mobile-action-list">
-          {quickActions.map((a) => (
-            <Link key={a.id} to={a.to} className="mobile-action-row">
+          {quickActions.map((a, idx) => (
+            <Link
+              key={a.id}
+              to={a.to}
+              className={`mobile-action-row${idx === 0 && adaptive?.prefs.adaptiveEnabled ? ' adaptive-top' : ''}`}
+              onClick={() => adaptive?.recordQuickAction(a.id)}
+            >
               <span aria-hidden>{a.icon}</span>
               <span>{a.label}</span>
               <span className="mobile-chevron" aria-hidden>›</span>

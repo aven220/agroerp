@@ -26,18 +26,22 @@ export class FarmTwinService {
     });
     if (!farm) return null;
 
-    const purchases = await this.prisma.resource.findMany({
-      where: { organizationId, resourceType: 'coffee_purchase', deletedAt: null },
-      take: 200,
+    const farmTickets = await this.prisma.cpepReceptionTicket.findMany({
+      where: { organizationId, farmId: farmUnitId },
+      include: { quality: true },
+      orderBy: { createdAt: 'desc' },
     });
-    const farmPurchases = purchases.filter((p) => {
-      const d = p.data as Record<string, unknown>;
-      return d.farm_unit_id === farmUnitId || d.farmUnitId === farmUnitId;
-    });
-    const productionYtdKg = farmPurchases.reduce((sum, p) => {
-      const d = p.data as Record<string, unknown>;
-      return sum + Number(d.weight_kg ?? d.weightKg ?? 0);
+    const productionYtdKg = farmTickets.reduce((sum, t) => {
+      return sum + Number(t.netWeightKg ?? 0);
     }, 0);
+
+    const qualityScores = farmTickets
+      .map((t) => t.quality?.qualityScore)
+      .filter((s): s is number => s != null);
+    const qualityAvgScore =
+      qualityScores.length > 0
+        ? qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length
+        : null;
 
     const agArea = Number(farm.agriculturalAreaHa ?? farm.totalAreaHa ?? 0);
     const avgYield = agArea > 0 ? productionYtdKg / agArea : 0;
@@ -61,6 +65,7 @@ export class FarmTwinService {
       activeCropStandCount: farm.cropStands.length,
       productionYtdKg,
       avgYieldKgHa: avgYield,
+      qualityAvgScore,
       activeCertificationCodes: farm.certifications.map((c) => c.certificationSchemeCode),
       riskFlags,
       lastVisitAt: farm.visitLinks[0]?.visitedAt ?? farm.lastVisitAt,
@@ -69,11 +74,10 @@ export class FarmTwinService {
         forestCoverPct: farm.totalAreaHa
           ? Number(farm.forestAreaHa ?? 0) / Number(farm.totalAreaHa) * 100
           : 0,
-        geoPrecisionAvgM: farm.geometryConfidence === 'high' ? 10 : 30,
       },
       aiProjection: {
-        productionForecastKg: productionYtdKg * 1.05,
-        riskScore: riskFlags.length * 20,
+        productionForecastKg: null,
+        riskScore: riskFlags.length > 0 ? riskFlags.length : null,
         recommendations: [] as string[],
       },
     };

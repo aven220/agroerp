@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { createFarm, getFarm, setFarmGeometry, updateFarm } from '../api/ftip';
+import { notifyEntityUpdated } from '../lib/entitySync';
 import { listProducers } from '../api/prm';
 import { markProcessMilestone } from '../lib/processWorkspace';
 
@@ -105,6 +106,7 @@ export function FarmFormPage() {
           const geometry = JSON.parse(form.boundaryGeoJson);
           await setFarmGeometry(id, { geometryGeo: geometry });
         }
+        notifyEntityUpdated('farm', id);
         navigate(`/fincas/${id}`);
       } else {
         if (form.producerId) payload.producerId = form.producerId;
@@ -113,6 +115,7 @@ export function FarmFormPage() {
           const geometry = JSON.parse(form.boundaryGeoJson);
           await setFarmGeometry(created.id, { geometryGeo: geometry });
         }
+        notifyEntityUpdated('farm', created.id);
         markProcessMilestone('agricultural', 'farm', {
           entityId: created.id,
           entityName: form.farmName,

@@ -1,0 +1,115 @@
+/* PM-05 — Enterprise Command Palette */
+
+.cmd-palette-panel {
+  max-width: 640px;
+  width: min(640px, 96vw);
+}
+
+.cmd-palette-input-wrap {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cmd-palette-icon {
+  font-weight: 700;
+  color: var(--primary, #15803d);
+}
+
+.cmd-palette-mode-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.cmd-palette-mode-tab {
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  background: transparent;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ds-text-muted, #64748b);
+}
+
+.cmd-palette-mode-tab.active {
+  background: var(--ds-primary-subtle, #ecfdf5);
+  border-color: var(--primary, #15803d);
+  color: var(--primary, #15803d);
+}
+
+.cmd-palette-results {
+  max-height: min(52vh, 480px);
+}
+
+.cmd-palette-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.15rem;
+}
+
+.cmd-palette-row.active .cmd-palette-result {
+  background: var(--ds-surface-hover, #f1f5f9);
+}
+
+.cmd-palette-result {
+  flex: 1;
+  min-width: 0;
+}
+
+.cmd-palette-result-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.cmd-palette-result-text strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.cmd-palette-fav-btn {
+  flex-shrink: 0;
+  width: 2rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ds-text-muted, #94a3b8);
+  font-size: 0.9rem;
+  border-radius: 4px;
+}
+
+.cmd-palette-fav-btn:hover {
+  background: var(--ds-surface-sunken, #f8fafc);
+  color: #ca8a04;
+}
+
+.cmd-palette-shortcut {
+  margin-left: auto;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: var(--ds-surface-sunken, #f1f5f9);
+  border: 1px solid var(--border, #e2e8f0);
+}
+
+.cmd-palette-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-top: 1px solid var(--border, #e2e8f0);
+  font-size: 0.7rem;
+  color: var(--ds-text-muted, #64748b);
+}
+
+.cmd-palette-footer kbd {
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  background: var(--ds-surface-sunken, #f1f5f9);
+  border: 1px solid var(--border, #e2e8f0);
+  font-size: 0.65rem;
+}

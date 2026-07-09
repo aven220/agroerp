@@ -10,8 +10,10 @@ import { FormAvailabilityBadges } from '../components/forms/FormAvailabilityBadg
 import { FormLifecycleStepper } from '../components/forms/FormLifecycleStepper';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { notifyEntityUpdated } from '../lib/entitySync';
 import {
   archiveForm,
+  approveForm,
   bootstrapForms,
   deleteForm,
   duplicateForm,
@@ -19,6 +21,7 @@ import {
   listForms,
   newFormVersion,
   publishForm,
+  rejectForm,
   restoreForm,
   saveFormSchemaExport,
   saveFormsReport,
@@ -200,6 +203,31 @@ export function FormsPage() {
       refreshAfterMutation();
     } catch (err) {
       toastError(err instanceof Error ? err.message : 'No se pudo enviar a revisión');
+    }
+  }
+
+  async function handleApprove(row: FormDefinition) {
+    if (!confirm(`¿Aprobar "${row.name}" v${row.version}?`)) return;
+    try {
+      await approveForm(row.id);
+      notifyEntityUpdated('form', row.id);
+      success('Formulario aprobado.');
+      refreshAfterMutation();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'No se pudo aprobar');
+    }
+  }
+
+  async function handleReject(row: FormDefinition) {
+    const reason = prompt('Motivo del rechazo (opcional):');
+    if (reason === null) return;
+    try {
+      await rejectForm(row.id, reason.trim() || undefined);
+      notifyEntityUpdated('form', row.id);
+      info('Formulario rechazado.');
+      refreshAfterMutation();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'No se pudo rechazar');
     }
   }
 
@@ -413,6 +441,12 @@ export function FormsPage() {
                   ) : null}
                   {row.status === 'draft' && canApproveForm ? (
                     <button type="button" className="btn btn-sm" onClick={() => handleSubmitReview(row)}>A revisión</button>
+                  ) : null}
+                  {row.status === 'in_review' && canApproveForm ? (
+                    <>
+                      <button type="button" className="btn btn-sm btn-primary" onClick={() => handleApprove(row)}>Aprobar</button>
+                      <button type="button" className="btn btn-sm" onClick={() => handleReject(row)}>Rechazar</button>
+                    </>
                   ) : null}
                   {row.status === 'archived' && canAdminForm ? (
                     <button type="button" className="btn btn-sm" onClick={() => handleRestore(row)}>Restaurar</button>

@@ -1,5 +1,7 @@
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useAdaptiveWorkspaceOptional } from '../../context/AdaptiveWorkspaceProvider';
+import { workContextWelcome } from '../../lib/adaptiveLayoutEngine';
 import { ROLE_LABELS } from '../../config/widgetRegistry';
 
 function greetingForHour(hour: number): string {
@@ -20,6 +22,7 @@ function formatDate(date: Date): string {
 export function DashboardWelcome() {
   const { user } = useAuth();
   const { dashboardRole } = useWorkspace();
+  const adaptive = useAdaptiveWorkspaceOptional();
   const now = new Date();
   const firstName = user?.firstName ?? 'usuario';
   const isReturning = Boolean(user?.lastLoginAt);
@@ -33,6 +36,11 @@ export function DashboardWelcome() {
         <p className="ws-welcome-sub">
           Organice su jornada: acciones prioritarias, pendientes y actividad reciente en un solo lugar.
         </p>
+        {adaptive?.prefs.adaptiveEnabled ? (
+          <p className="ws-welcome-adaptive">
+            {workContextWelcome(adaptive.profile.workContext)}
+          </p>
+        ) : null}
       </div>
       <dl className="ws-welcome-meta">
         <div>

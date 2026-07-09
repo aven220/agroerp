@@ -35,6 +35,7 @@ interface WorkspaceContextValue {
   addWidget: (widgetId: string) => void;
   removeWidget: (instanceId: string) => void;
   moveWidget: (fromIndex: number, toIndex: number) => void;
+  reorderActiveWidgets: (priorityWidgetIds: string[]) => void;
   resizeWidget: (instanceId: string, w: number, h?: number) => void;
   resetWorkspace: () => void;
   dashboardRole: DashboardRole;
@@ -188,6 +189,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     });
   }, [updateActiveView]);
 
+  const reorderActiveWidgets = useCallback((priorityWidgetIds: string[]) => {
+    updateActiveView((v) => {
+      const priority = new Map(priorityWidgetIds.map((id, i) => [id, i]));
+      const widgets = [...v.widgets].sort((a, b) => {
+        const pa = priority.get(a.widgetId) ?? 999;
+        const pb = priority.get(b.widgetId) ?? 999;
+        return pa - pb;
+      });
+      return { ...v, widgets };
+    });
+  }, [updateActiveView]);
+
   const resizeWidget = useCallback((instanceId: string, w: number, h?: number) => {
     updateActiveView((view) => ({
       ...view,
@@ -216,13 +229,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       addWidget,
       removeWidget,
       moveWidget,
+      reorderActiveWidgets,
       resizeWidget,
       resetWorkspace,
       dashboardRole,
     }),
     [
       state, activeView, editMode, setActiveView, addView, renameView, removeView,
-      addWidget, removeWidget, moveWidget, resizeWidget, resetWorkspace, dashboardRole,
+      addWidget, removeWidget, moveWidget, reorderActiveWidgets, resizeWidget, resetWorkspace, dashboardRole,
     ],
   );
 

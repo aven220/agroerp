@@ -1,40 +1,75 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { LoadingState } from '../components/ux/LoadingState';
 import { Header } from '../components/layout/Header';
 import { DataTable } from '../components/ui/DataTable';
 import { Modal } from '../components/ui/Modal';
-import { useResources } from '../hooks/useResources';
+import { listProducers, type Producer } from '../api/prm';
+import { listCoffeeDocuments } from '../api/coffee';
 import { uploadDocument } from '../api/files';
-import { deleteResource } from '../api/resources';
 import { useAuth } from '../context/AuthContext';
-import {
-  RESOURCE_TYPES,
-  resourceData,
-  type ProducerData,
-  type Resource,
-} from '../types';
+import { notifyEntityUpdated } from '../lib/entitySync';
 
-interface FileData {
-  filename?: string;
-  mimeType?: string;
-  sizeBytes?: number;
-  storageKey?: string;
+interface DocumentRow {
+  id: string;
+  documentKey: string;
+  title: string;
+  documentType?: string;
+  ticketKey?: string;
+  producerId?: string;
+  createdAt?: string;
+}
+
+function mapDocument(raw: Record<string, unknown>): DocumentRow {
+  const documentKey = String(raw.documentKey ?? raw.id ?? '');
+  return {
+    id: documentKey,
+    documentKey,
+    title: String(raw.title ?? raw.documentType ?? documentKey),
+    documentType: raw.documentType ? String(raw.documentType) : undefined,
+    ticketKey: raw.ticketKey ? String(raw.ticketKey) : undefined,
+    producerId: raw.producerId ? String(raw.producerId) : undefined,
+    createdAt: raw.createdAt ? String(raw.createdAt) : undefined,
+  };
 }
 
 export function DocumentsPage() {
   const { user } = useAuth();
   const [refresh, setRefresh] = useState(0);
-  const { items: files, loading } = useResources(RESOURCE_TYPES.FILE, refresh);
-  const { items: producers } = useResources(RESOURCE_TYPES.PRODUCER, refresh);
+  const [files, setFiles] = useState<DocumentRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [producers, setProducers] = useState<Producer[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [producerId, setProducerId] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const load = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
+    listCoffeeDocuments()
+      .then((docs) => setFiles((docs as Array<Record<string, unknown>>).map(mapDocument)))
+      .catch((e: unknown) => {
+        setFiles([]);
+        setLoadError(e instanceof Error ? e.message : 'Error al cargar documentos');
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load, refresh]);
+
+  useEffect(() => {
+    listProducers({ limit: 200 })
+      .then((res) => setProducers(res.items))
+      .catch(() => setProducers([]));
+  }, [refresh]);
+
   const producerMap = useMemo(() => {
     const m = new Map<string, string>();
-    producers.forEach((p) => m.set(p.id, resourceData<ProducerData>(p).name ?? ''));
+    producers.forEach((p) => m.set(p.id, p.legalName || p.producerNumber));
     return m;
   }, [producers]);
 
@@ -44,14 +79,11 @@ export function DocumentsPage() {
     setUploading(true);
     setError(null);
     try {
-      await uploadDocument(
-        file,
-        user.organizationId,
-        producerId || undefined,
-      );
+      await uploadDocument(file, user.organizationId, producerId || undefined);
       setModalOpen(false);
       setFile(null);
       setRefresh((r) => r + 1);
+      if (producerId) notifyEntityUpdated('producer', producerId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al subir');
     } finally {
@@ -59,24 +91,11 @@ export function DocumentsPage() {
     }
   }
 
-  async function handleDelete(row: Resource) {
-    if (!confirm('¿Eliminar registro de documento?')) return;
-    await deleteResource(row.id);
-    setRefresh((r) => r + 1);
-  }
-
-  function formatSize(bytes?: number) {
-    if (!bytes) return '—';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  }
-
   return (
     <>
       <Header
         title="Documentos"
-        subtitle="Archivos asociados a productores y operaciones"
+        subtitle="Documentos operativos CPEP y archivos asociados a productores PRM"
         actions={
           <button type="button" className="btn btn-primary" onClick={() => setModalOpen(true)}>
             + Subir documento
@@ -89,59 +108,24 @@ export function DocumentsPage() {
         queda referenciado por <code>storageKey</code> (consola MinIO: puerto 9001).
       </div>
 
+      {loadError ? <div className="alert alert-error">{loadError}</div> : null}
+
       {loading ? (
         <LoadingState variant="table" />
       ) : (
-        <DataTable<Resource>
+        <DataTable<DocumentRow>
           gridId="documents"
           data={files}
           columns={[
-            {
-              key: 'filename',
-              label: 'Archivo',
-              render: (r) => resourceData<FileData>(r)?.filename ?? '—',
-            },
-            {
-              key: 'type',
-              label: 'Tipo',
-              render: (r) => resourceData<FileData>(r)?.mimeType ?? '—',
-            },
-            {
-              key: 'size',
-              label: 'Tamaño',
-              render: (r) => formatSize(resourceData<FileData>(r)?.sizeBytes),
-            },
-            {
-              key: 'storage',
-              label: 'Storage Key',
-              render: (r) => (
-                <code className="code-sm">
-                  {resourceData<FileData>(r)?.storageKey ?? '—'}
-                </code>
-              ),
-            },
+            { key: 'title', label: 'Documento', render: (r) => r.title },
+            { key: 'type', label: 'Tipo', render: (r) => r.documentType ?? '—' },
+            { key: 'ticket', label: 'Ticket', render: (r) => r.ticketKey ?? '—' },
             {
               key: 'producer',
               label: 'Productor',
-              render: (r) =>
-                producerMap.get(r.parentId ?? '') ?? '—',
+              render: (r) => (r.producerId ? producerMap.get(r.producerId) ?? r.producerId : '—'),
             },
-            {
-              key: 'actions',
-              label: '',
-              render: (r) => (
-                <button
-                  type="button"
-                  className="btn btn-sm btn-danger"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(r);
-                  }}
-                >
-                  Eliminar
-                </button>
-              ),
-            },
+            { key: 'date', label: 'Fecha', render: (r) => r.createdAt?.slice(0, 10) ?? '—' },
           ]}
         />
       )}
@@ -159,19 +143,16 @@ export function DocumentsPage() {
           </label>
           <label>
             Asociar a productor (opcional)
-            <select
-              value={producerId}
-              onChange={(e) => setProducerId(e.target.value)}
-            >
+            <select value={producerId} onChange={(e) => setProducerId(e.target.value)}>
               <option value="">Sin asociar</option>
               {producers.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {resourceData<ProducerData>(p).name}
+                  {p.legalName || p.producerNumber}
                 </option>
               ))}
             </select>
           </label>
-          {error && <div className="alert alert-error">{error}</div>}
+          {error ? <div className="alert alert-error">{error}</div> : null}
           <div className="form-actions">
             <button type="button" className="btn" onClick={() => setModalOpen(false)}>
               Cancelar

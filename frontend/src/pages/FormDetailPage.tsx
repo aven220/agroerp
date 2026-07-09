@@ -10,8 +10,10 @@ import { PinRecordButton } from '../components/guided-workspace/PinRecordButton'
 import { useAuth } from '../context/AuthContext';
 import { updateWorkEntityLabel } from '../lib/workEntityHistory';
 import { useToast } from '../context/ToastContext';
+import { notifyEntityUpdated } from '../lib/entitySync';
 import {
   archiveForm,
+  approveForm,
   bootstrapForms,
   deleteForm,
   duplicateForm,
@@ -19,6 +21,7 @@ import {
   getFormVersionHistory,
   newFormVersion,
   publishForm,
+  rejectForm,
   restoreForm,
   submitFormForReview,
   unpublishForm,
@@ -36,12 +39,13 @@ export function FormDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const toast = useToast();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [form, setForm] = useState<FormDefinition | null>(null);
   const [versions, setVersions] = useState<FormVersionHistoryItem[]>([]);
   const [inBootstrap, setInBootstrap] = useState<boolean | undefined>();
   const [loading, setLoading] = useState(true);
   const [syncChecking, setSyncChecking] = useState(false);
+  const canApproveForm = hasPermission('form:approve');
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -142,6 +146,25 @@ export function FormDetailPage() {
     load();
   }
 
+  async function handleApprove() {
+    if (!form) return;
+    if (!confirm(`¿Aprobar "${form.name}" v${form.version}?`)) return;
+    await approveForm(form.id);
+    notifyEntityUpdated('form', form.id);
+    toast.success('Formulario aprobado.');
+    load();
+  }
+
+  async function handleReject() {
+    if (!form) return;
+    const reason = prompt('Motivo del rechazo (opcional):');
+    if (reason === null) return;
+    await rejectForm(form.id, reason.trim() || undefined);
+    notifyEntityUpdated('form', form.id);
+    toast.info('Formulario rechazado.');
+    load();
+  }
+
   if (loading || !form) {
     return <LoadingState variant="page" message="Cargando formulario…" />;
   }
@@ -233,6 +256,15 @@ export function FormDetailPage() {
             {(form.status === 'draft' || form.status === 'approved') && (
               <button type="button" className="btn btn-primary" onClick={handlePublish}>Publicar</button>
             )}
+            {form.status === 'draft' && canApproveForm ? (
+              <button type="button" className="btn" onClick={handleSubmitReview}>Enviar a revisión</button>
+            ) : null}
+            {form.status === 'in_review' && canApproveForm ? (
+              <>
+                <button type="button" className="btn btn-primary" onClick={handleApprove}>Aprobar</button>
+                <button type="button" className="btn" onClick={handleReject}>Rechazar</button>
+              </>
+            ) : null}
           </div>
         }
       />

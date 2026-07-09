@@ -1,56 +1,68 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { LoadingState } from '../components/ux/LoadingState';
 import { Header } from '../components/layout/Header';
-import { DataTable } from '../components/ui/DataTable';
+import { DataTable, type RowAction } from '../components/ui/DataTable';
 import { Modal } from '../components/ui/Modal';
-import { useResources } from '../hooks/useResources';
-import { createResource, deleteResource } from '../api/resources';
+import { listProducers, type Producer } from '../api/prm';
 import {
-  RESOURCE_TYPES,
-  resourceData,
-  type ProducerData,
-  type PurchaseData,
-  type Resource,
-} from '../types';
+  createCoffeeTicket,
+  listCoffeeTickets,
+  type CoffeeTicket,
+} from '../api/coffee';
+import { createBulkExportAction, createBulkCopyIdsAction } from '../lib/gridBulkActions';
+import type { GridColumnDef } from '../lib/data-grid/types';
+import { notifyEntityUpdated } from '../lib/entitySync';
 
 const today = new Date().toISOString().slice(0, 10);
 
 export function PurchasesPage() {
   const [refresh, setRefresh] = useState(0);
-  const { items: purchases, loading } = useResources(
-    RESOURCE_TYPES.PURCHASE,
-    refresh,
-  );
-  const { items: producers } = useResources(RESOURCE_TYPES.PRODUCER, refresh);
+  const [tickets, setTickets] = useState<CoffeeTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [producers, setProducers] = useState<Producer[]>([]);
+  const [producersLoading, setProducersLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [producerId, setProducerId] = useState('');
-  const [form, setForm] = useState<PurchaseData>({
-    weight_kg: 0,
-    price_per_kg: 0,
-    quality_score: 80,
-    purchase_date: today,
-    notes: '',
-  });
+  const [netWeightKg, setNetWeightKg] = useState(0);
+  const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const loadTickets = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
+    listCoffeeTickets()
+      .then(setTickets)
+      .catch((e: unknown) => {
+        setTickets([]);
+        setLoadError(e instanceof Error ? e.message : 'Error al cargar compras');
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    loadTickets();
+  }, [loadTickets, refresh]);
+
+  useEffect(() => {
+    setProducersLoading(true);
+    listProducers({ limit: 200 })
+      .then((res) => setProducers(res.items))
+      .catch(() => setProducers([]))
+      .finally(() => setProducersLoading(false));
+  }, [refresh]);
+
   const producerMap = useMemo(() => {
     const m = new Map<string, string>();
-    producers.forEach((p) => m.set(p.id, resourceData<ProducerData>(p).name ?? ''));
+    producers.forEach((p) => m.set(p.id, p.legalName || p.producerNumber));
     return m;
   }, [producers]);
 
-  const total = form.weight_kg * form.price_per_kg;
-
   function openCreate() {
     setProducerId(producers[0]?.id ?? '');
-    setForm({
-      weight_kg: 0,
-      price_per_kg: 0,
-      quality_score: 80,
-      purchase_date: today,
-      notes: '',
-    });
+    setNetWeightKg(0);
+    setNotes('');
     setFormError(null);
     setModalOpen(true);
   }
@@ -61,34 +73,19 @@ export function PurchasesPage() {
       setFormError('Seleccione un productor');
       return;
     }
+    const producer = producers.find((p) => p.id === producerId);
     setSaving(true);
     setFormError(null);
     try {
-      const purchaseData = {
-        ...form,
-        name: `Compra ${form.purchase_date}`,
-        total,
-      };
-      const purchase = await createResource({
-        resourceType: RESOURCE_TYPES.PURCHASE,
-        parentId: producerId,
-        data: purchaseData as unknown as Record<string, unknown>,
+      await createCoffeeTicket({
+        producerId,
+        producerName: producer?.legalName,
+        notes: notes || `Registro simple ${today}`,
+        netWeightKg: netWeightKg > 0 ? netWeightKg : undefined,
       });
-
-      await createResource({
-        resourceType: RESOURCE_TYPES.INVENTORY,
-        parentId: purchase.id,
-        data: {
-          name: `Lote ${form.purchase_date}`,
-          stock_kg: form.weight_kg,
-          warehouse: 'Acopio principal',
-          quality_grade: form.quality_score,
-          purchase_id: purchase.id,
-        },
-      });
-
       setModalOpen(false);
       setRefresh((r) => r + 1);
+      notifyEntityUpdated('purchase', producerId);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
@@ -96,88 +93,65 @@ export function PurchasesPage() {
     }
   }
 
-  async function handleDelete(row: Resource) {
-    if (!confirm('¿Eliminar esta compra?')) return;
-    await deleteResource(row.id);
-    setRefresh((r) => r + 1);
-  }
+  const exportColumns = useMemo<GridColumnDef<CoffeeTicket>[]>(() => [
+    { key: 'date', label: 'Fecha', getValue: (t) => t.createdAt?.slice(0, 10) ?? '' },
+    { key: 'producer', label: 'Productor', getValue: (t) => t.producerName ?? producerMap.get(t.producerId ?? '') ?? '' },
+    { key: 'kg', label: 'Peso (kg)', getValue: (t) => t.netWeightKg ?? '' },
+    { key: 'status', label: 'Estado', getValue: (t) => t.status },
+    { key: 'ticket', label: 'Ticket', getValue: (t) => t.ticketKey },
+  ], [producerMap]);
+
+  const bulkActions = useMemo(
+    () => [
+      createBulkExportAction(exportColumns, 'compras-cpep'),
+      createBulkCopyIdsAction<CoffeeTicket>(),
+    ],
+    [exportColumns],
+  );
+
+  const rowActions = useMemo((): RowAction<CoffeeTicket>[] => [], []);
+
+  const columns = useMemo(() => [
+    { key: 'date', label: 'Fecha', render: (t: CoffeeTicket) => t.createdAt?.slice(0, 10) ?? '—' },
+    {
+      key: 'producer',
+      label: 'Productor',
+      render: (t: CoffeeTicket) => t.producerName ?? producerMap.get(t.producerId ?? '') ?? '—',
+    },
+    { key: 'kg', label: 'Peso (kg)', render: (t: CoffeeTicket) => t.netWeightKg ?? '—' },
+    { key: 'status', label: 'Estado', render: (t: CoffeeTicket) => t.status },
+    { key: 'ticket', label: 'Ticket', render: (t: CoffeeTicket) => t.ticketKey },
+  ], [producerMap]);
 
   return (
     <>
       <Header
         title="Compras de café"
-        subtitle="Registro de compras y generación de inventario"
+        subtitle="Tickets de recepción CPEP vinculados a productores PRM"
         actions={
           <button
             type="button"
             className="btn btn-primary"
             onClick={openCreate}
             disabled={producers.length === 0}
+            title={producersLoading ? 'Cargando productores…' : producers.length === 0 ? 'Registre productores en PRM primero' : undefined}
           >
             + Nueva compra
           </button>
         }
       />
 
+      {loadError ? <div className="alert alert-error">{loadError}</div> : null}
+
       {loading ? (
         <LoadingState variant="table" />
       ) : (
-        <DataTable<Resource>
+        <DataTable<CoffeeTicket>
           gridId="purchases"
-          data={purchases}
-          columns={[
-            {
-              key: 'date',
-              label: 'Fecha',
-              render: (r) => resourceData<PurchaseData>(r)?.purchase_date ?? '—',
-            },
-            {
-              key: 'producer',
-              label: 'Productor',
-              render: (r) => producerMap.get(r.parentId ?? '') ?? '—',
-            },
-            {
-              key: 'kg',
-              label: 'Peso (kg)',
-              render: (r) => resourceData<PurchaseData>(r)?.weight_kg ?? '—',
-            },
-            {
-              key: 'quality',
-              label: 'Calidad',
-              render: (r) => resourceData<PurchaseData>(r)?.quality_score ?? '—',
-            },
-            {
-              key: 'price',
-              label: 'Precio/kg',
-              render: (r) =>
-                `$${Number(resourceData<PurchaseData>(r)?.price_per_kg ?? 0).toLocaleString('es-CO')}`,
-            },
-            {
-              key: 'total',
-              label: 'Total',
-              render: (r) => {
-                const d = resourceData<PurchaseData>(r);
-                const t = (d.weight_kg ?? 0) * (d.price_per_kg ?? 0);
-                return `$${t.toLocaleString('es-CO')}`;
-              },
-            },
-            {
-              key: 'actions',
-              label: '',
-              render: (r) => (
-                <button
-                  type="button"
-                  className="btn btn-sm btn-danger"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(r);
-                  }}
-                >
-                  Eliminar
-                </button>
-              ),
-            },
-          ]}
+          data={tickets}
+          bulkActions={bulkActions}
+          rowActions={rowActions}
+          columns={columns}
         />
       )}
 
@@ -197,70 +171,32 @@ export function PurchasesPage() {
               <option value="">Seleccionar...</option>
               {producers.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {resourceData<ProducerData>(p).name}
+                  {p.legalName || p.producerNumber}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            Fecha *
-            <input
-              type="date"
-              value={form.purchase_date}
-              onChange={(e) => setForm({ ...form, purchase_date: e.target.value })}
-              required
-            />
-          </label>
-          <label>
-            Peso (kg) *
+            Peso neto (kg)
             <input
               type="number"
               min="0"
-              step="0.1"
-              value={form.weight_kg || ''}
-              onChange={(e) =>
-                setForm({ ...form, weight_kg: Number(e.target.value) })
-              }
-              required
+              step="0.01"
+              value={netWeightKg}
+              onChange={(e) => setNetWeightKg(Number(e.target.value))}
             />
           </label>
           <label>
-            Calidad (0-100)
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={form.quality_score ?? ''}
-              onChange={(e) =>
-                setForm({ ...form, quality_score: Number(e.target.value) })
-              }
-            />
+            Notas
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </label>
-          <label>
-            Precio por kg *
-            <input
-              type="number"
-              min="0"
-              value={form.price_per_kg || ''}
-              onChange={(e) =>
-                setForm({ ...form, price_per_kg: Number(e.target.value) })
-              }
-              required
-            />
-          </label>
-          <div className="total-preview">
-            Total estimado: <strong>${total.toLocaleString('es-CO')}</strong>
-          </div>
-          <p className="muted small">
-            Al guardar se creará automáticamente un lote en inventario.
-          </p>
-          {formError && <div className="alert alert-error">{formError}</div>}
+          {formError ? <div className="alert alert-error">{formError}</div> : null}
           <div className="form-actions">
             <button type="button" className="btn" onClick={() => setModalOpen(false)}>
               Cancelar
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Registrando...' : 'Registrar compra'}
+              {saving ? 'Guardando...' : 'Registrar ticket'}
             </button>
           </div>
         </form>

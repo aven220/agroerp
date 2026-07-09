@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
-import { DataTable } from '../components/ui/DataTable';
+import { DataTable, type RowAction } from '../components/ui/DataTable';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useAuth } from '../context/AuthContext';
+import { createStandardBulkActions } from '../lib/gridBulkActions';
+import type { GridColumnDef } from '../lib/data-grid/types';
 import {
   deleteLot,
   exportLots,
@@ -77,6 +79,15 @@ export function LotsPage() {
     loadMeta();
   }, [loadMeta]);
 
+  useEffect(() => {
+    const raw = sessionStorage.getItem('agroerp_cmd_filter_lots');
+    if (!raw) return;
+    sessionStorage.removeItem('agroerp_cmd_filter_lots');
+    try {
+      setFilters((f) => ({ ...f, ...JSON.parse(raw), page: 1 }));
+    } catch { /* ignore */ }
+  }, []);
+
   async function handleExport() {
     const result = await exportLots(filters);
     const blob = new Blob([result.csv], { type: 'text/csv' });
@@ -98,6 +109,53 @@ export function LotsPage() {
       setError(err instanceof Error ? err.message : 'No se pudo archivar');
     }
   }
+
+  const exportColumns = useMemo<GridColumnDef<FieldLotProfile>[]>(() => [
+    { key: 'code', label: 'Código', getValue: (r) => r.lotCode },
+    { key: 'name', label: 'Lote', getValue: (r) => r.lotName },
+    { key: 'farm', label: 'Finca', getValue: (r) => r.farmUnit?.farmName ?? '' },
+    { key: 'producer', label: 'Productor', getValue: (r) => r.responsibleProducer?.legalName ?? '' },
+    { key: 'crop', label: 'Cultivo', getValue: (r) => r.agronomicStates?.[0]?.primaryCropCode ?? '' },
+    { key: 'area', label: 'Área (ha)', getValue: (r) => r.totalAreaHa ?? '' },
+    { key: 'status', label: 'Estado', getValue: (r) => STATUS_LABELS[r.status] ?? r.status },
+  ], []);
+
+  const bulkActions = useMemo(
+    () => createStandardBulkActions(exportColumns, 'lotes', (r) => `/lotes/${r.id}`),
+    [exportColumns],
+  );
+
+  const rowActions = useMemo((): RowAction<FieldLotProfile>[] => {
+    const actions: RowAction<FieldLotProfile>[] = [
+      { id: 'view', label: 'Ver', onAction: (r) => navigate(`/lotes/${r.id}`) },
+    ];
+    if (canUpdate) actions.push({ id: 'edit', label: 'Editar', onAction: (r) => navigate(`/lotes/${r.id}/editar`) });
+    if (canDelete) actions.push({ id: 'archive', label: 'Archivar', variant: 'danger', onAction: handleDelete });
+    return actions;
+  }, [canUpdate, canDelete, navigate]);
+
+  const columns = useMemo(() => [
+    { key: 'code', label: 'Código', render: (r: FieldLotProfile) => r.lotCode },
+    { key: 'name', label: 'Lote', render: (r: FieldLotProfile) => r.lotName },
+    { key: 'farm', label: 'Finca', render: (r: FieldLotProfile) => r.farmUnit?.farmName ?? '—' },
+    { key: 'producer', label: 'Productor', render: (r: FieldLotProfile) => r.responsibleProducer?.legalName ?? '—' },
+    { key: 'crop', label: 'Cultivo', render: (r: FieldLotProfile) => r.agronomicStates?.[0]?.primaryCropCode ?? '—' },
+    {
+      key: 'area',
+      label: 'Área (ha)',
+      render: (r: FieldLotProfile) => (r.totalAreaHa != null ? Number(r.totalAreaHa).toFixed(2) : '—'),
+    },
+    {
+      key: 'status',
+      label: 'Estado',
+      render: (r: FieldLotProfile) => (
+        <span className={`badge badge-${r.status}`}>
+          {STATUS_LABELS[r.status] ?? r.status}
+        </span>
+      ),
+    },
+    { key: 'geo', label: 'GPS', render: (r: FieldLotProfile) => (r.centroidLatitude != null ? '✓' : '—') },
+  ], []);
 
   return (
     <>
@@ -185,6 +243,10 @@ export function LotsPage() {
         onExport={handleExport}
         emptyMessage="No se encontraron lotes con los filtros aplicados."
         onRowClick={(r) => navigate(`/lotes/${r.id}`)}
+        bulkActions={bulkActions}
+        rowActions={rowActions}
+        serverFilterState={filters as unknown as Record<string, unknown>}
+        onServerFilterStateApply={(state) => setFilters({ ...(state as LotFilters), page: 1 })}
         toolbar={
           <select
             className="ds-input edw-density-select"
@@ -204,88 +266,7 @@ export function LotsPage() {
             ))}
           </select>
         }
-        columns={[
-          { key: 'code', label: 'Código', render: (r) => r.lotCode },
-          { key: 'name', label: 'Lote', render: (r) => r.lotName },
-          {
-            key: 'farm',
-            label: 'Finca',
-            render: (r) => r.farmUnit?.farmName ?? '—',
-          },
-          {
-            key: 'producer',
-            label: 'Productor',
-            render: (r) => r.responsibleProducer?.legalName ?? '—',
-          },
-          {
-            key: 'crop',
-            label: 'Cultivo',
-            render: (r) => r.agronomicStates?.[0]?.primaryCropCode ?? '—',
-          },
-          {
-            key: 'area',
-            label: 'Área (ha)',
-            render: (r) =>
-              r.totalAreaHa != null ? Number(r.totalAreaHa).toFixed(2) : '—',
-          },
-          {
-            key: 'status',
-            label: 'Estado',
-            render: (r) => (
-              <span className={`badge badge-${r.status}`}>
-                {STATUS_LABELS[r.status] ?? r.status}
-              </span>
-            ),
-          },
-          {
-            key: 'geo',
-            label: 'GPS',
-            render: (r) =>
-              r.centroidLatitude != null ? '✓' : '—',
-          },
-          {
-            key: 'actions',
-            label: 'Acciones',
-            render: (r) => (
-              <div className="row-actions">
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/lotes/${r.id}`);
-                  }}
-                >
-                  Ver
-                </button>
-                {canUpdate ? (
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/lotes/${r.id}/editar`);
-                    }}
-                  >
-                    Editar
-                  </button>
-                ) : null}
-                {canDelete ? (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-danger"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(r);
-                    }}
-                  >
-                    Archivar
-                  </button>
-                ) : null}
-              </div>
-            ),
-          },
-        ]}
+        columns={columns}
       />
       )}
     </>

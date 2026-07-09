@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { EnterpriseDataGrid } from '../data-workspace/EnterpriseDataGrid';
-import type { GridColumnDef } from '../../lib/data-grid/types';
+import type { BulkAction, GridColumnDef, RowAction } from '../../lib/data-grid/types';
 
 export type TableDensity = 'compact' | 'default' | 'comfortable';
 
@@ -8,6 +8,14 @@ interface Column<T> {
   key: string;
   label: string;
   sortable?: boolean;
+  width?: number;
+  minWidth?: number;
+  hidden?: boolean;
+  frozen?: boolean;
+  filterable?: boolean;
+  groupable?: boolean;
+  getValue?: (row: T) => string | number | boolean | null | undefined;
+  getExportValue?: (row: T) => string | number;
   render?: (row: T) => ReactNode;
 }
 
@@ -30,6 +38,11 @@ interface DataTableProps<T> {
   onPageSizeChange?: (size: number) => void;
   onExport?: () => void;
   onQuickSearchChange?: (query: string) => void;
+  bulkActions?: BulkAction<T>[];
+  rowActions?: RowAction<T>[];
+  detailRender?: (row: T) => ReactNode;
+  serverFilterState?: Record<string, unknown>;
+  onServerFilterStateApply?: (state: Record<string, unknown>) => void;
 }
 
 export function DataTable<T extends { id: string }>({
@@ -51,18 +64,31 @@ export function DataTable<T extends { id: string }>({
   onPageSizeChange,
   onExport,
   onQuickSearchChange,
+  bulkActions,
+  rowActions,
+  detailRender,
+  serverFilterState,
+  onServerFilterStateApply,
 }: DataTableProps<T>) {
   const gridColumns = useMemo<GridColumnDef<T>[]>(
     () =>
-      columns.map((col) => ({
-        key: col.key,
-        label: col.label,
-        sortable: col.sortable ?? col.key !== 'actions',
-        filterable: col.key !== 'actions',
-        groupable: col.key !== 'actions',
-        render: col.render,
-      })),
-    [columns],
+      columns
+        .filter((col) => col.key !== 'actions' || !rowActions?.length)
+        .map((col) => ({
+          key: col.key,
+          label: col.label,
+          width: col.width,
+          minWidth: col.minWidth,
+          sortable: col.sortable ?? col.key !== 'actions',
+          filterable: col.filterable ?? col.key !== 'actions',
+          groupable: col.groupable ?? col.key !== 'actions',
+          hidden: col.hidden,
+          frozen: col.frozen,
+          getValue: col.getValue,
+          getExportValue: col.getExportValue,
+          render: col.render,
+        })),
+    [columns, rowActions],
   );
 
   return (
@@ -85,6 +111,13 @@ export function DataTable<T extends { id: string }>({
       emptyMessage={emptyMessage}
       density={density}
       toolbarExtra={toolbar}
+      bulkActions={bulkActions}
+      rowActions={rowActions}
+      detailRender={detailRender}
+      serverFilterState={serverFilterState}
+      onServerFilterStateApply={onServerFilterStateApply}
     />
   );
 }
+
+export type { BulkAction, RowAction, GridColumnDef };
