@@ -26,13 +26,13 @@ function patch(context: WorkflowInspectorContext, next: FormWorkflowDefinition) 
 
 const WORKFLOW_INSPECTOR: InspectorTypeDefinition<WorkflowInspectorContext> = {
   type: 'WORKFLOW',
-  title: () => 'Workflow',
-  subtitle: () => 'metadata.workflow',
+  title: () => 'Aprobaciones',
+  subtitle: () => 'Flujo de revisión al enviar el formulario',
   groups: [
     { id: 'general', title: 'General', priority: 1 },
     { id: 'data', title: 'Estados', priority: 2 },
     { id: 'erp', title: 'Transiciones', priority: 3 },
-    { id: 'advanced', title: 'JSON', priority: 4, collapsed: true },
+    { id: 'advanced', title: 'Avanzado', priority: 4, collapsed: true },
   ],
   properties: [
     {

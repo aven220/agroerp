@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { InspectorProvider, useInspectorContext } from './InspectorContext';
 import { InspectorFooter } from './InspectorFooter';
 import { InspectorHeader, InspectorHeaderSlot } from './InspectorHeader';
@@ -48,21 +49,47 @@ function InspectorViewBody() {
 
 function CompositeInspectorBody() {
   const { compositeView } = useInspectorContext();
+  const [activeType, setActiveType] = useState<string | null>(null);
 
   if (!compositeView) return null;
 
+  const entries = compositeView.entries;
+  const currentType = activeType ?? entries[0]?.view.type ?? null;
+  const activeEntry = entries.find((e) => e.view.type === currentType) ?? entries[0];
+
+  const TAB_LABELS: Record<string, string> = {
+    CAPTURE: 'Captura',
+    ERP_MAPPING: 'Destino',
+    WORKFLOW: 'Aprobaciones',
+  };
+
   return (
     <div className="form-panel inspector-body inspector-body-composite">
-      {compositeView.entries.map((entry) => (
-        <div key={entry.view.type} className="inspector-composite-block">
+      {entries.length > 1 ? (
+        <nav className="inspector-composite-tabs" aria-label="Secciones de configuración">
+          {entries.map((entry) => (
+            <button
+              key={entry.view.type}
+              type="button"
+              className={`inspector-composite-tab${currentType === entry.view.type ? ' active' : ''}`}
+              onClick={() => setActiveType(entry.view.type)}
+              aria-selected={currentType === entry.view.type}
+            >
+              {TAB_LABELS[entry.view.type] ?? entry.view.title}
+            </button>
+          ))}
+        </nav>
+      ) : null}
+
+      {activeEntry ? (
+        <div key={activeEntry.view.type} className="inspector-composite-block">
           <InspectorHeaderSlot
-            title={entry.view.title}
-            subtitle={entry.view.subtitle}
-            typeLabel={entry.view.type}
+            title={activeEntry.view.title}
+            subtitle={activeEntry.view.subtitle}
           />
-          {entry.view.groups.map((group) => (
+          {activeEntry.view.groups.map((group) => (
             <InspectorSection
-              key={`${entry.view.type}-${group.definition.id}`}
+              key={`${activeEntry.view.type}-${group.definition.id}`}
               group={group.definition}
               defaultCollapsed={group.definition.collapsed}
             >
@@ -73,19 +100,21 @@ function CompositeInspectorBody() {
                     className="inspector-property-raw"
                     data-inspector-property={property.id}
                   >
-                    {property.render(entry.selection.context)}
+                    {property.render(activeEntry.selection.context)}
                   </div>
                 ) : (
                   <InspectorProperty key={property.id} id={property.id} label={property.label}>
-                    {property.render(entry.selection.context)}
+                    {property.render(activeEntry.selection.context)}
                   </InspectorProperty>
                 ),
               )}
             </InspectorSection>
           ))}
-          {entry.view.footer ? <footer className="inspector-footer">{entry.view.footer}</footer> : null}
+          {activeEntry.view.footer ? (
+            <footer className="inspector-footer">{activeEntry.view.footer}</footer>
+          ) : null}
         </div>
-      ))}
+      ) : null}
     </div>
   );
 }

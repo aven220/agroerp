@@ -3,6 +3,7 @@ import { fieldTypeUsesOptions, FieldOptionsEditor } from '../../../components/fo
 import { ConditionalRuleEditor } from '../../../components/forms/ConditionalRuleEditor';
 import { DYNAMIC_CATALOGS } from '../../form-dynamic-catalogs';
 import type { StudioComponentDef } from '../../form-field-catalog';
+import { labelFieldType } from '../../studio-labels';
 import { inspectorRegistry } from '../InspectorRegistry';
 import type { InspectorTypeDefinition } from '../types';
 
@@ -18,18 +19,18 @@ export interface FieldInspectorContext {
 const FIELD_INSPECTOR: InspectorTypeDefinition<FieldInspectorContext> = {
   type: 'FIELD',
   title: (context) => context.field.label || context.field.key,
-  subtitle: (context) => `Tipo: ${context.field.type}`,
+  subtitle: (context) => labelFieldType(context.field.type),
   groups: [
     { id: 'general', title: 'General', priority: 1 },
     { id: 'validation', title: 'Validación', priority: 2 },
-    { id: 'appearance', title: 'Apariencia', priority: 3, collapsed: true },
+    { id: 'appearance', title: 'Apariencia', priority: 3 },
     { id: 'data', title: 'Datos', priority: 4 },
     { id: 'advanced', title: 'Avanzado', priority: 5, collapsed: true },
   ],
   properties: [
     {
       id: 'field.key',
-      label: 'Clave',
+      label: 'Identificador interno',
       groupId: 'general',
       priority: 1,
       render: (context) => (

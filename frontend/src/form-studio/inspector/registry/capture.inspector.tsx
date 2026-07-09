@@ -9,11 +9,11 @@ import { inspectorRegistry } from '../InspectorRegistry';
 import type { InspectorTypeDefinition } from '../types';
 
 const ERP_OPTIONS: Array<{ value: CaptureProcessingUiValue; label: string; description: string }> = [
-  { value: '', label: 'Solo captura', description: 'Guarda envíos sin acción ERP automática' },
-  { value: 'PRODUCER_CREATE', label: 'Crear productor', description: 'PRODUCER_CREATE' },
-  { value: 'FARM_CREATE', label: 'Crear finca', description: 'FARM_CREATE' },
-  { value: 'PRODUCTION_CREATE', label: 'Registrar producción', description: 'PRODUCTION_CREATE' },
-  { value: 'LOT_UPDATE', label: 'Actualizar lote', description: 'Reservado para sincronización de lotes' },
+  { value: '', label: 'Solo guardar respuestas', description: 'Los envíos se almacenan sin crear registros automáticos' },
+  { value: 'PRODUCER_CREATE', label: 'Crear productor', description: 'Genera un expediente de productor al enviar' },
+  { value: 'FARM_CREATE', label: 'Crear finca', description: 'Registra una unidad territorial nueva' },
+  { value: 'PRODUCTION_CREATE', label: 'Registrar producción', description: 'Vincula el envío a un registro de producción' },
+  { value: 'LOT_UPDATE', label: 'Actualizar lote', description: 'Actualiza información de un lote existente' },
 ];
 
 const CATALOG_SOURCES = [
@@ -71,13 +71,13 @@ function removeCatalogRequirement(context: CaptureInspectorContext, index: numbe
 
 const CAPTURE_INSPECTOR: InspectorTypeDefinition<CaptureInspectorContext> = {
   type: 'CAPTURE',
-  title: () => 'Capture',
-  subtitle: () => 'Configuración móvil y sincronización',
+  title: () => 'Captura en campo',
+  subtitle: () => 'Dispositivos móviles y sincronización',
   groups: [
-    { id: 'capture', title: 'Offline', priority: 1 },
-    { id: 'general', title: 'GPS', priority: 2 },
+    { id: 'capture', title: 'Sin conexión', priority: 1 },
+    { id: 'general', title: 'Ubicación', priority: 2 },
     { id: 'data', title: 'Multimedia', priority: 3 },
-    { id: 'erp', title: 'Integración ERP', priority: 4 },
+    { id: 'erp', title: 'Al guardar', priority: 4 },
     { id: 'advanced', title: 'Catálogos', priority: 5 },
   ],
   properties: [

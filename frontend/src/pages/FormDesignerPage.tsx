@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
 import { FormLifecycleStepper } from '../components/forms/FormLifecycleStepper';
-import { FlowNextActions } from '../components/flow/FlowNextActions';
-import { FlowProgress } from '../components/flow/FlowProgress';
-import { useToast } from '../context/ToastContext';
 import { ComponentLibraryPanel } from '../form-studio/ComponentLibraryPanel';
 import { FormSimulator } from '../form-studio/FormSimulator';
+import { FormStudioCanvas } from '../form-studio/FormStudioCanvas';
 import { FormStudioPreview, type PreviewDevice } from '../form-studio/FormStudioPreview';
 import { FormStudioRenderer } from '../form-studio/FormStudioRenderer';
+import { FormStudioToolbar } from '../form-studio/FormStudioToolbar';
+import { labelProcessingType, LAYOUT_MODE_LABELS } from '../form-studio/studio-labels';
 import {
   captureValueFromForm,
   captureValueToPayload,
   type CaptureConfigurationValue,
 } from '../form-studio/CaptureConfigurationPanel';
+import { useToast } from '../context/ToastContext';
 import { TemplateLibraryModal } from '../form-studio/TemplateLibraryModal';
 import type { FormStudioTemplate } from '../form-studio/form-templates-library';
 import { findComponentByType } from '../form-studio/form-field-catalog';
@@ -33,7 +33,7 @@ import {
   type FormRenderPayload,
 } from '../api/forms';
 import type { FormCaptureMetadata } from '../api/forms';
-import { FORM_STATUS_LABELS, getNextLifecycleHint } from '../form-studio/form-lifecycle';
+import { FORM_STATUS_LABELS } from '../form-studio/form-lifecycle';
 import { FORM_STUDIO_TEMPLATES } from '../form-studio/form-templates-library';
 import { LayoutBuilder } from '../form-studio/layout/LayoutBuilder';
 import type { FormLayoutNode } from '../form-studio/layout/layout-types';
@@ -308,7 +308,7 @@ export function FormDesignerPage() {
   }
 
   async function handleSaveAsTemplate() {
-    const templateKey = prompt('Clave de plantilla (template_key):', `${formKey}-tpl`);
+    const templateKey = prompt('Nombre interno de la plantilla:', `${formKey}-plantilla`);
     if (!templateKey) return;
     try {
       await saveAsTemplate({
@@ -375,6 +375,26 @@ export function FormDesignerPage() {
   useEffect(() => {
     if (tab === 'preview') refreshPreview();
   }, [tab, previewData, fields, id]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if ((formStatus === 'draft' || isNew) && !saving) handleSave();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'P') {
+        e.preventDefault();
+        setTab('preview');
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'T') {
+        e.preventDefault();
+        setTab('simulator');
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- atajos de teclado del estudio
+  }, [formStatus, isNew, saving]);
 
   const selected = selectedIdx != null ? fields[selectedIdx] : null;
   const learning = selected ? findComponentByType(selected.type) : null;
@@ -451,198 +471,127 @@ export function FormDesignerPage() {
           ]
         : [];
 
-  const tabs: { id: StudioTab; label: string }[] = [
-    { id: 'design', label: 'Diseño' },
-    { id: 'layout', label: 'Layout' },
-    { id: 'components', label: 'Componentes' },
-    { id: 'preview', label: 'Vista previa' },
-    { id: 'simulator', label: 'Probar formulario' },
-    { id: 'rules', label: 'Reglas avanzadas' },
-    ...(!isNew ? [{ id: 'versions' as const, label: 'Versiones' }] : []),
+  const studioTabs = [
+    { id: 'design', label: 'Diseño', icon: '✏️' },
+    { id: 'layout', label: 'Estructura', icon: '📐' },
+    { id: 'preview', label: 'Vista previa', icon: '👁' },
+    { id: 'simulator', label: 'Simular', icon: '🧪' },
+    ...(!isNew ? [{ id: 'versions', label: 'Historial', icon: '📋' }] : []),
   ];
 
+  const canSave = formStatus === 'draft' || isNew;
+  const canPublish = (formStatus === 'draft' || isNew) && Boolean(id || savedFormId);
+
   return (
-    <>
-      <Header
-        title={isNew ? 'Diseñador de formularios — Nuevo' : `Diseñador de formularios — ${name}`}
-        subtitle="Diseñe campos, configure el destino de los datos y publique para uso en web y dispositivos"
-        actions={
-          <div className="row-actions">
-            <button type="button" className="btn" onClick={() => setShowTemplates(true)}>Plantillas</button>
-            {!isNew && formStatus === 'draft' && (
-              <button type="button" className="btn" onClick={handleSubmitReview}>Enviar a revisión</button>
-            )}
-            {!isNew && (
-              <button type="button" className="btn" onClick={handleSaveAsTemplate}>Guardar como plantilla</button>
-            )}
-            <button type="button" className="btn" onClick={() => navigate('/formularios')}>Mis Formularios</button>
-            {(formStatus === 'draft' || isNew) && (id || savedFormId) && !dirty && (
-              <button type="button" className="btn btn-primary" onClick={handlePublishFromDesigner}>Publicar</button>
-            )}
-            <button type="button" className="btn btn-primary" disabled={saving || (formStatus !== 'draft' && !isNew)} onClick={handleSave}>
-              {saving ? 'Guardando…' : dirty || isNew ? 'Guardar borrador' : 'Guardar'}
-            </button>
-          </div>
-        }
+    <div className="fs-studio">
+      <FormStudioToolbar
+        formName={name || 'Nuevo formulario'}
+        formKey={formKey}
+        status={formStatus}
+        dirty={dirty}
+        saving={saving}
+        lastSavedAt={lastSavedAt}
+        activeTab={tab}
+        tabs={studioTabs}
+        canSave={canSave}
+        canPublish={canPublish}
+        onTabChange={(t) => setTab(t as StudioTab)}
+        onBack={() => navigate('/formularios')}
+        onSave={handleSave}
+        onPublish={handlePublishFromDesigner}
+        onPreview={() => setTab('preview')}
+        onSimulate={() => setTab('simulator')}
+        onTemplates={() => setShowTemplates(true)}
+        onHistory={!isNew ? () => setTab('versions') : undefined}
+        onSettings={() => setDesignInspectorTarget('form')}
       />
 
-      <FlowProgress
-        flowId="forms"
-        currentStepId={
-          tab === 'simulator' || tab === 'preview'
-            ? 'test'
-            : isNew
-              ? 'create'
-              : 'design'
-        }
-      />
-
-      {!isNew && (id || savedFormId) ? (
-        <FlowNextActions
-          title="Continuar con…"
-          actions={[
-            {
-              label: tab === 'simulator' ? 'Publicar formulario' : 'Probar en simulador',
-              description:
-                tab === 'simulator'
-                  ? 'Haga el formulario disponible para captura'
-                  : 'Valide respuestas antes de publicar',
-              onClick: () =>
-                tab === 'simulator'
-                  ? handlePublishFromDesigner()
-                  : setTab('simulator'),
-              primary: true,
-              icon: tab === 'simulator' ? '🚀' : '🧪',
-            },
-            {
-              label: 'Ver ficha del formulario',
-              description: 'Estado, versiones y acciones de publicación',
-              to: `/formularios/${id ?? savedFormId}`,
-              icon: '📋',
-            },
-          ]}
-        />
-      ) : null}
-
+      <div className="fs-studio-body">
       <TemplateLibraryModal
         open={showTemplates}
         onClose={() => setShowTemplates(false)}
         onSelect={applyTemplate}
       />
 
-      {templateLoaded && isNew && (
-        <div className="alert alert-info">
-          Plantilla cargada en el editor. Los cambios <strong>no están guardados</strong> hasta presionar «Guardar borrador».
+      {saveError ? <div className="alert alert-danger" style={{ margin: '0.5rem 1rem' }}>{saveError}</div> : null}
+
+      {formStatus !== 'draft' && !isNew ? (
+        <div className="alert alert-warning" style={{ margin: '0.5rem 1rem' }}>
+          Este formulario está publicado. Para editar, cree una{' '}
+          <button type="button" className="btn-link" onClick={handleNewVersion}>nueva versión</button>.
         </div>
-      )}
+      ) : null}
 
-      {dirty && (
-        <div className="alert alert-warning">Hay cambios sin guardar.</div>
-      )}
-
-      {lastSavedAt && !dirty && (
-        <div className="alert alert-success form-save-success panel">
-          <strong>Borrador guardado</strong>
-          {savedVersion != null ? ` · v${savedVersion}` : ''}
-          {' · '}
-          {new Date(lastSavedAt).toLocaleString('es-CO')}
-          <p className="muted">{getNextLifecycleHint(formStatus)}</p>
-          <div className="row-actions" style={{ marginTop: '0.5rem' }}>
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={() => navigate(`/formularios?saved=${savedFormId ?? id}`)}
+      {(tab === 'design' || tab === 'layout') ? (
+        <div className="fs-studio-settings">
+          <label>
+            Presentación
+            <select
+              value={layoutMode}
+              onChange={(e) => { setLayoutMode(e.target.value as typeof layoutMode); markDirty(); }}
+              disabled={formStatus !== 'draft' && !isNew}
             >
-              Ver en Mis Formularios
-            </button>
-            <button type="button" className="btn btn-sm" onClick={() => setTab('preview')}>Vista previa</button>
-            {(formStatus === 'draft' || isNew) && (id || savedFormId) && (
-              <button type="button" className="btn btn-sm btn-primary" onClick={handlePublishFromDesigner}>Publicar ahora</button>
-            )}
-          </div>
-        </div>
-      )}
-
-      <section className="panel form-designer-lifecycle">
-        <FormLifecycleStepper status={formStatus} compact highlightFrom={templateLoaded ? 'template' : undefined} />
-      </section>
-
-      {formStatus !== 'draft' && !isNew && (
-        <div className="alert alert-warning">
-          Estado: <strong>{formStatus}</strong>. Para editar, cree una <button type="button" className="btn-link" onClick={handleNewVersion}>nueva versión</button>.
-        </div>
-      )}
-      {saveError && <div className="alert alert-danger">{saveError}</div>}
-
-      <div className="form-studio-settings-bar panel">
-        <label>
-          Layout
-          <select value={layoutMode} onChange={(e) => { setLayoutMode(e.target.value as typeof layoutMode); markDirty(); }} disabled={formStatus !== 'draft' && !isNew}>
-            <option value="flat">Plano</option>
-            <option value="tabs">Pestañas</option>
-            <option value="accordion">Acordeón</option>
-          </select>
-        </label>
-        <button type="button" className="btn btn-sm" onClick={() => setSections((s) => [...(s ?? []), { key: `sec_${(s?.length ?? 0) + 1}`, title: `Sección ${(s?.length ?? 0) + 1}` }])}>
-          + Sección
-        </button>
-        <button type="button" className="btn btn-sm" onClick={() => setTab('simulator')}>Probar formulario</button>
-      </div>
-
-      <nav className="tab-nav">
-        {tabs.map((t) => (
-          <button key={t.id} type="button" className={`tab-btn ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
-            {t.label}
+              {Object.entries(LAYOUT_MODE_LABELS).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="fs-action-btn"
+            onClick={() =>
+              setSections((s) => [
+                ...(s ?? []),
+                { key: `sec_${(s?.length ?? 0) + 1}`, title: `Sección ${(s?.length ?? 0) + 1}` },
+              ])
+            }
+          >
+            + Sección
           </button>
-        ))}
-      </nav>
+          {!isNew && formStatus === 'draft' ? (
+            <button type="button" className="fs-action-btn" onClick={handleSubmitReview}>
+              Enviar a revisión
+            </button>
+          ) : null}
+          {!isNew ? (
+            <button type="button" className="fs-action-btn" onClick={handleSaveAsTemplate}>
+              Guardar como plantilla
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {tab === 'design' && (
-        <div className="designer-layout">
+        <div className="fs-studio-workspace">
           <ComponentLibraryPanel onAdd={addField} selectedType={selected?.type} />
 
-          <section className="designer-canvas panel">
-            {isNew && (
-              <div className="form-row">
-                <input placeholder="Clave del formulario (ej. registro_productor)" value={formKey} onChange={(e) => { setFormKey(e.target.value); markDirty(); }} title="Identificador único del formulario. Use minúsculas y guiones bajos." />
-                <input placeholder="Nombre" value={name} onChange={(e) => { setName(e.target.value); markDirty(); }} />
-              </div>
-            )}
-            <textarea placeholder="Descripción" value={description} onChange={(e) => { setDescription(e.target.value); markDirty(); }} rows={2} />
-            <div
-              className={`designer-field designer-form-target ${designInspectorTarget === 'form' ? 'selected' : ''}`}
-              onClick={() => {
-                setDesignInspectorTarget('form');
-                setSelectedIdx(null);
-              }}
-            >
-              <strong>{name || formKey || 'Formulario'}</strong>
-              <span className="muted">Captura · Destino de datos · Procesos · Sin conexión · Ubicación · Expedientes</span>
-            </div>
-            <h3>Campos ({fields.length})</h3>
-            {fields.map((f, idx) => (
-              <div
-                key={`${f.key}-${idx}`}
-                className={`designer-field ${designInspectorTarget === 'field' && selectedIdx === idx ? 'selected' : ''}`}
-                onClick={() => {
-                  setDesignInspectorTarget('field');
-                  setSelectedIdx(idx);
-                }}
-              >
-                <strong>{f.label}</strong> <span className="muted">({f.type})</span>
-                {f.visibleWhen ? <span className="badge">condicional</span> : null}
-                <div className="row-actions">
-                  <button type="button" className="btn btn-sm" onClick={(e) => { e.stopPropagation(); moveField(idx, -1); }}>↑</button>
-                  <button type="button" className="btn btn-sm" onClick={(e) => { e.stopPropagation(); moveField(idx, 1); }}>↓</button>
-                  <button type="button" className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); removeField(idx); }}>×</button>
-                </div>
-              </div>
-            ))}
-          </section>
+          <FormStudioCanvas
+            isNew={isNew}
+            formKey={formKey}
+            name={name}
+            description={description}
+            fields={fields}
+            selectedIdx={selectedIdx}
+            formSelected={designInspectorTarget === 'form'}
+            onFormKeyChange={(v) => { setFormKey(v); markDirty(); }}
+            onNameChange={(v) => { setName(v); markDirty(); }}
+            onDescriptionChange={(v) => { setDescription(v); markDirty(); }}
+            onSelectForm={() => {
+              setDesignInspectorTarget('form');
+              setSelectedIdx(null);
+            }}
+            onSelectField={(idx) => {
+              setDesignInspectorTarget('field');
+              setSelectedIdx(idx);
+            }}
+            onMoveField={moveField}
+            onRemoveField={removeField}
+          />
 
           <InspectorPanel
             variant="design"
-            emptyMessage="Seleccione el formulario o un campo para editar propiedades."
+            className="fs-inspector"
+            emptyMessage="Seleccione el formulario o un campo para editar sus propiedades."
             selections={designInspectorSelections}
           />
         </div>
@@ -662,17 +611,6 @@ export function FormDesignerPage() {
             markDirty();
           }}
         />
-      )}
-
-      {tab === 'components' && (
-        <div className="designer-layout">
-          <ComponentLibraryPanel onAdd={(f) => { addField(f); setTab('design'); }} />
-          <section className="panel">
-            <h3>Catálogo de componentes Enterprise</h3>
-            <p className="muted">Clic para agregar al formulario. Clic derecho en un componente (en Diseño) para ver modo aprendizaje.</p>
-            <p>Listas dinámicas en cadena: País → Departamento → Municipio → Vereda → Finca → Lote.</p>
-          </section>
-        </div>
       )}
 
       {tab === 'preview' && (() => {
@@ -696,84 +634,94 @@ export function FormDesignerPage() {
               universalCatalogs: dataMapping.universalCatalogs,
               fieldOrigins: clientUcem,
             };
+        const processingCode = (displayMetadata as FormCaptureMetadata).processingType;
         return (
-        <>
-          <UcemPreviewBanner
-            fieldOrigins={displayUcem.fieldOrigins}
-            targetEntity={displayUcem.entityMapping?.targetEntity}
-          />
-          <div className="panel capture-preview-package">
-            <h3>Vista previa para dispositivos</h3>
-            <p className="muted">Así verá el formulario la app de campo: diseño, configuración y metadatos.</p>
-            <div className="capture-preview-meta">
-              <div>
-                <strong>Acción al enviar</strong>
-                <span>{String((displayMetadata as FormCaptureMetadata).processingType ?? '—')}</span>
+          <div style={{ padding: '1rem' }}>
+            <UcemPreviewBanner
+              fieldOrigins={displayUcem.fieldOrigins}
+              targetEntity={displayUcem.entityMapping?.targetEntity}
+            />
+            <div className="fs-preview-package">
+              <div className="fs-preview-package-item">
+                <strong>Al enviar</strong>
+                <span>{labelProcessingType(processingCode)}</span>
               </div>
-              <div>
-                <strong>Catálogos requeridos</strong>
-                <span>{displayCatalogKeys.length ? displayCatalogKeys.join(', ') : '—'}</span>
+              <div className="fs-preview-package-item">
+                <strong>Catálogos</strong>
+                <span>{displayCatalogKeys.length ? `${displayCatalogKeys.length} requeridos` : 'Ninguno'}</span>
               </div>
-              <div>
+              <div className="fs-preview-package-item">
                 <strong>Sin conexión</strong>
-                <span>
-                  {displaySettings?.allowOffline !== false ? 'Permitido' : 'No permitido'}
-                  {' · '}
-                  {displaySettings?.allowDraft !== false ? 'Borradores permitidos' : 'Sin borradores'}
-                  {' · '}
-                  {displaySettings?.requiresSync ? 'Requiere sincronización' : 'Sincronización opcional'}
-                </span>
+                <span>{displaySettings?.allowOffline !== false ? 'Permitido' : 'No permitido'}</span>
               </div>
-              <div>
-                <strong>Ubicación GPS</strong>
+              <div className="fs-preview-package-item">
+                <strong>Ubicación</strong>
                 <span>
                   {displaySettings?.location?.enabled
-                    ? `Activo${displaySettings.location.required ? ' (obligatorio)' : ''} · precisión ${displaySettings.location.accuracy ?? 50} m`
-                    : 'Desactivado'}
+                    ? `Activa${displaySettings.location.required ? ' (obligatoria)' : ''}`
+                    : 'Desactivada'}
                 </span>
               </div>
             </div>
+            <FormStudioPreview device={previewDevice} onDeviceChange={setPreviewDevice}>
+              <FormStudioRenderer
+                fields={fields}
+                layout={layout}
+                data={previewRender?.resolvedData ?? previewData}
+                serverFields={serverFields.length ? serverFields : undefined}
+                onChange={(key, val) => setPreviewData((d) => ({ ...d, [key]: val }))}
+                onButtonAction={(action, field) => {
+                  if (action === 'reset') setPreviewData({});
+                  if (action === 'link') {
+                    const url = field.metadata?.url ?? field.description;
+                    if (url) window.open(String(url), '_blank', 'noopener,noreferrer');
+                  }
+                }}
+              />
+            </FormStudioPreview>
           </div>
-          <FormStudioPreview device={previewDevice} onDeviceChange={setPreviewDevice}>
-            <FormStudioRenderer
-              fields={fields}
-              layout={layout}
-              data={previewRender?.resolvedData ?? previewData}
-              serverFields={serverFields.length ? serverFields : undefined}
-              onChange={(key, val) => setPreviewData((d) => ({ ...d, [key]: val }))}
-              onButtonAction={(action, field) => {
-                if (action === 'reset') setPreviewData({});
-                if (action === 'link') {
-                  const url = field.metadata?.url ?? field.description;
-                  if (url) window.open(String(url), '_blank', 'noopener,noreferrer');
-                }
-              }}
-            />
-          </FormStudioPreview>
-        </>
         );
       })()}
 
       {tab === 'simulator' && (
-        <FormSimulator fields={fields} layout={layout} formName={name || 'Formulario'} />
+        <div style={{ padding: '1rem' }}>
+          <FormSimulator fields={fields} layout={layout} formName={name || 'Formulario'} />
+        </div>
       )}
 
       {tab === 'rules' && (
-        <div className="panel">
-          <p>Esquema JSON compatible con Web y móvil. Las reglas <code>visibleWhen</code> / <code>requiredWhen</code> se evalúan en servidor y cliente.</p>
-          <h4>Schema</h4>
-          <pre className="code-block">{JSON.stringify(buildSchema(), null, 2)}</pre>
-          <h4>Layout</h4>
-          <pre className="code-block">{JSON.stringify(layout, null, 2)}</pre>
-          <h4>Capture metadata</h4>
-          <pre className="code-block">{JSON.stringify(buildSavePayload().metadata, null, 2)}</pre>
+        <div className="panel" style={{ margin: '1rem' }}>
+          <div className="fs-rules-summary">
+            <div className="fs-rules-card">
+              <h4>Resumen del formulario</h4>
+              <p className="muted">{fields.length} campos · {sections?.length ?? 0} secciones · Presentación: {LAYOUT_MODE_LABELS[layoutMode]}</p>
+              <p className="muted">
+                Campos condicionales: {fields.filter((f) => f.visibleWhen || f.requiredWhen).length}
+              </p>
+            </div>
+            <div className="fs-rules-card">
+              <h4>Al enviar</h4>
+              <p>{labelProcessingType(captureConfig.metadata.processingType)}</p>
+            </div>
+          </div>
+          <details className="fs-rules-dev">
+            <summary>Vista técnica (solo para soporte)</summary>
+            <pre className="code-block" style={{ maxHeight: 240, overflow: 'auto' }}>
+              {JSON.stringify({ fields: fields.length, layout: layout.length }, null, 2)}
+            </pre>
+          </details>
         </div>
       )}
 
       {tab === 'versions' && (
-        <div className="panel">
+        <div className="panel" style={{ margin: '1rem' }}>
+          <section className="form-designer-lifecycle" style={{ marginBottom: '1rem' }}>
+            <FormLifecycleStepper status={formStatus} compact />
+          </section>
           <div className="row-actions" style={{ marginBottom: '1rem' }}>
-            <button type="button" className="btn btn-primary" onClick={handleNewVersion}>Nueva versión (clonar)</button>
+            <button type="button" className="fs-action-btn fs-action-primary" onClick={handleNewVersion}>
+              Nueva versión
+            </button>
           </div>
           <table className="data-table">
             <thead><tr><th>Versión</th><th>Estado</th><th>Creado</th><th>Publicado</th></tr></thead>
@@ -782,14 +730,15 @@ export function FormDesignerPage() {
                 <tr key={v.id}>
                   <td>v{v.version}</td>
                   <td>{FORM_STATUS_LABELS[v.status] ?? v.status}</td>
-                  <td>{new Date(v.createdAt).toLocaleString()}</td>
-                  <td>{v.publishedAt ? new Date(v.publishedAt).toLocaleString() : '—'}</td>
+                  <td>{new Date(v.createdAt).toLocaleString('es-CO')}</td>
+                  <td>{v.publishedAt ? new Date(v.publishedAt).toLocaleString('es-CO') : '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </>
+      </div>
+    </div>
   );
 }
