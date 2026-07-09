@@ -1,6 +1,21 @@
 FROM node:20-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
+# prisma generate no conecta a la DB; run-with-env.mjs exige estas variables en image build.
+ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/agroerp?schema=public" \
+    DATABASE_URL_BPMS="postgresql://build:build@127.0.0.1:5432/agroerp?schema=bpms" \
+    DATABASE_URL_EIP="postgresql://build:build@127.0.0.1:5432/agroerp?schema=eip" \
+    DATABASE_URL_EINT="postgresql://build:build@127.0.0.1:5432/agroerp?schema=eint" \
+    DATABASE_URL_EOPS="postgresql://build:build@127.0.0.1:5432/agroerp?schema=eops" \
+    DATABASE_URL_EATP="postgresql://build:build@127.0.0.1:5432/agroerp?schema=eatp" \
+    DATABASE_URL_EAPP="postgresql://build:build@127.0.0.1:5432/agroerp?schema=eapp" \
+    DATABASE_URL_EIWP="postgresql://build:build@127.0.0.1:5432/agroerp?schema=eiwp" \
+    DATABASE_URL_EPHP="postgresql://build:build@127.0.0.1:5432/agroerp?schema=ephp" \
+    DATABASE_URL_EATR="postgresql://build:build@127.0.0.1:5432/agroerp?schema=eatr" \
+    DATABASE_URL_EACC="postgresql://build:build@127.0.0.1:5432/agroerp?schema=eacc" \
+    DATABASE_URL_EFFM="postgresql://build:build@127.0.0.1:5432/agroerp?schema=effm" \
+    DATABASE_URL_EAIP="postgresql://build:build@127.0.0.1:5432/agroerp?schema=eaip" \
+    DATABASE_URL_EACE="postgresql://build:build@127.0.0.1:5432/agroerp?schema=eace"
 
 # ─── Dependencies ────────────────────────────────────────────────────────────
 FROM base AS deps
