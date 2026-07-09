@@ -117,13 +117,16 @@ function QuickActionsWidget() {
   const { dashboardRole } = useWorkspace();
   const actions = getQuickActionsForRole(dashboardRole);
   return (
-    <div className="ws-quick-actions">
-      {actions.map((a) => (
-        <Link key={a.id} to={a.to} className="ws-quick-action">
-          <span aria-hidden>{a.icon}</span>
-          {a.label}
-        </Link>
-      ))}
+    <div className="ws-quick-actions-wrap">
+      <p className="ws-quick-actions-lead">Acciones principales según su perfil</p>
+      <div className="ws-quick-actions">
+        {actions.map((a) => (
+          <Link key={a.id} to={a.to} className="ws-quick-action">
+            <span aria-hidden>{a.icon}</span>
+            {a.label}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

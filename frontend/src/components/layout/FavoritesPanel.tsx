@@ -42,7 +42,7 @@ export function FavoritesPanel({ onNavigate }: { onNavigate?: () => void }) {
   if (sorted.length === 0) {
     return (
       <p className="favorites-empty" role="status">
-        Marque pantallas con ☆ en el menú para agregarlas aquí.
+        Agregue accesos frecuentes con ☆ junto a cada opción del menú.
       </p>
     );
   }

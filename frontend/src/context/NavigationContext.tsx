@@ -10,6 +10,7 @@ import {
 import { useLocation } from 'react-router-dom';
 import {
   ALL_NAV_ITEMS,
+  DEFAULT_EXPANDED_CATEGORIES,
   NAV_CATEGORIES,
   type NavCategoryId,
   type NavItem,
@@ -157,7 +158,12 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   }, [favorites, filterNavItem]);
 
   const toggleGroup = useCallback((id: NavCategoryId) => {
-    setCollapsedGroups((prev) => ({ ...prev, [id]: !prev[id] }));
+    setCollapsedGroups((prev) => {
+      const cat = NAV_CATEGORIES.find((c) => c.id === id);
+      const defaultCollapsed = cat?.defaultCollapsed ?? !DEFAULT_EXPANDED_CATEGORIES.includes(id);
+      const currentlyCollapsed = prev[id] ?? defaultCollapsed;
+      return { ...prev, [id]: !currentlyCollapsed };
+    });
   }, []);
 
   const expandGroup = useCallback((id: NavCategoryId) => {

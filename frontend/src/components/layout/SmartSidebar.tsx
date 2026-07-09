@@ -1,7 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
-import { findNavItemByPath, type NavCategoryId, type NavItem } from '../../config/navigation';
+import {
+  DEFAULT_EXPANDED_CATEGORIES,
+  findNavItemByPath,
+  type NavCategoryId,
+  type NavItem,
+} from '../../config/navigation';
 import { FavoritesPanel } from './FavoritesPanel';
 
 function NavLinkItem({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
@@ -88,7 +93,7 @@ export function SmartSidebar() {
           <div className="brand-logo" aria-hidden>A</div>
           <div>
             <strong>AGROERP</strong>
-            <span>Enterprise Platform</span>
+            <span>Gestión agrícola empresarial</span>
           </div>
           <button
             type="button"
@@ -102,20 +107,25 @@ export function SmartSidebar() {
 
         <nav className="sidebar-nav" aria-label="Menú por áreas">
           {visibleCategories.map((category) => {
-            const collapsed = collapsedGroups[category.id] ?? (category.id !== 'home' && category.id !== 'favorites');
+            const defaultCollapsed =
+              category.defaultCollapsed ?? !DEFAULT_EXPANDED_CATEGORIES.includes(category.id);
+            const collapsed = collapsedGroups[category.id] ?? defaultCollapsed;
             const active = isGroupActive(category.id, category.items);
             const isSingle = category.items.length === 1 && category.id === 'home';
 
             if (isSingle) {
               return (
-                <div key={category.id} className="nav-category">
+                <div key={category.id} className="nav-category nav-category-single">
                   <NavLinkItem item={category.items[0]} onNavigate={closeMobile} />
                 </div>
               );
             }
 
             return (
-              <div key={category.id} className={`nav-category${active ? ' has-active' : ''}`}>
+              <div
+                key={category.id}
+                className={`nav-category${active ? ' has-active' : ''}${category.id === 'advanced' ? ' nav-category-advanced' : ''}`}
+              >
                 <button
                   type="button"
                   className={`nav-category-header${collapsed ? ' collapsed' : ''}`}
@@ -124,8 +134,8 @@ export function SmartSidebar() {
                 >
                   <span className="nav-category-icon" aria-hidden>{category.icon}</span>
                   <span className="nav-category-label">{category.label}</span>
-                  {category.id !== 'favorites' ? (
-                    <span className="nav-category-count">{category.items.length}</span>
+                  {!category.hideCount && category.items.length > 0 ? (
+                    <span className="nav-category-count" aria-hidden>{category.items.length}</span>
                   ) : null}
                   <span className="nav-category-chevron" aria-hidden>{collapsed ? '▸' : '▾'}</span>
                 </button>

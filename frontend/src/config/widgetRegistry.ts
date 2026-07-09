@@ -74,7 +74,7 @@ const w = (
 
 export const WIDGET_REGISTRY: WidgetDefinition[] = [
   w('widget-search', 'search', 'Búsqueda global', '⌕', { defaultW: 12, defaultH: 1, description: 'Acceso rápido al buscador empresarial' }),
-  w('widget-quick-actions', 'quick-actions', 'Acciones rápidas', '⚡', { defaultW: 12, defaultH: 1 }),
+  w('widget-quick-actions', 'quick-actions', '¿Qué desea hacer hoy?', '⚡', { defaultW: 12, defaultH: 1 }),
   w('widget-ai', 'ai-assistant', 'Asistente IA', '🤖', { defaultW: 6, defaultH: 3, description: 'Consultas, KPIs y resúmenes' }),
   w('widget-kpi-overview', 'kpi-overview', 'Indicadores operativos', '📊', { kpiKey: 'overview', defaultW: 12, defaultH: 2, refreshMs: 60000 }),
   w('widget-kpi-purchases', 'kpi-overview', 'KPIs Compras', '☕', { kpiKey: 'purchases', defaultW: 6, defaultH: 2, roles: ['purchasing', 'agricultural'], refreshMs: 60000 }),
@@ -259,22 +259,27 @@ export const ROLE_WORKSPACE_DEFAULTS: Record<DashboardRole, WorkspaceView[]> = {
   ],
 };
 
+/** Acciones principales por rol — ordenadas por frecuencia de uso; máx. 5 visibles */
 export const QUICK_ACTIONS: Array<{ id: string; label: string; to: string; icon: string; roles?: DashboardRole[] }> = [
-  { id: 'qa-purchase', label: 'Nueva compra', to: '/compras/wizard', icon: '☕', roles: ['purchasing', 'agricultural', 'admin', 'default'] },
+  { id: 'qa-producer', label: 'Registrar productor', to: '/productores/nuevo', icon: '👤', roles: ['agricultural', 'purchasing', 'admin', 'default'] },
+  { id: 'qa-lot', label: 'Registrar lote', to: '/lotes/nuevo', icon: '📍', roles: ['agricultural', 'admin', 'default'] },
+  { id: 'qa-form', label: 'Crear formulario', to: '/formularios/nuevo', icon: '📝', roles: ['agricultural', 'quality', 'admin', 'default'] },
+  { id: 'qa-inbox', label: 'Bandeja de aprobaciones', to: '/procesos/bandeja', icon: '📥', roles: ['admin', 'default', 'executive', 'production'] },
+  { id: 'qa-purchase', label: 'Registrar compra', to: '/compras/wizard', icon: '☕', roles: ['purchasing', 'agricultural', 'admin'] },
+  { id: 'qa-farm', label: 'Registrar finca', to: '/fincas/nueva', icon: '🌿', roles: ['agricultural', 'admin'] },
   { id: 'qa-sale', label: 'Nueva venta', to: '/comercial/pedidos', icon: '💼', roles: ['sales', 'crm', 'executive'] },
   { id: 'qa-customer', label: 'Nuevo cliente', to: '/comercial/clientes', icon: '👤', roles: ['sales', 'crm'] },
-  { id: 'qa-product', label: 'Nuevo producto', to: '/inventario/articulos', icon: '📦', roles: ['inventory', 'logistics'] },
+  { id: 'qa-product', label: 'Nuevo artículo', to: '/inventario/articulos', icon: '📦', roles: ['inventory', 'logistics'] },
   { id: 'qa-order', label: 'Nueva orden', to: '/comercial/pedidos', icon: '📋', roles: ['sales', 'production'] },
-  { id: 'qa-lot', label: 'Nuevo lote', to: '/lotes/nuevo', icon: '📍', roles: ['agricultural', 'admin', 'default'] },
-  { id: 'qa-labor', label: 'Nueva labor', to: '/lotes', icon: '🌱', roles: ['agricultural'] },
-  { id: 'qa-asset', label: 'Nuevo activo', to: '/gestion-activos', icon: '🏗', roles: ['maintenance', 'admin'] },
+  { id: 'qa-labor', label: 'Actividad de campo', to: '/formularios/recoleccion', icon: '🌱', roles: ['agricultural'] },
+  { id: 'qa-asset', label: 'Nuevo activo', to: '/gestion-activos', icon: '🏗', roles: ['maintenance'] },
   { id: 'qa-employee', label: 'Nuevo empleado', to: '/rrhh', icon: '👥', roles: ['hr', 'admin'] },
-  { id: 'qa-request', label: 'Nueva solicitud', to: '/portal/solicitudes', icon: '📝', roles: ['hr', 'default', 'admin'] },
-  { id: 'qa-producer', label: 'Nuevo productor', to: '/productores/nuevo', icon: '👤', roles: ['agricultural', 'purchasing', 'default'] },
 ];
 
-export function getQuickActionsForRole(role: DashboardRole) {
-  return QUICK_ACTIONS.filter((a) => !a.roles || a.roles.includes(role));
+const QUICK_ACTIONS_LIMIT = 5;
+
+export function getQuickActionsForRole(role: DashboardRole, limit = QUICK_ACTIONS_LIMIT) {
+  return QUICK_ACTIONS.filter((a) => !a.roles || a.roles.includes(role)).slice(0, limit);
 }
 
 export const ROLE_LABELS: Record<DashboardRole, string> = {

@@ -19,7 +19,7 @@ export function DashboardPage() {
     <>
       <Header
         title="Inicio"
-        subtitle={`Workspace · ${ROLE_LABELS[dashboardRole]} · ${user?.firstName ?? ''}`}
+        subtitle={`Bienvenido, ${user?.firstName ?? 'usuario'} · ${ROLE_LABELS[dashboardRole]}`}
       />
       <DashboardWorkspace />
     </>
