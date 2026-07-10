@@ -132,7 +132,7 @@ export function WorkflowInboxPage() {
         actions={
           <PageActions>
             <Link to="/procesos" className="btn">Procesos</Link>
-            <Link to="/procesos/instancias" className="btn">Instancias</Link>
+            <Link to="/procesos/instancias" className="btn">Solicitudes</Link>
             <button type="button" className="btn" onClick={load}>Actualizar</button>
           </PageActions>
         }
@@ -155,7 +155,7 @@ export function WorkflowInboxPage() {
               </button>
             ) : (
               <Link to="/procesos/instancias" className="btn btn-sm btn-primary">
-                Ver instancias
+                Ver solicitudes
               </Link>
             )}
             <button type="button" className="btn btn-sm" onClick={() => setLastCompleted(null)}>

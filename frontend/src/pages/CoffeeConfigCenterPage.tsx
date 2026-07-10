@@ -1,45 +1,94 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import { HubToolbar } from '../components/layout/HubToolbar';
+import {
+  PageLayout,
+  PageHeader,
+  PageSection,
+  PageSummary,
+  MetricCard,
+  PageState,
+} from '../components/page';
 import { getCoffeeConfigCenter, seedCoffeeConfig } from '../api/coffee';
 
 export function CoffeeConfigCenterPage() {
   const [dash, setDash] = useState<Record<string, unknown> | null>(null);
-  const reload = () => getCoffeeConfigCenter().then(setDash);
-  useEffect(() => { reload(); }, []);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+
+  const reload = () =>
+    getCoffeeConfigCenter()
+      .then(setDash)
+      .catch((e) => setError(e instanceof Error ? e.message : 'No se pudo cargar la configuración'));
+
+  useEffect(() => {
+    reload();
+  }, []);
+
+  if (!dash && !error) {
+    return <PageState variant="loading" loadingVariant="dashboard" message="Cargando configuración…" />;
+  }
+
+  const catalogCounts = (dash?.catalogCounts ?? {}) as Record<string, unknown>;
+  const filteredCounts = Object.entries(catalogCounts).filter(([key]) => {
+    if (!search.trim()) return true;
+    return key.toLowerCase().includes(search.toLowerCase());
+  });
 
   return (
     <>
-      <Header
+      <PageHeader
         title="Centro de configuración — Compras café"
         subtitle="Catálogos, parámetros y reglas de recepción"
-        actions={
-          <div className="row-actions">
-            <button type="button" className="btn" onClick={() => seedCoffeeConfig().then(reload)}>Sembrar defaults</button>
-            <Link to="/compras/config/catalogos" className="btn">Catálogos</Link>
-            <Link to="/compras/config/parametros" className="btn">Parámetros</Link>
-            <Link to="/compras/config/precios" className="btn">Precios</Link>
-            <Link to="/compras/config/centros" className="btn">Centros</Link>
-            <Link to="/compras/config/validaciones" className="btn">Validaciones</Link>
-            <Link to="/compras/config/cambios" className="btn">Historial</Link>
-            <Link to="/compras" className="btn">Compras</Link>
-          </div>
-        }
+        showExperience={false}
       />
-      {dash && (
-        <div className="kpi-grid kpi-grid-lg">
-          <div className="kpi-card kpi-card-primary"><span className="kpi-label">Catálogos</span><span className="kpi-value">{String(dash.totalCatalogEntries)}</span></div>
-          <div className="kpi-card"><span className="kpi-label">Activos</span><span className="kpi-value">{String(dash.activeCatalogEntries)}</span></div>
-          <div className="kpi-card"><span className="kpi-label">Parámetros</span><span className="kpi-value">{String(dash.parameters)}</span></div>
-          <div className="kpi-card"><span className="kpi-label">Reglas recepción</span><span className="kpi-value">{String(dash.receptionRules)}</span></div>
-          <div className="kpi-card"><span className="kpi-label">Centros compra</span><span className="kpi-value">{String(dash.purchaseCenters)}</span></div>
-          <div className="kpi-card"><span className="kpi-label">Precios</span><span className="kpi-value">{String(dash.priceConfigs)}</span></div>
-        </div>
-      )}
-      <section className="panel">
-        <h3>Conteo por catálogo</h3>
-        <pre className="code-block">{JSON.stringify(dash?.catalogCounts ?? {}, null, 2)}</pre>
-      </section>
+      <PageLayout
+        toolbar={
+          <HubToolbar
+            primaryAction={{ label: 'Catálogos', to: '/compras/config/catalogos' }}
+            searchPlaceholder="Buscar catálogo…"
+            searchValue={search}
+            onSearchChange={setSearch}
+            moreActions={[
+              {
+                label: 'Cargar configuración inicial',
+                onClick: () => seedCoffeeConfig().then(reload).catch((e) => setError(e.message)),
+              },
+              { label: 'Parámetros', to: '/compras/config/parametros' },
+              { label: 'Precios', to: '/compras/config/precios' },
+              { label: 'Centros', to: '/compras/config/centros' },
+              { label: 'Validaciones', to: '/compras/config/validaciones' },
+              { label: 'Historial', to: '/compras/config/cambios' },
+              { label: 'Compras', to: '/compras' },
+            ]}
+          />
+        }
+      >
+        {error ? <PageState variant="error" message={error} /> : null}
+
+        {dash ? (
+          <PageSummary>
+            <MetricCard label="Catálogos" value={String(dash.totalCatalogEntries)} tone="blue" />
+            <MetricCard label="Activos" value={String(dash.activeCatalogEntries)} tone="green" />
+            <MetricCard label="Parámetros" value={String(dash.parameters)} />
+            <MetricCard label="Reglas recepción" value={String(dash.receptionRules)} />
+            <MetricCard label="Centros compra" value={String(dash.purchaseCenters)} tone="teal" />
+            <MetricCard label="Precios" value={String(dash.priceConfigs)} tone="coffee" />
+          </PageSummary>
+        ) : null}
+
+        <PageSection title="Conteo por catálogo">
+          {filteredCounts.length === 0 ? (
+            <PageState
+              variant="empty"
+              title="Sin catálogos"
+              message="No hay conteos que coincidan con la búsqueda."
+              loadingVariant="inline"
+            />
+          ) : (
+            <pre className="code-block">{JSON.stringify(Object.fromEntries(filteredCounts), null, 2)}</pre>
+          )}
+        </PageSection>
+      </PageLayout>
     </>
   );
 }

@@ -1,97 +1,113 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
-import { getCoffeeCenter, type CoffeeDashboard } from '../api/coffee';
+import { HubToolbar } from '../components/layout/HubToolbar';
+import { PageLayout, PageSection, PageSummary, MetricCard } from '../components/page';
+import { EnterpriseDataGrid } from '../components/data-workspace/EnterpriseDataGrid';
+import type { GridColumnDef, RowAction } from '../lib/data-grid/types';
+import { getCoffeeCenter, type CoffeeDashboard, type CoffeeTicket } from '../api/coffee';
 import { LoadingState } from '../components/ux/LoadingState';
+import { labelTicketStatus } from '../lib/productLabels';
 
+/**
+ * PM-25 — Hub de compras simplificado (máx. Nueva acción · Buscar · Filtros · Más acciones)
+ */
 export function CoffeeCenterPage() {
+  const navigate = useNavigate();
   const [dash, setDash] = useState<CoffeeDashboard | null>(null);
-  useEffect(() => { getCoffeeCenter().then(setDash); }, []);
-  if (!dash) return <LoadingState variant="page" message="Cargando compras de café..." />;
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    getCoffeeCenter().then(setDash);
+  }, []);
+
+  if (!dash) return <LoadingState variant="page" message="Cargando compras de café…" />;
+
+  const queue = (dash.queue ?? []).filter((t) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      t.ticketKey?.toLowerCase().includes(q) ||
+      t.producerName?.toLowerCase().includes(q) ||
+      labelTicketStatus(t.status).toLowerCase().includes(q)
+    );
+  });
+
+  const gridRows = queue.slice(0, 12).map((t) => ({ ...t, id: t.id || t.ticketKey }));
+
+  const columns: GridColumnDef<CoffeeTicket>[] = [
+    { key: 'ticketKey', label: 'Ticket', getValue: (r) => r.ticketKey },
+    { key: 'producerName', label: 'Productor', getValue: (r) => r.producerName ?? '—' },
+    { key: 'status', label: 'Estado', render: (r) => labelTicketStatus(r.status) },
+  ];
+
+  const rowActions: RowAction<CoffeeTicket>[] = [
+    {
+      id: 'attend',
+      label: 'Atender',
+      onAction: (r) => navigate(`/compras/pesaje?ticket=${encodeURIComponent(r.ticketKey)}`),
+    },
+  ];
 
   return (
     <>
       <Header
         title="Compras de café"
-        subtitle="Recepción, pesaje, liquidación y trazabilidad del café"
-        actions={
-          <div className="row-actions">
-            <Link to="/compras/wizard" className="btn">Wizard recepción</Link>
-            <Link to="/compras/recepcion" className="btn">Recepción</Link>
-            <Link to="/compras/dia" className="btn">Compras del día</Link>
-            <Link to="/compras/cola" className="btn">Cola</Link>
-            <Link to="/compras/pesaje" className="btn">Pesaje</Link>
-            <Link to="/compras/pesaje/monitor" className="btn">Monitor balanzas</Link>
-            <Link to="/compras/balanzas" className="btn">Balanzas</Link>
-            <Link to="/compras/pesaje/historial" className="btn">Historial pesajes</Link>
-            <Link to="/compras/calidad" className="btn">Calidad</Link>
-            <Link to="/compras/calidad/historial" className="btn">Historial calidad</Link>
-            <Link to="/compras/calidad/muestras" className="btn">Muestras</Link>
-            <Link to="/compras/calidad/indicadores" className="btn">Indicadores calidad</Link>
-            <Link to="/compras/liquidaciones" className="btn">Liquidaciones</Link>
-            <Link to="/compras/liquidaciones/reportes" className="btn">Reportes liquidación</Link>
-            <Link to="/compras/inventario" className="btn">Inventario</Link>
-            <Link to="/compras/trazabilidad" className="btn">Trazabilidad</Link>
-            <Link to="/compras/inventario/kardex" className="btn">Kardex</Link>
-            <Link to="/compras/inventario/auditoria" className="btn">Auditoría inventario</Link>
-            <Link to="/compras/historial" className="btn">Historial</Link>
-            <Link to="/compras/consultas" className="btn">Consultas</Link>
-            <Link to="/compras/ops" className="btn">Operations Center</Link>
-            <Link to="/compras/ops/ejecutivo" className="btn">Dashboard ejecutivo</Link>
-            <Link to="/compras/ops/analitica" className="btn">Analítica</Link>
-            <Link to="/compras/ops/reportes" className="btn">Reportes</Link>
-            <Link to="/compras/kpis" className="btn">KPIs</Link>
-            <Link to="/compras/auditoria" className="btn">Auditoría</Link>
-            <Link to="/compras/config" className="btn">Configuración</Link>
-            <Link to="/compras/simple" className="btn">Vista simple</Link>
-          </div>
-        }
+        subtitle="Recepción, pesaje, calidad, liquidación e inventario"
+        showExperience={false}
       />
-      <div className="kpi-grid kpi-grid-lg">
-        <div className="kpi-card kpi-card-primary"><span className="kpi-label">Tickets hoy</span><span className="kpi-value">{dash.ticketsToday}</span></div>
-        <div className="kpi-card"><span className="kpi-label">En cola</span><span className="kpi-value">{dash.queueLength}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Pesados</span><span className="kpi-value">{dash.weighedToday}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Calidad</span><span className="kpi-value">{dash.qualityToday}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Liquidaciones</span><span className="kpi-value">{dash.settlementsToday}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Inventario</span><span className="kpi-value">{dash.inventoryToday}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Kg hoy</span><span className="kpi-value">{dash.kgToday.toFixed(0)}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Monto hoy</span><span className="kpi-value">${dash.amountToday.toLocaleString()}</span></div>
-      </div>
-      {dash.operations ? (
-        <section className="panel grid-4">
-          <div><strong>Atención prom.</strong><div>{String((dash.operations as Record<string, unknown>).avgAttentionMinutes ?? 0)} min</div></div>
-          <div><strong>Pesaje prom.</strong><div>{String((dash.operations as Record<string, unknown>).avgWeighingMinutes ?? 0)} min</div></div>
-          <div><strong>Calidad prom.</strong><div>{String((dash.operations as Record<string, unknown>).avgQualityMinutes ?? 0)} min</div></div>
-          <div><strong>Proceso total</strong><div>{String((dash.operations as Record<string, unknown>).avgTotalProcessMinutes ?? 0)} min</div></div>
-        </section>
-      ) : null}
-      {(dash.alerts?.length ?? 0) > 0 && (
-        <section className="panel">
-          <h3>Alertas operativas</h3>
-          <ul>
-            {(dash.alerts ?? []).slice(0, 5).map((a, i) => (
-              <li key={i}>[{String(a.severity)}] {String(a.title)} — {String(a.message)}</li>
-            ))}
-          </ul>
-          <Link to="/compras/ops">Ver Operations Center</Link>
-        </section>
-      )}
-      {dash.suggestions.length > 0 && (
-        <section className="panel">
-          <h3>IA — recomendaciones</h3>
-          <table className="data-table data-table-compact">
-            <thead><tr><th>Tipo</th><th>Recomendación</th></tr></thead>
-            <tbody>
-              {dash.suggestions.map((s, i) => (
-                <tr key={i}>
-                  <td>{String(s.type ?? '')}</td>
-                  <td>{String(s.recommendation ?? '')}</td>
-                </tr>
+      <PageLayout
+        toolbar={
+          <HubToolbar
+            primaryAction={{ label: 'Nueva recepción', to: '/compras/recepcion' }}
+            searchPlaceholder="Buscar ticket o productor…"
+            searchValue={search}
+            onSearchChange={setSearch}
+            moreActions={[
+              { label: 'Pesaje', to: '/compras/pesaje' },
+              { label: 'Calidad', to: '/compras/calidad' },
+              { label: 'Liquidaciones', to: '/compras/liquidaciones' },
+              { label: 'Inventario café', to: '/compras/inventario' },
+              { label: 'Balanzas', to: '/compras/balanzas' },
+              { label: 'Configuración', to: '/compras/config' },
+              { label: 'Trazabilidad', to: '/compras/trazabilidad' },
+              { label: 'Reportes', to: '/compras/ops/reportes' },
+            ]}
+          />
+        }
+      >
+        <PageSummary>
+          <MetricCard label="Tickets hoy" value={dash.ticketsToday} tone="coffee" />
+          <MetricCard label="En cola" value={dash.queueLength} />
+          <MetricCard label="Pesados" value={dash.weighedToday} />
+          <MetricCard label="Calidad" value={dash.qualityToday} tone="green" />
+          <MetricCard label="Liquidaciones" value={dash.settlementsToday} />
+          <MetricCard label="Kg hoy" value={dash.kgToday.toFixed(0)} tone="teal" />
+        </PageSummary>
+
+        <PageSection title="Cola del día">
+          <EnterpriseDataGrid
+            gridId="coffee-center-queue"
+            columns={columns}
+            data={gridRows}
+            selectable={false}
+            rowActions={rowActions}
+            emptyMessage="No hay tickets que coincidan con la búsqueda."
+          />
+        </PageSection>
+
+        {(dash.alerts?.length ?? 0) > 0 ? (
+          <PageSection title="Alertas operativas">
+            <ul>
+              {(dash.alerts ?? []).slice(0, 5).map((a, i) => (
+                <li key={i}>
+                  [{String(a.severity)}] {String(a.title)} — {String(a.message)}
+                </li>
               ))}
-            </tbody>
-          </table>
-        </section>
-      )}
+            </ul>
+          </PageSection>
+        ) : null}
+      </PageLayout>
     </>
   );
 }

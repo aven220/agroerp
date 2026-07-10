@@ -13,6 +13,8 @@ import {
   FormActions,
   EmptyPanel,
 } from '../components/page';
+import { EnterpriseDataGrid } from '../components/data-workspace/EnterpriseDataGrid';
+import type { GridColumnDef, RowAction } from '../lib/data-grid/types';
 import {
   captureWeighingReading,
   confirmWeighingGross,
@@ -29,6 +31,7 @@ import {
   verifyWeighingScale,
   type CoffeeTicket,
 } from '../api/coffee';
+import { labelTicketStatus } from '../lib/productLabels';
 import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 import { useIsMounted } from '../hooks/useIsMounted';
 
@@ -167,6 +170,26 @@ export function CoffeeWeighingPage() {
   const ticket = session?.ticket as Record<string, unknown> | undefined;
   const scale = session?.scale as Record<string, unknown> | undefined;
 
+  const gridRows = pending.map((t) => ({ ...t, id: t.id || t.ticketKey }));
+
+  const columns: GridColumnDef<CoffeeTicket>[] = [
+    { key: 'ticketKey', label: 'Ticket', getValue: (r) => r.ticketKey },
+    { key: 'producerName', label: 'Productor', getValue: (r) => r.producerName ?? '—' },
+    { key: 'turnNumber', label: 'Turno', getValue: (r) => r.turnNumber ?? '—' },
+    { key: 'status', label: 'Estado', render: (r) => labelTicketStatus(r.status) },
+  ];
+
+  const rowActions: RowAction<CoffeeTicket>[] = [
+    {
+      id: 'start-weighing',
+      label: 'Iniciar pesaje',
+      onAction: (r) => {
+        if (busy) return;
+        start(r.ticketKey);
+      },
+    },
+  ];
+
   return (
     <PageLayout>
       <PageHeader
@@ -195,34 +218,14 @@ export function CoffeeWeighingPage() {
         {pending.length === 0 ? (
           <EmptyPanel title="Sin tickets pendientes" description="No hay tickets en cola de pesaje." />
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Ticket</th>
-                  <th>Productor</th>
-                  <th>Turno</th>
-                  <th>Estado</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {pending.map((t) => (
-                  <tr key={t.id}>
-                    <td>{t.ticketKey}</td>
-                    <td>{t.producerName ?? '—'}</td>
-                    <td>{t.turnNumber ?? '—'}</td>
-                    <td>{t.status}</td>
-                    <td>
-                      <button className="btn" disabled={busy} onClick={() => start(t.ticketKey)}>
-                        Iniciar pesaje
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <EnterpriseDataGrid
+            gridId="coffee-weighing-queue"
+            columns={columns}
+            data={gridRows}
+            selectable={false}
+            rowActions={rowActions}
+            emptyMessage="No hay tickets en cola de pesaje."
+          />
         )}
       </PageSection>
 

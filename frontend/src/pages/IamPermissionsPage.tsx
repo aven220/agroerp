@@ -53,7 +53,7 @@ export function IamPermissionsPage() {
         actions={
           <PageActions>
             <Link to="/iam" className="btn">
-              Centro de seguridad
+              Usuarios y accesos
             </Link>
           </PageActions>
         }

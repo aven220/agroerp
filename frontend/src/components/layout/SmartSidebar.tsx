@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
+import { useExperienceCenterOptional } from '../../context/ExperienceCenterContext';
 import {
   DEFAULT_EXPANDED_CATEGORIES,
   findNavItemByPath,
@@ -46,6 +47,7 @@ function NavLinkItem({ item, onNavigate }: { item: NavItem; onNavigate?: () => v
 export function SmartSidebar() {
   const { user } = useAuth();
   const location = useLocation();
+  const experience = useExperienceCenterOptional();
   const {
     visibleCategories,
     collapsedGroups,
@@ -57,7 +59,10 @@ export function SmartSidebar() {
   const closeMobile = () => setSidebarOpen(false);
 
   const isGroupActive = (categoryId: NavCategoryId, items: NavItem[]) => {
-    if (categoryId === 'home') return location.pathname === '/';
+    if (categoryId === 'home') {
+      const homePaths = ['/', '/operacion', '/gerencia', '/implementacion'];
+      return homePaths.includes(location.pathname);
+    }
     if (categoryId === 'favorites') {
       return items.some((item) => {
         const match = findNavItemByPath(location.pathname);
@@ -66,9 +71,14 @@ export function SmartSidebar() {
     }
     return items.some((item) => {
       const match = findNavItemByPath(location.pathname);
-      return match?.id === item.id;
+      return match?.id === item.id || location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
     });
   };
+
+  const packageLabel =
+    experience?.packageId === 'coop-cafe-co'
+      ? 'Cooperativa cafetera'
+      : 'Plataforma completa';
 
   return (
     <>
@@ -93,7 +103,10 @@ export function SmartSidebar() {
           <div className="brand-logo" aria-hidden>A</div>
           <div>
             <strong>AGROERP</strong>
-            <span>Gestión agrícola empresarial</span>
+            <span>{packageLabel}</span>
+            {experience ? (
+              <span className="sidebar-center-badge">{experience.centerMeta.shortLabel}</span>
+            ) : null}
           </div>
           <button
             type="button"

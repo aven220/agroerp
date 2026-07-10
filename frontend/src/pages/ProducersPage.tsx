@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSummary,
+  MetricCard,
+  PageState,
+} from '../components/page';
 import { DataTable, type RowAction } from '../components/ui/DataTable';
-import { EmptyState } from '../components/ui/EmptyState';
 import { useAuth } from '../context/AuthContext';
 import { createStandardBulkActions } from '../lib/gridBulkActions';
 import type { GridColumnDef } from '../lib/data-grid/types';
@@ -277,13 +283,14 @@ export function ProducersPage() {
 
   return (
     <>
-      <Header
+      <PageHeader
         title="Productores"
         subtitle="Registre y administre los productores de su organización"
+        showExperience={false}
         actions={
-          <div className="row-actions">
+          <PageActions>
             <Link to="/productores/dashboard" className="btn">
-              Dashboard
+              Indicadores
             </Link>
             <Link to="/productores/mapa" className="btn">
               Mapa
@@ -297,67 +304,55 @@ export function ProducersPage() {
                 + Nuevo productor
               </button>
             ) : null}
-          </div>
+          </PageActions>
         }
       />
+      <PageLayout>
+        {dashboard ? (
+          <PageSummary>
+            <MetricCard label="Total" value={dashboard.kpis.total} />
+            <MetricCard label="Activos" value={dashboard.kpis.active} tone="green" />
+            <MetricCard label="Pendientes de aprobación" value={dashboard.kpis.pendingApproval} tone="coffee" />
+            <MetricCard label="Índice de calidad" value={dashboard.kpis.avgQualityScore} tone="teal" />
+          </PageSummary>
+        ) : null}
 
-      {dashboard && (
-        <div className="kpi-grid">
-          <div className="kpi-card">
-            <span className="kpi-label">Total</span>
-            <span className="kpi-value">{dashboard.kpis.total}</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Activos</span>
-            <span className="kpi-value">{dashboard.kpis.active}</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Pendientes de aprobación</span>
-            <span className="kpi-value">{dashboard.kpis.pendingApproval}</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Índice de calidad</span>
-            <span className="kpi-value">{dashboard.kpis.avgQualityScore}</span>
-          </div>
-        </div>
-      )}
+        {error ? <PageState variant="error" message={error} onRetry={loadList} /> : null}
 
-      {error && <div className="alert alert-error">{error}</div>}
-
-      {!loading && items.length === 0 && !error ? (
-        <EmptyState
-          illustration="data"
-          title="Aún no hay productores registrados"
-          description="Los productores son la base de su operación agrícola. Registre el primero para vincular fincas, lotes y formularios de campo."
-          hint="También puede importar productores desde un formulario de captura en dispositivos móviles."
-          action={canCreate ? { label: 'Registrar productor', to: '/productores/nuevo' } : undefined}
-          secondaryAction={{ label: 'Ver mapa', to: '/productores/mapa' }}
-        />
-      ) : (
-      <DataTable<Producer>
-        gridId="producers"
-        data={items}
-        loading={loading}
-        serverSide
-        totalCount={pagination.total}
-        page={pagination.page}
-        pageSize={filters.limit ?? 25}
-        onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
-        onQuickSearchChange={handleQuickSearchChange}
-        onExport={canExport ? handleExport : undefined}
-        onRowClick={handleRowClick}
-        toolbar={serverFilters}
-        bulkActions={bulkActions}
-        rowActions={rowActions}
-        serverFilterState={filters as unknown as Record<string, unknown>}
-        onServerFilterStateApply={(state) => {
-          setFilters({ ...(state as ProducerFilters), page: 1 });
-        }}
-        columns={columns}
-        emptyMessage="No se encontraron productores con los filtros aplicados."
-      />
-      )}
+        {!loading && items.length === 0 && !error ? (
+          <PageState
+            variant="empty"
+            title="Aún no hay productores registrados"
+            message="Los productores son la base de su operación agrícola. Registre el primero para vincular fincas, lotes y formularios de campo."
+            hint="También puede importar productores desde un formulario de captura en dispositivos móviles."
+            action={canCreate ? { label: 'Registrar productor', to: '/productores/nuevo' } : undefined}
+          />
+        ) : (
+          <DataTable<Producer>
+            gridId="producers"
+            data={items}
+            loading={loading}
+            serverSide
+            totalCount={pagination.total}
+            page={pagination.page}
+            pageSize={filters.limit ?? 25}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            onQuickSearchChange={handleQuickSearchChange}
+            onExport={canExport ? handleExport : undefined}
+            onRowClick={handleRowClick}
+            toolbar={serverFilters}
+            bulkActions={bulkActions}
+            rowActions={rowActions}
+            serverFilterState={filters as unknown as Record<string, unknown>}
+            onServerFilterStateApply={(state) => {
+              setFilters({ ...(state as ProducerFilters), page: 1 });
+            }}
+            columns={columns}
+            emptyMessage="No se encontraron productores con los filtros aplicados."
+          />
+        )}
+      </PageLayout>
     </>
   );
 }

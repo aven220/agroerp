@@ -1,6 +1,10 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { LoadingState } from '../components/ux/LoadingState';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageState,
+} from '../components/page';
 import { DataTable } from '../components/ui/DataTable';
 import { Modal } from '../components/ui/Modal';
 import { listProducers, type Producer } from '../api/prm';
@@ -105,28 +109,30 @@ export function DocumentsPage() {
   }
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Documentos"
-        subtitle="Documentos operativos CPEP y archivos asociados a productores PRM"
+        subtitle="Documentos operativos y archivos asociados a productores"
+        showExperience={false}
         actions={
           canUpload ? (
-            <button type="button" className="btn btn-primary" onClick={() => setModalOpen(true)}>
-              + Subir documento
-            </button>
+            <PageActions>
+              <button type="button" className="btn btn-primary" onClick={() => setModalOpen(true)}>
+                + Subir documento
+              </button>
+            </PageActions>
           ) : undefined
         }
       />
 
       <div className="alert alert-info">
-        Los metadatos se registran en la API. El almacenamiento binario en MinIO
-        queda referenciado por <code>storageKey</code> (consola MinIO: puerto 9001).
+        Los archivos se almacenan de forma segura. Los metadatos quedan asociados al productor.
       </div>
 
-      {loadError ? <div className="alert alert-error">{loadError}</div> : null}
+      {loadError ? <PageState variant="error" message={loadError} onRetry={load} /> : null}
 
       {loading ? (
-        <LoadingState variant="table" />
+        <PageState variant="loading" loadingVariant="table" message="Cargando documentos…" />
       ) : (
         <DataTable<DocumentRow>
           gridId="documents"
@@ -178,6 +184,6 @@ export function DocumentsPage() {
           </div>
         </form>
       </Modal>
-    </>
+    </PageLayout>
   );
 }

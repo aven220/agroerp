@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { NavigationProvider } from './context/NavigationContext';
+import { ExperienceCenterProvider } from './context/ExperienceCenterContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
 import { MobileProvider } from './context/MobileContext';
@@ -12,7 +13,21 @@ import { UxProviders } from './components/ux/UxProviders';
 import { ModuleLoadingFallback } from './components/ux/LoadingState';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
-import { DashboardPage } from './pages/DashboardPage';
+import { DashboardPage, WorkspaceHomePage } from './pages/DashboardPage';
+import { OperationCenterPage } from './pages/OperationCenterPage';
+import { ManagementCenterPage } from './pages/ManagementCenterPage';
+import {
+  ImplementationSummaryPage,
+  ImplementationEmpresaPage,
+  ImplementationConfigPage,
+  ImplementationUsuariosPage,
+  ImplementationModulosPage,
+  ImplementationProcesosPage,
+  ImplementationDocumentosPage,
+  ImplementationIntegracionesPage,
+  ImplementationEstadoPage,
+  ImplementationGoLivePage,
+} from './pages/ImplementationCenterPage';
 import { ProducersPage } from './pages/ProducersPage';
 import { ProducerDetailPage } from './pages/ProducerDetailPage';
 import { ProducerFormPage } from './pages/ProducerFormPage';
@@ -615,6 +630,7 @@ export function App() {
     <ToastProvider>
     <AuthProvider>
       <BrowserRouter>
+        <ExperienceCenterProvider>
         <NavigationProvider>
         <MobileProvider>
         <WorkspaceProvider>
@@ -629,6 +645,19 @@ export function App() {
           <Route element={<ProtectedRoute />}>
 
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/inicio-workspace" element={<WorkspaceHomePage />} />
+            <Route path="/operacion" element={<OperationCenterPage />} />
+            <Route path="/gerencia" element={<ManagementCenterPage />} />
+            <Route path="/implementacion" element={<ImplementationSummaryPage />} />
+            <Route path="/implementacion/empresa" element={<ImplementationEmpresaPage />} />
+            <Route path="/implementacion/configuracion" element={<ImplementationConfigPage />} />
+            <Route path="/implementacion/usuarios" element={<ImplementationUsuariosPage />} />
+            <Route path="/implementacion/modulos" element={<ImplementationModulosPage />} />
+            <Route path="/implementacion/procesos" element={<ImplementationProcesosPage />} />
+            <Route path="/implementacion/documentos" element={<ImplementationDocumentosPage />} />
+            <Route path="/implementacion/integraciones" element={<ImplementationIntegracionesPage />} />
+            <Route path="/implementacion/estado" element={<ImplementationEstadoPage />} />
+            <Route path="/implementacion/go-live" element={<ImplementationGoLivePage />} />
             <Route path="/productores" element={<ProducersPage />} />
             <Route path="/productores/dashboard" element={<ProducerDashboardPage />} />
             <Route path="/productores/mapa" element={<ProducerDashboardPage />} />
@@ -1163,6 +1192,7 @@ export function App() {
         </WorkspaceProvider>
         </MobileProvider>
         </NavigationProvider>
+        </ExperienceCenterProvider>
       </BrowserRouter>
     </AuthProvider>
     </ToastProvider>

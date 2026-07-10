@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import { HubToolbar } from '../components/layout/HubToolbar';
+import {
+  PageLayout,
+  PageHeader,
+  PageSection,
+  PageSummary,
+  MetricCard,
+  PageState,
+} from '../components/page';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { getBiCenter, getBiRealtime, type BiCenter } from '../api/bi';
-import { LoadingState } from '../components/ux/LoadingState';
 import { useIsMounted } from '../hooks/useIsMounted';
 import { useOnEntityUpdated } from '../lib/entitySync';
 
@@ -12,11 +19,20 @@ export function BiCenterPage() {
   const mounted = useIsMounted();
   const [center, setCenter] = useState<BiCenter | null>(null);
   const [realtime, setRealtime] = useState<Record<string, unknown> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    getBiCenter().then((c) => {
-      if (mounted.current) setCenter(c);
-    });
+    getBiCenter()
+      .then((c) => {
+        if (mounted.current) {
+          setCenter(c);
+          setError(null);
+        }
+      })
+      .catch((e) => {
+        if (mounted.current) setError(e instanceof Error ? e.message : 'No se pudieron cargar los reportes');
+      });
     getBiRealtime().then((r) => {
       if (mounted.current) setRealtime(r);
     });
@@ -38,105 +54,108 @@ export function BiCenterPage() {
       .catch(() => undefined);
   }, ['producer', 'farm', 'lot', 'purchase', 'inventory']);
 
-  if (!center) return <LoadingState variant="dashboard" message="Cargando reportes e indicadores..." />;
+  if (!center && !error) {
+    return <PageState variant="loading" loadingVariant="dashboard" message="Cargando reportes e indicadores…" />;
+  }
+
+  if (error && !center) {
+    return (
+      <>
+        <PageHeader title="Reportes e indicadores" subtitle="Tableros, KPIs y análisis para la toma de decisiones" />
+        <PageLayout>
+          <PageState variant="error" message={error} />
+        </PageLayout>
+      </>
+    );
+  }
+
+  if (!center) return null;
 
   const kpis = center.executive.kpis as Record<string, number> | undefined;
+  const categories = Object.entries(center.categories).filter(([cat]) => {
+    if (!search.trim()) return true;
+    return cat.toLowerCase().includes(search.toLowerCase());
+  });
 
   return (
     <>
-      <Header
+      <PageHeader
         title="Reportes e indicadores"
         subtitle="Tableros, KPIs y análisis para la toma de decisiones"
-        actions={
-          <div className="row-actions">
-            <Link to="/bi/dashboards" className="btn">Dashboards</Link>
-            <Link to="/bi/disenar" className="btn btn-primary">Constructor</Link>
-            <Link to="/bi/reportes" className="btn">Reportes</Link>
-            <Link to="/bi/kpis" className="btn">KPIs</Link>
-            <Link to="/bi/consultas" className="btn">Consultas</Link>
-          </div>
+        showExperience={false}
+      />
+      <PageLayout
+        toolbar={
+          <HubToolbar
+            primaryAction={{ label: 'Constructor', to: '/bi/disenar' }}
+            searchPlaceholder="Buscar categoría…"
+            searchValue={search}
+            onSearchChange={setSearch}
+            moreActions={[
+              { label: 'Dashboards', to: '/bi/dashboards' },
+              { label: 'Reportes', to: '/bi/reportes' },
+              { label: 'KPIs', to: '/bi/kpis' },
+              { label: 'Consultas', to: '/bi/consultas' },
+            ]}
+          />
         }
-      />
+      >
+        <FlowProgress flowId="reports" currentStepId="hub" />
 
-      <FlowProgress flowId="reports" currentStepId="hub" />
+        <FlowNextActions
+          title="Recorrido de reportes"
+          subtitle="Del tablero ejecutivo al detalle analítico."
+          actions={[
+            { label: 'Ver tableros', description: 'Indicadores visuales por área', to: '/bi/dashboards', primary: true, icon: '📈' },
+            { label: 'Generar reporte', description: 'Exporte datos con filtros', to: '/bi/reportes', icon: '📄' },
+            { label: 'Consulta avanzada', description: 'Cruce de datos personalizado', to: '/bi/consultas', icon: '🔍' },
+          ]}
+        />
 
-      <FlowNextActions
-        title="Recorrido de reportes"
-        subtitle="Del tablero ejecutivo al detalle analítico."
-        actions={[
-          { label: 'Ver tableros', description: 'Indicadores visuales por área', to: '/bi/dashboards', primary: true, icon: '📈' },
-          { label: 'Generar reporte', description: 'Exporte datos con filtros', to: '/bi/reportes', icon: '📄' },
-          { label: 'Consulta avanzada', description: 'Cruce de datos personalizado', to: '/bi/consultas', icon: '🔍' },
-        ]}
-      />
+        <PageSummary>
+          <MetricCard label="Productores" value={String(kpis?.totalProducers ?? 0)} tone="blue" />
+          <MetricCard label="Fincas" value={String(kpis?.totalFarms ?? 0)} />
+          <MetricCard label="Lotes" value={String(kpis?.totalLots ?? 0)} />
+          <MetricCard label="Procesos activos" value={String(kpis?.activeWorkflows ?? 0)} />
+          <MetricCard label="Dashboards" value={String(center.dashboardCount)} tone="teal" />
+          <MetricCard label="KPIs" value={String(center.kpiCount)} />
+          <MetricCard label="Reportes" value={String(center.reportCount)} />
+          <MetricCard label="Eventos 24h" value={String(kpis?.eventsLast24h ?? 0)} tone="coffee" />
+        </PageSummary>
 
-      <div className="kpi-grid kpi-grid-lg">
-        <div className="kpi-card kpi-card-primary">
-          <span className="kpi-label">Productores</span>
-          <span className="kpi-value">{kpis?.totalProducers ?? 0}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Fincas</span>
-          <span className="kpi-value">{kpis?.totalFarms ?? 0}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Lotes</span>
-          <span className="kpi-value">{kpis?.totalLots ?? 0}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Procesos activos</span>
-          <span className="kpi-value">{kpis?.activeWorkflows ?? 0}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Dashboards</span>
-          <span className="kpi-value">{center.dashboardCount}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">KPIs</span>
-          <span className="kpi-value">{center.kpiCount}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Reportes</span>
-          <span className="kpi-value">{center.reportCount}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Eventos 24h</span>
-          <span className="kpi-value">{kpis?.eventsLast24h ?? 0}</span>
-        </div>
-      </div>
-
-      {realtime && (
-        <section className="panel bi-realtime-panel">
-          <h3>Indicadores en tiempo real</h3>
-          <div className="kpi-grid">
-            {((realtime.indicators as Record<string, number>) ?? {}) &&
-              Object.entries(realtime.indicators as Record<string, number>).map(([k, v]) => (
-                <div key={k} className="kpi-card">
-                  <span className="kpi-label">{k}</span>
-                  <span className="kpi-value">{v}</span>
-                </div>
+        {realtime ? (
+          <PageSection title="Indicadores en tiempo real">
+            <PageSummary>
+              {Object.entries((realtime.indicators as Record<string, number>) ?? {}).map(([k, v]) => (
+                <MetricCard key={k} label={k} value={String(v)} />
               ))}
-          </div>
-        </section>
-      )}
+            </PageSummary>
+          </PageSection>
+        ) : null}
 
-      <div className="bi-category-grid">
-        {Object.entries(center.categories).map(([cat, count]) => (
-          <Link key={cat} to={`/bi/dashboards?category=${cat}`} className="bi-category-card">
-            <strong>{cat}</strong>
-            <span>{count} dashboard{count !== 1 ? 's' : ''}</span>
-          </Link>
-        ))}
-      </div>
+        <PageSection title="Categorías">
+          {categories.length === 0 ? (
+            <PageState variant="empty" title="Sin categorías" message="No hay categorías que coincidan con la búsqueda." loadingVariant="inline" />
+          ) : (
+            <div className="bi-category-grid">
+              {categories.map(([cat, count]) => (
+                <Link key={cat} to={`/bi/dashboards?category=${cat}`} className="bi-category-card">
+                  <strong>{cat}</strong>
+                  <span>{count} dashboard{count !== 1 ? 's' : ''}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </PageSection>
 
-      <section className="panel">
-        <h3>IA — Preparación</h3>
-        <ul className="stat-list">
-          {Object.entries(center.aiReadiness ?? {}).map(([k, v]) => (
-            <li key={k}><span>{k}</span><strong>{v ? '✓' : '—'}</strong></li>
-          ))}
-        </ul>
-      </section>
+        <PageSection title="IA — Preparación">
+          <ul className="stat-list">
+            {Object.entries(center.aiReadiness ?? {}).map(([k, v]) => (
+              <li key={k}><span>{k}</span><strong>{v ? '✓' : '—'}</strong></li>
+            ))}
+          </ul>
+        </PageSection>
+      </PageLayout>
     </>
   );
 }

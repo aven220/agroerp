@@ -10,6 +10,7 @@ import { SmartAssistantTrigger } from '../smart-assistant/RecommendationCenter';
 import { FocusModeToggle } from '../adaptive-workspace/AdaptiveToolbar';
 import { Breadcrumbs } from './Breadcrumbs';
 import { ThemeToggle } from './ThemeToggle';
+import { CenterSelector } from './CenterSelector';
 import { Tooltip } from '../ui/Tooltip';
 
 export function AppShellBar({ compact = false }: { compact?: boolean }) {
@@ -28,6 +29,8 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
   return (
     <header className={`app-shell-bar${compact ? ' compact' : ''}`} role="banner">
       <div className="app-shell-bar-left">
+        {!focusMode ? <CenterSelector compact={compact} /> : null}
+        {!compact && !focusMode ? <span className="app-shell-bar-divider" aria-hidden /> : null}
         <Breadcrumbs />
       </div>
       <div className="app-shell-bar-center">

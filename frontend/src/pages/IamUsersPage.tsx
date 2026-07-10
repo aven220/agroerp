@@ -7,11 +7,52 @@ import {
   PageSection,
   PageState,
 } from '../components/page';
+import { EnterpriseDataGrid } from '../components/data-workspace/EnterpriseDataGrid';
+import type { GridColumnDef } from '../lib/data-grid/types';
 import { listIamUsers } from '../api/iam';
 import { USER_STATUS_LABELS } from '../lib/adminLabels';
 
+type IamUserRow = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  status: string;
+  mfaEnabled: boolean;
+  lastLoginAt?: string;
+};
+
+const columns: GridColumnDef<IamUserRow>[] = [
+  { key: 'email', label: 'Correo', getValue: (u) => u.email },
+  {
+    key: 'name',
+    label: 'Nombre',
+    getValue: (u) => `${u.firstName} ${u.lastName}`,
+    render: (u) => `${u.firstName} ${u.lastName}`,
+  },
+  {
+    key: 'status',
+    label: 'Estado',
+    getValue: (u) => USER_STATUS_LABELS[u.status] ?? u.status,
+    render: (u) => USER_STATUS_LABELS[u.status] ?? u.status,
+  },
+  {
+    key: 'mfa',
+    label: 'Autenticación 2 pasos',
+    getValue: (u) => (u.mfaEnabled ? 'Activada' : 'No configurada'),
+    render: (u) => (u.mfaEnabled ? 'Activada' : 'No configurada'),
+  },
+  {
+    key: 'lastLogin',
+    label: 'Último acceso',
+    getValue: (u) => (u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString('es-CO') : 'Sin registro'),
+    render: (u) =>
+      u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString('es-CO') : 'Sin registro',
+  },
+];
+
 export function IamUsersPage() {
-  const [users, setUsers] = useState<Array<Record<string, unknown>>>([]);
+  const [users, setUsers] = useState<IamUserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +60,17 @@ export function IamUsersPage() {
     setLoading(true);
     listIamUsers()
       .then((u) => {
-        setUsers(u as Array<Record<string, unknown>>);
+        setUsers(
+          (u as Array<Record<string, unknown>>).map((row) => ({
+            id: String(row.id),
+            email: String(row.email ?? ''),
+            firstName: String(row.firstName ?? ''),
+            lastName: String(row.lastName ?? ''),
+            status: String(row.status ?? ''),
+            mfaEnabled: Boolean(row.mfaEnabled),
+            lastLoginAt: row.lastLoginAt ? String(row.lastLoginAt) : undefined,
+          })),
+        );
         setError(null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'No se pudieron cargar los usuarios'))
@@ -37,7 +88,7 @@ export function IamUsersPage() {
               Gestionar usuarios
             </Link>
             <Link to="/iam" className="btn">
-              Centro de seguridad
+              Usuarios y accesos
             </Link>
           </PageActions>
         }
@@ -63,34 +114,13 @@ export function IamUsersPage() {
         />
       ) : (
         <PageSection title="Usuarios">
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Correo</th>
-                  <th>Nombre</th>
-                  <th>Estado</th>
-                  <th>Autenticación 2 pasos</th>
-                  <th>Último acceso</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={String(u.id)}>
-                    <td>{String(u.email)}</td>
-                    <td>{String(u.firstName)} {String(u.lastName)}</td>
-                    <td>{USER_STATUS_LABELS[String(u.status)] ?? String(u.status)}</td>
-                    <td>{u.mfaEnabled ? 'Activada' : 'No configurada'}</td>
-                    <td>
-                      {u.lastLoginAt
-                        ? new Date(String(u.lastLoginAt)).toLocaleString('es-CO')
-                        : 'Sin registro'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <EnterpriseDataGrid
+            gridId="iam-users"
+            columns={columns}
+            data={users}
+            selectable={false}
+            emptyMessage="No hay usuarios registrados"
+          />
         </PageSection>
       )}
     </PageLayout>

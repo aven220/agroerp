@@ -8,8 +8,9 @@ import {
   PageState,
   FieldGroup,
   FormActions,
-  EmptyPanel,
 } from '../components/page';
+import { EnterpriseDataGrid } from '../components/data-workspace/EnterpriseDataGrid';
+import type { GridColumnDef, RowAction } from '../lib/data-grid/types';
 import {
   createEimsReservation,
   expireEimsReservations,
@@ -20,8 +21,40 @@ import {
 } from '../api/eims';
 import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
+type ReservationRow = {
+  id: string;
+  reservationKey: string;
+  reservationType: string;
+  itemKey: string;
+  warehouseKey: string;
+  quantity: string;
+  status: string;
+};
+
+const columns: GridColumnDef<ReservationRow>[] = [
+  { key: 'reservationKey', label: 'Clave', getValue: (r) => r.reservationKey },
+  { key: 'reservationType', label: 'Tipo', getValue: (r) => r.reservationType },
+  { key: 'itemKey', label: 'Artículo', getValue: (r) => r.itemKey },
+  { key: 'warehouseKey', label: 'Bodega', getValue: (r) => r.warehouseKey },
+  { key: 'quantity', label: 'Cantidad', getValue: (r) => r.quantity },
+  { key: 'status', label: 'Estado', getValue: (r) => r.status },
+];
+
+function mapReservation(r: Record<string, unknown>): ReservationRow {
+  const reservationKey = String(r.reservationKey ?? r.id ?? '');
+  return {
+    id: reservationKey,
+    reservationKey,
+    reservationType: String(r.reservationType ?? ''),
+    itemKey: String((r.item as Record<string, unknown>)?.itemKey ?? ''),
+    warehouseKey: String((r.warehouse as Record<string, unknown>)?.warehouseKey ?? ''),
+    quantity: String(r.quantity ?? ''),
+    status: String(r.status ?? ''),
+  };
+}
+
 export function EimsReservationsPage() {
-  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  const [rows, setRows] = useState<ReservationRow[]>([]);
   const [items, setItems] = useState<Array<Record<string, unknown>>>([]);
   const [warehouses, setWarehouses] = useState<Array<Record<string, unknown>>>([]);
   const [error, setError] = useState('');
@@ -38,7 +71,7 @@ export function EimsReservationsPage() {
 
   const reload = async () => {
     const [r, i, w] = await Promise.all([listEimsReservations(), listEimsItems(), listEimsWarehouses()]);
-    setRows(r as Array<Record<string, unknown>>);
+    setRows((r as Array<Record<string, unknown>>).map(mapReservation));
     setItems(i as Array<Record<string, unknown>>);
     setWarehouses(w as Array<Record<string, unknown>>);
   };
@@ -58,6 +91,20 @@ export function EimsReservationsPage() {
     notifyEntityUpdated('inventory', '*');
     await reload();
   };
+
+  const rowActions: RowAction<ReservationRow>[] = [
+    {
+      id: 'release',
+      label: 'Liberar',
+      hidden: (r) => r.status !== 'active',
+      onAction: (r) => {
+        releaseEimsReservation(r.reservationKey)
+          .then(() => notifyEntityUpdated('inventory', '*'))
+          .then(reload)
+          .catch((e) => setError(e.message));
+      },
+    },
+  ];
 
   return (
     <PageLayout>
@@ -123,40 +170,21 @@ export function EimsReservationsPage() {
 
       <PageSection title="Reservas activas">
         {rows.length === 0 ? (
-          <EmptyPanel title="Sin reservas" description="No hay reservas registradas en el sistema." />
+          <PageState
+            variant="empty"
+            title="Sin reservas"
+            message="No hay reservas registradas en el sistema."
+            loadingVariant="inline"
+          />
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead><tr><th>Clave</th><th>Tipo</th><th>Artículo</th><th>Bodega</th><th>Cantidad</th><th>Estado</th><th></th></tr></thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={String(r.id)}>
-                    <td>{String(r.reservationKey)}</td>
-                    <td>{String(r.reservationType)}</td>
-                    <td>{String((r.item as Record<string, unknown>)?.itemKey ?? '')}</td>
-                    <td>{String((r.warehouse as Record<string, unknown>)?.warehouseKey ?? '')}</td>
-                    <td>{String(r.quantity)}</td>
-                    <td>{String(r.status)}</td>
-                    <td>
-                      {r.status === 'active' ? (
-                        <button
-                          className="btn"
-                          onClick={() =>
-                            releaseEimsReservation(String(r.reservationKey))
-                              .then(() => notifyEntityUpdated('inventory', '*'))
-                              .then(reload)
-                              .catch((e) => setError(e.message))
-                          }
-                        >
-                          Liberar
-                        </button>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <EnterpriseDataGrid
+            gridId="eims-reservations"
+            columns={columns}
+            data={rows}
+            selectable={false}
+            rowActions={rowActions}
+            emptyMessage="Sin reservas"
+          />
         )}
       </PageSection>
     </PageLayout>

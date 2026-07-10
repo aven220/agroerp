@@ -8,6 +8,7 @@ const TERM_REPLACEMENTS: Array<[RegExp, string]> = [
   [/\bUCEM\b/g, 'Centro de datos'],
   [/\bEIAMP\b/g, 'Seguridad'],
   [/\bEIMS\b/g, 'Inventario'],
+  [/\bCPEP\b/g, 'Compras de café'],
   [/\bESCM\b/g, 'Comercial'],
   [/\bEMFG\b/g, 'Manufactura'],
   [/\bHCM\b/g, 'Recursos humanos'],
@@ -28,7 +29,13 @@ const TERM_REPLACEMENTS: Array<[RegExp, string]> = [
   [/\bEATR\b/g, 'Trazabilidad'],
   [/\bEATP\b/g, 'Plataforma agrícola'],
   [/\bEGSIP\b/g, 'Mapas'],
-  [/\bIAM\b/g, 'Seguridad'],
+  [/\bIAM\b/g, 'Usuarios y accesos'],
+  [/\bOps Center\b/gi, 'Centro de operaciones'],
+  [/\bOperations Center\b/gi, 'Centro de operaciones'],
+  [/\bWorkflow Instance\b/gi, 'Trámite'],
+  [/\bWorkflow\b/gi, 'Procesos'],
+  [/\binventory_posted\b/g, 'En inventario'],
+  [/\barrived\b/gi, 'Recibido'],
   [/\bbootstrap\b/gi, 'configuración inicial'],
   [/\bworkflowKey\b/g, 'código de proceso'],
   [/\bstateKey\b/g, 'paso actual'],
@@ -52,6 +59,8 @@ const TERM_REPLACEMENTS: Array<[RegExp, string]> = [
   [/\bLista vacía\b/gi, 'Aún no hay registros'],
   [/\b0 registros\b/gi, 'Sin registros aún'],
   [/\bSin pendientes\b/g, 'Todo al día'],
+  [/\bSembrar catálogos\b/gi, 'Cargar configuración inicial'],
+  [/\bSembrar\b/gi, 'Cargar configuración inicial'],
 ];
 
 /** Aplica sustituciones de lenguaje empresarial a un texto visible */
@@ -63,7 +72,7 @@ export function humanizeCopy(text: string): string {
   return result.replace(/\s{2,}/g, ' ').trim();
 }
 
-/** Etiqueta legible para pasos de workflow */
+/** Etiqueta legible para pasos de workflow / estados de ticket */
 export function labelWorkflowStep(stateKey: string): string {
   const known: Record<string, string> = {
     draft: 'Borrador',
@@ -74,6 +83,16 @@ export function labelWorkflowStep(stateKey: string): string {
     completed: 'Completado',
     cancelled: 'Cancelado',
     pending: 'Pendiente',
+    arrived: 'Recibido',
+    queued: 'En espera',
+    receiving: 'En recepción',
+    identity_validated: 'Identidad confirmada',
+    weighed: 'Pesado',
+    quality_pending: 'Pendiente de calidad',
+    quality_approved: 'Aprobado en calidad',
+    quality_rejected: 'Rechazado en calidad',
+    settled: 'Liquidado',
+    inventory_posted: 'En inventario',
   };
   return known[stateKey] ?? humanizeCopy(stateKey.replace(/_/g, ' '));
 }

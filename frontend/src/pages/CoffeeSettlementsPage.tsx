@@ -13,6 +13,8 @@ import {
   FormActions,
   EmptyPanel,
 } from '../components/page';
+import { EnterpriseDataGrid } from '../components/data-workspace/EnterpriseDataGrid';
+import type { GridColumnDef, RowAction } from '../lib/data-grid/types';
 import {
   confirmSettlementOperator,
   confirmSettlementProducer,
@@ -30,6 +32,10 @@ import {
 } from '../api/coffee';
 import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 import { useIsMounted } from '../hooks/useIsMounted';
+
+type SettlementRow = Record<string, unknown> & { id: string };
+type DocumentRow = Record<string, unknown> & { id: string };
+type PendingTicket = CoffeeTicket & { quality?: Record<string, unknown> };
 
 export function CoffeeSettlementsPage() {
   const mounted = useIsMounted();
@@ -160,6 +166,131 @@ export function CoffeeSettlementsPage() {
   const flow = (session?.flow ?? []) as Array<Record<string, unknown>>;
   const ticket = session?.ticket as Record<string, unknown> | undefined;
 
+  const pendingRows = pending.map((t) => ({ ...t, id: t.id || t.ticketKey })) as PendingTicket[];
+
+  const pendingColumns: GridColumnDef<PendingTicket>[] = [
+    { key: 'ticketKey', label: 'Ticket', getValue: (r) => r.ticketKey },
+    { key: 'producerName', label: 'Productor', getValue: (r) => r.producerName ?? '—' },
+    {
+      key: 'netWeightKg',
+      label: 'Neto',
+      getValue: (r) => (r.netWeightKg != null ? `${r.netWeightKg} kg` : '—'),
+    },
+    {
+      key: 'quality',
+      label: 'Calidad',
+      getValue: (r) => String(r.quality?.decision ?? r.quality?.grade ?? '—'),
+    },
+  ];
+
+  const pendingActions: RowAction<PendingTicket>[] = [
+    {
+      id: 'settle',
+      label: 'Liquidar',
+      onAction: (r) => {
+        if (busy) return;
+        start(r.ticketKey);
+      },
+    },
+  ];
+
+  const settlementRows: SettlementRow[] = rows.map((r) => ({
+    ...r,
+    id: String(r.id ?? r.settlementKey),
+  }));
+
+  const settlementColumns: GridColumnDef<SettlementRow>[] = [
+    { key: 'settlementKey', label: 'Clave', getValue: (r) => String(r.settlementKey) },
+    {
+      key: 'ticketKey',
+      label: 'Ticket',
+      getValue: (r) => String((r.ticket as Record<string, unknown> | undefined)?.ticketKey ?? ''),
+    },
+    { key: 'netWeightKg', label: 'Neto', getValue: (r) => String(r.netWeightKg) },
+    {
+      key: 'price',
+      label: 'Precio',
+      getValue: (r) => Number(r.appliedPricePerKg ?? r.basePricePerKg).toLocaleString(),
+    },
+    {
+      key: 'totalAmount',
+      label: 'Total',
+      getValue: (r) => Number(r.totalAmount).toLocaleString(),
+    },
+    {
+      key: 'paidAmount',
+      label: 'Pagado',
+      getValue: (r) => Number(r.paidAmount).toLocaleString(),
+    },
+    { key: 'paymentStatus', label: 'Estado', getValue: (r) => String(r.paymentStatus) },
+  ];
+
+  const settlementActions: RowAction<SettlementRow>[] = [
+    {
+      id: 'pay',
+      label: 'Pagar',
+      onAction: (r) => {
+        if (busy) return;
+        const t = r.ticket as Record<string, unknown> | undefined;
+        const amount = Number(payAmount || r.netPayable || r.totalAmount);
+        if (!amount || Number.isNaN(amount)) {
+          setError('Indique un monto de pago válido');
+          return;
+        }
+        paySettlement(String(t?.ticketKey), amount);
+      },
+    },
+    {
+      id: 'void',
+      label: 'Anular',
+      variant: 'danger',
+      onAction: (r) => {
+        if (busy) return;
+        voidRow(String(r.settlementKey));
+      },
+    },
+  ];
+
+  const documentRows: DocumentRow[] = docs.map((d) => ({
+    ...d,
+    id: String(d.id ?? d.documentKey),
+  }));
+
+  const documentColumns: GridColumnDef<DocumentRow>[] = [
+    { key: 'documentType', label: 'Tipo', getValue: (r) => String(r.documentType) },
+    { key: 'title', label: 'Título', getValue: (r) => String(r.title) },
+    {
+      key: 'qrPayload',
+      label: 'QR',
+      getValue: (r) => (r.source !== 'prm' ? String(r.qrPayload ?? '—') : '—'),
+    },
+    {
+      key: 'pdfUrl',
+      label: 'PDF',
+      getValue: (r) => (r.source !== 'prm' ? String(r.pdfUrl ?? '—') : '—'),
+    },
+    {
+      key: 'reprintCount',
+      label: 'Reimpresiones',
+      getValue: (r) => (r.source !== 'prm' ? String(r.reprintCount ?? 0) : '—'),
+    },
+  ];
+
+  const documentActions: RowAction<DocumentRow>[] = [
+    {
+      id: 'reprint',
+      label: 'Reimprimir',
+      hidden: (r) => r.source === 'prm',
+      onAction: (r) => {
+        if (busy) return;
+        reprintCoffeeDocument(String(r.documentKey)).then(() => {
+          notifyEntityUpdated('document', String(r.documentKey));
+          return reload();
+        });
+      },
+    },
+  ];
+
   return (
     <PageLayout>
       <PageHeader
@@ -188,27 +319,14 @@ export function CoffeeSettlementsPage() {
         {pending.length === 0 ? (
           <EmptyPanel title="Sin tickets" description="No hay tickets pendientes de liquidación." />
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr><th>Ticket</th><th>Productor</th><th>Neto</th><th>Calidad</th><th></th></tr>
-              </thead>
-              <tbody>
-                {pending.map((t) => {
-                  const quality = (t as CoffeeTicket & { quality?: Record<string, unknown> }).quality;
-                  return (
-                    <tr key={t.id}>
-                      <td>{t.ticketKey}</td>
-                      <td>{t.producerName ?? '—'}</td>
-                      <td>{t.netWeightKg != null ? `${t.netWeightKg} kg` : '—'}</td>
-                      <td>{String(quality?.decision ?? quality?.grade ?? '—')}</td>
-                      <td><button className="btn" disabled={busy} onClick={() => start(t.ticketKey)}>Liquidar</button></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <EnterpriseDataGrid
+            gridId="coffee-settlement-queue"
+            columns={pendingColumns}
+            data={pendingRows}
+            selectable={false}
+            rowActions={pendingActions}
+            emptyMessage="No hay tickets pendientes de liquidación."
+          />
         )}
       </PageSection>
 
@@ -263,56 +381,14 @@ export function CoffeeSettlementsPage() {
       ) : null}
 
       <PageSection title="Historial de liquidaciones">
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Clave</th><th>Ticket</th><th>Neto</th><th>Precio</th><th>Total</th><th>Pagado</th><th>Estado</th><th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => {
-                const t = r.ticket as Record<string, unknown> | undefined;
-                return (
-                  <tr key={String(r.id)}>
-                    <td>{String(r.settlementKey)}</td>
-                    <td>{String(t?.ticketKey ?? '')}</td>
-                    <td>{String(r.netWeightKg)}</td>
-                    <td>{Number(r.appliedPricePerKg ?? r.basePricePerKg).toLocaleString()}</td>
-                    <td>{Number(r.totalAmount).toLocaleString()}</td>
-                    <td>{Number(r.paidAmount).toLocaleString()}</td>
-                    <td>{String(r.paymentStatus)}</td>
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          className="btn"
-                          disabled={busy}
-                          onClick={() => {
-                            const amount = Number(payAmount || r.netPayable || r.totalAmount);
-                            if (!amount || Number.isNaN(amount)) {
-                              setError('Indique un monto de pago válido');
-                              return;
-                            }
-                            paySettlement(String(t?.ticketKey), amount);
-                          }}
-                        >
-                          Pagar
-                        </button>
-                        <button
-                          className="btn"
-                          disabled={busy}
-                          onClick={() => voidRow(String(r.settlementKey))}
-                        >
-                          Anular
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <EnterpriseDataGrid
+          gridId="coffee-settlement-history"
+          columns={settlementColumns}
+          data={settlementRows}
+          selectable={false}
+          rowActions={settlementActions}
+          emptyMessage="No hay liquidaciones registradas."
+        />
         <PageToolbar>
           <FieldGroup label="Monto pago">
             <input placeholder="Monto pago" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
@@ -333,38 +409,15 @@ export function CoffeeSettlementsPage() {
       </PageSection>
 
       <PageSection title="Documentos">
-        <div className="table-wrap">
-          <table className="data-table data-table-compact">
-            <thead>
-              <tr><th>Tipo</th><th>Título</th><th>QR</th><th>PDF</th><th>Reimpresiones</th><th></th></tr>
-            </thead>
-            <tbody>
-              {docs.map((d) => {
-                const isCpep = d.source !== 'prm';
-                return (
-                <tr key={String(d.id)}>
-                  <td>{String(d.documentType)}</td>
-                  <td>{String(d.title)}</td>
-                  <td>{isCpep ? String(d.qrPayload ?? '—') : '—'}</td>
-                  <td>{isCpep ? String(d.pdfUrl ?? '—') : '—'}</td>
-                  <td>{isCpep ? String(d.reprintCount ?? 0) : '—'}</td>
-                  <td>
-                    {isCpep ? (
-                      <button className="btn" disabled={busy} onClick={() => reprintCoffeeDocument(String(d.documentKey)).then(() => {
-                        notifyEntityUpdated('document', String(d.documentKey));
-                        return reload();
-                      })}>
-                        Reimprimir
-                      </button>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                </tr>
-              );})}
-            </tbody>
-          </table>
-        </div>
+        <EnterpriseDataGrid
+          gridId="coffee-settlement-documents"
+          columns={documentColumns}
+          data={documentRows}
+          selectable={false}
+          rowActions={documentActions}
+          emptyMessage="No hay documentos de liquidación."
+          density="compact"
+        />
       </PageSection>
     </PageLayout>
   );

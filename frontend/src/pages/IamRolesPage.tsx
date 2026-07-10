@@ -6,10 +6,24 @@ import {
   PageSection,
   PageState,
 } from '../components/page';
+import { EnterpriseDataGrid } from '../components/data-workspace/EnterpriseDataGrid';
+import type { GridColumnDef, RowAction } from '../lib/data-grid/types';
 import { exportIamRole, listIamRoles } from '../api/iam';
 
+type IamRoleRow = { id: string; name: string; slug: string; isSystem: boolean };
+
+const columns: GridColumnDef<IamRoleRow>[] = [
+  { key: 'name', label: 'Nombre del rol', getValue: (r) => r.name },
+  {
+    key: 'type',
+    label: 'Tipo',
+    getValue: (r) => (r.isSystem ? 'Rol del sistema' : 'Rol personalizado'),
+    render: (r) => (r.isSystem ? 'Rol del sistema' : 'Rol personalizado'),
+  },
+];
+
 export function IamRolesPage() {
-  const [roles, setRoles] = useState<Array<{ id: string; name: string; slug: string; isSystem: boolean }>>([]);
+  const [roles, setRoles] = useState<IamRoleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,19 +31,39 @@ export function IamRolesPage() {
     setLoading(true);
     listIamRoles()
       .then((r) => {
-        setRoles(r as typeof roles);
+        setRoles(r as IamRoleRow[]);
         setError(null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'No se pudieron cargar los roles'))
       .finally(() => setLoading(false));
   }, []);
 
+  const rowActions: RowAction<IamRoleRow>[] = [
+    {
+      id: 'export',
+      label: 'Exportar',
+      onAction: (r) => {
+        exportIamRole(r.id)
+          .then((d) => {
+            const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rol-${r.name.replace(/\s+/g, '-').toLowerCase()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+          })
+          .catch((err) => setError(err instanceof Error ? err.message : 'Exportación fallida'));
+      },
+    },
+  ];
+
   return (
     <PageLayout>
       <PageHeader
         title="Roles de seguridad"
         subtitle="Defina qué puede hacer cada perfil en la organización"
-        actions={<Link to="/iam" className="btn">Centro de seguridad</Link>}
+        actions={<Link to="/iam" className="btn">Usuarios y accesos</Link>}
       />
 
       <PageSection>
@@ -51,41 +85,14 @@ export function IamRolesPage() {
         />
       ) : (
         <PageSection title="Roles">
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead><tr><th>Nombre del rol</th><th>Tipo</th><th></th></tr></thead>
-              <tbody>
-                {roles.map((r) => (
-                  <tr key={r.id}>
-                    <td>{r.name}</td>
-                    <td>{r.isSystem ? 'Rol del sistema' : 'Rol personalizado'}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn btn-sm"
-                        title="Descargar definición del rol para respaldo o migración"
-                        onClick={() =>
-                          exportIamRole(r.id)
-                            .then((d) => {
-                              const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
-                              const url = URL.createObjectURL(blob);
-                              const a = document.createElement('a');
-                              a.href = url;
-                              a.download = `rol-${r.name.replace(/\s+/g, '-').toLowerCase()}.json`;
-                              a.click();
-                              URL.revokeObjectURL(url);
-                            })
-                            .catch((err) => setError(err instanceof Error ? err.message : 'Exportación fallida'))
-                        }
-                      >
-                        Exportar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <EnterpriseDataGrid
+            gridId="iam-roles"
+            columns={columns}
+            data={roles}
+            selectable={false}
+            rowActions={rowActions}
+            emptyMessage="No hay roles configurados"
+          />
         </PageSection>
       )}
     </PageLayout>

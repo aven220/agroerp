@@ -11,8 +11,9 @@ import {
   TableToolbar,
   FieldGroup,
   FormActions,
-  EmptyPanel,
 } from '../components/page';
+import { EnterpriseDataGrid } from '../components/data-workspace/EnterpriseDataGrid';
+import type { GridColumnDef, RowAction } from '../lib/data-grid/types';
 import {
   getEimsMovementMonitor,
   importEimsMovementsCsv,
@@ -32,9 +33,94 @@ const MOVEMENT_TYPES = [
   'consumption', 'production', 'return', 'shrinkage', 'loss', 'donation', 'intercompany_transfer',
 ];
 
+type MovementRow = {
+  id: string;
+  movementKey: string;
+  movementType: string;
+  itemKey: string;
+  quantity: string;
+  fromWarehouseKey: string;
+  toWarehouseKey: string;
+  lotKey: string;
+  postedBy: string;
+  status: string;
+  reason: string;
+};
+
+type StockRow = {
+  id: string;
+  itemKey: string;
+  warehouseKey: string;
+  onHandQty: string;
+  reservedQty: string;
+  blockedQty: string;
+  availableQty: string;
+  averageCost: string;
+};
+
+const movementColumns: GridColumnDef<MovementRow>[] = [
+  { key: 'movementKey', label: 'Clave', getValue: (m) => m.movementKey },
+  { key: 'movementType', label: 'Tipo', getValue: (m) => m.movementType },
+  { key: 'itemKey', label: 'Artículo', getValue: (m) => m.itemKey },
+  { key: 'quantity', label: 'Cant.', getValue: (m) => m.quantity },
+  { key: 'fromWarehouseKey', label: 'Origen', getValue: (m) => m.fromWarehouseKey },
+  { key: 'toWarehouseKey', label: 'Destino', getValue: (m) => m.toWarehouseKey },
+  { key: 'lotKey', label: 'Lote', getValue: (m) => m.lotKey },
+  { key: 'postedBy', label: 'Usuario', getValue: (m) => m.postedBy },
+  { key: 'status', label: 'Estado', getValue: (m) => m.status },
+  { key: 'reason', label: 'Motivo', getValue: (m) => m.reason },
+];
+
+const stockColumns: GridColumnDef<StockRow>[] = [
+  { key: 'itemKey', label: 'Artículo', getValue: (s) => s.itemKey },
+  { key: 'warehouseKey', label: 'Bodega', getValue: (s) => s.warehouseKey },
+  { key: 'onHandQty', label: 'On hand', getValue: (s) => s.onHandQty },
+  { key: 'reservedQty', label: 'Reservado', getValue: (s) => s.reservedQty },
+  { key: 'blockedQty', label: 'Bloqueado', getValue: (s) => s.blockedQty },
+  { key: 'availableQty', label: 'Disponible', getValue: (s) => s.availableQty },
+  { key: 'averageCost', label: 'Costo prom.', getValue: (s) => s.averageCost },
+];
+
+function mapMovement(m: Record<string, unknown>): MovementRow {
+  const item = m.item as Record<string, unknown> | undefined;
+  const from = m.fromWarehouse as Record<string, unknown> | undefined;
+  const to = m.toWarehouse as Record<string, unknown> | undefined;
+  const movementKey = String(m.movementKey ?? m.id ?? '');
+  return {
+    id: movementKey,
+    movementKey,
+    movementType: String(m.movementType ?? ''),
+    itemKey: String(item?.itemKey ?? ''),
+    quantity: String(m.quantity ?? ''),
+    fromWarehouseKey: String(from?.warehouseKey ?? '—'),
+    toWarehouseKey: String(to?.warehouseKey ?? '—'),
+    lotKey: String(m.lotKey ?? '—'),
+    postedBy: String(m.postedBy ?? '—'),
+    status: String(m.status ?? ''),
+    reason: String(m.reason ?? '—'),
+  };
+}
+
+function mapStock(s: Record<string, unknown>, index: number): StockRow {
+  const item = s.item as Record<string, unknown> | undefined;
+  const warehouse = s.warehouse as Record<string, unknown> | undefined;
+  const itemKey = String(item?.itemKey ?? '');
+  const warehouseKey = String(warehouse?.warehouseKey ?? '');
+  return {
+    id: String(s.id ?? `${itemKey}-${warehouseKey}-${index}`),
+    itemKey,
+    warehouseKey,
+    onHandQty: String(s.onHandQty ?? ''),
+    reservedQty: String(s.reservedQty ?? ''),
+    blockedQty: String(s.blockedQty ?? ''),
+    availableQty: String(s.availableQty ?? ''),
+    averageCost: Number(s.averageCost ?? 0).toLocaleString(),
+  };
+}
+
 export function EimsMovementsPage() {
-  const [movements, setMovements] = useState<Array<Record<string, unknown>>>([]);
-  const [stock, setStock] = useState<Array<Record<string, unknown>>>([]);
+  const [movements, setMovements] = useState<MovementRow[]>([]);
+  const [stock, setStock] = useState<StockRow[]>([]);
   const [monitor, setMonitor] = useState<Record<string, unknown> | null>(null);
   const [items, setItems] = useState<Array<Record<string, unknown>>>([]);
   const [warehouses, setWarehouses] = useState<Array<Record<string, unknown>>>([]);
@@ -71,8 +157,8 @@ export function EimsMovementsPage() {
       listEimsItems(),
       listEimsWarehouses(),
     ]);
-    setMovements(m as Array<Record<string, unknown>>);
-    setStock(s as Array<Record<string, unknown>>);
+    setMovements((m as Array<Record<string, unknown>>).map(mapMovement));
+    setStock((s as Array<Record<string, unknown>>).map(mapStock));
     setMonitor(mon);
     setItems(i as Array<Record<string, unknown>>);
     setWarehouses(w as Array<Record<string, unknown>>);
@@ -115,11 +201,26 @@ export function EimsMovementsPage() {
     }
   };
 
+  const movementActions: RowAction<MovementRow>[] = [
+    {
+      id: 'void',
+      label: 'Anular',
+      variant: 'danger',
+      hidden: (m) => m.status !== 'confirmed',
+      onAction: (m) => {
+        voidEimsMovement(m.movementKey, 'Anulación controlada')
+          .then(() => notifyEntityUpdated('inventory', '*'))
+          .then(reload)
+          .catch((e) => setError(e.message));
+      },
+    },
+  ];
+
   return (
     <PageLayout>
       <PageHeader
-        title="Centro de movimientos de inventario"
-        subtitle="Motor de transacciones basado en eventos"
+        title="Movimientos de inventario"
+        subtitle="Entradas, salidas, transferencias y ajustes de existencias"
         actions={
           <PageActions>
             <Link to="/inventario" className="btn">Inventario</Link>
@@ -240,79 +341,26 @@ export function EimsMovementsPage() {
           </select>
           <button className="btn" onClick={() => reload()}>Consultar</button>
         </TableToolbar>
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Clave</th><th>Tipo</th><th>Artículo</th><th>Cant.</th><th>Origen</th><th>Destino</th>
-                <th>Lote</th><th>Usuario</th><th>Estado</th><th>Motivo</th><th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {movements.map((m) => {
-                const item = m.item as Record<string, unknown> | undefined;
-                const from = m.fromWarehouse as Record<string, unknown> | undefined;
-                const to = m.toWarehouse as Record<string, unknown> | undefined;
-                return (
-                  <tr key={String(m.id)}>
-                    <td>{String(m.movementKey)}</td>
-                    <td>{String(m.movementType)}</td>
-                    <td>{String(item?.itemKey ?? '')}</td>
-                    <td>{String(m.quantity)}</td>
-                    <td>{String(from?.warehouseKey ?? '—')}</td>
-                    <td>{String(to?.warehouseKey ?? '—')}</td>
-                    <td>{String(m.lotKey ?? '—')}</td>
-                    <td>{String(m.postedBy ?? '—')}</td>
-                    <td>{String(m.status)}</td>
-                    <td>{String(m.reason ?? '—')}</td>
-                    <td>
-                      {m.status === 'confirmed' ? (
-                        <button
-                          className="btn"
-                          onClick={() =>
-                            voidEimsMovement(String(m.movementKey), 'Anulación controlada')
-                              .then(() => notifyEntityUpdated('inventory', '*'))
-                              .then(reload)
-                              .catch((e) => setError(e.message))
-                          }
-                        >
-                          Anular
-                        </button>
-                      ) : null}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <EnterpriseDataGrid
+          gridId="eims-movements"
+          columns={movementColumns}
+          data={movements}
+          selectable={false}
+          rowActions={movementActions}
+          emptyMessage="Sin movimientos"
+          emptyDescription="Ajuste los filtros o registre un movimiento."
+        />
       </PageSection>
 
       <PageSection title="Existencias (derivadas de movimientos)">
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr><th>Artículo</th><th>Bodega</th><th>On hand</th><th>Reservado</th><th>Bloqueado</th><th>Disponible</th><th>Costo prom.</th></tr>
-            </thead>
-            <tbody>
-              {stock.map((s) => {
-                const item = s.item as Record<string, unknown> | undefined;
-                const warehouse = s.warehouse as Record<string, unknown> | undefined;
-                return (
-                  <tr key={String(s.id)}>
-                    <td>{String(item?.itemKey ?? '')}</td>
-                    <td>{String(warehouse?.warehouseKey ?? '')}</td>
-                    <td>{String(s.onHandQty)}</td>
-                    <td>{String(s.reservedQty)}</td>
-                    <td>{String(s.blockedQty)}</td>
-                    <td>{String(s.availableQty)}</td>
-                    <td>{Number(s.averageCost ?? 0).toLocaleString()}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <EnterpriseDataGrid
+          gridId="eims-movements-stock"
+          columns={stockColumns}
+          data={stock}
+          selectable={false}
+          emptyMessage="Sin existencias"
+          emptyDescription="Las existencias aparecerán tras registrar movimientos."
+        />
       </PageSection>
     </PageLayout>
   );

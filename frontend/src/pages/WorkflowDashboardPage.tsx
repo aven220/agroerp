@@ -9,8 +9,47 @@ import {
   PageSummary,
   MetricCard,
 } from '../components/page';
+import { EnterpriseDataGrid } from '../components/data-workspace/EnterpriseDataGrid';
+import type { GridColumnDef } from '../lib/data-grid/types';
 import { getWorkflowDashboard, type WorkflowDashboard } from '../api/workflows';
 import { useOnEntityUpdated } from '../lib/entitySync';
+
+type BottleneckRow = { id: string; state: string; count: number };
+type WorkloadRow = { id: string; userId: string; pendingAssignments: number };
+
+const bottleneckColumns: GridColumnDef<BottleneckRow>[] = [
+  {
+    key: 'state',
+    label: 'Estado',
+    getValue: (b) => b.state,
+    render: (b) => <code>{b.state}</code>,
+  },
+  {
+    key: 'count',
+    label: 'Solicitudes',
+    getValue: (b) => b.count,
+    render: (b) => (
+      <div className="bar-meter">
+        <div className="bar-fill" style={{ width: `${Math.min(100, b.count * 10)}%` }} />
+        <span>{b.count}</span>
+      </div>
+    ),
+  },
+];
+
+const workloadColumns: GridColumnDef<WorkloadRow>[] = [
+  {
+    key: 'userId',
+    label: 'Usuario',
+    getValue: (w) => w.userId,
+    render: (w) => <code>{w.userId.slice(0, 8)}…</code>,
+  },
+  {
+    key: 'pendingAssignments',
+    label: 'Tareas',
+    getValue: (w) => w.pendingAssignments,
+  },
+];
 
 export function WorkflowDashboardPage() {
   const [dashboard, setDashboard] = useState<WorkflowDashboard | null>(null);
@@ -24,7 +63,7 @@ export function WorkflowDashboardPage() {
       .then(setDashboard)
       .catch((e: unknown) => {
         setDashboard(null);
-        setError(e instanceof Error ? e.message : 'Error al cargar dashboard BPM');
+        setError(e instanceof Error ? e.message : 'Error al cargar indicadores de procesos');
       })
       .finally(() => setLoading(false));
   }, []);
@@ -35,11 +74,13 @@ export function WorkflowDashboardPage() {
 
   useOnEntityUpdated(reload, 'workflow');
 
-  if (loading) return <PageState variant="loading" loadingVariant="dashboard" message="Cargando dashboard BPM..." />;
+  if (loading) {
+    return <PageState variant="loading" loadingVariant="dashboard" message="Cargando indicadores de procesos…" />;
+  }
   if (error || !dashboard) {
     return (
       <PageLayout>
-        <PageHeader title="Dashboard BPM" subtitle="KPIs · cuellos de botella · carga de trabajo" />
+        <PageHeader title="Indicadores de procesos" subtitle="KPIs · cuellos de botella · carga de trabajo" />
         <PageState variant="error" message={error ?? 'No hay datos disponibles'} onRetry={reload} />
       </PageLayout>
     );
@@ -47,16 +88,28 @@ export function WorkflowDashboardPage() {
 
   const { summary, bottlenecks, workloadByUser, sla } = dashboard;
 
+  const bottleneckRows: BottleneckRow[] = bottlenecks.map((b) => ({
+    id: b.state,
+    state: b.state,
+    count: b.count,
+  }));
+
+  const workloadRows: WorkloadRow[] = workloadByUser.map((w) => ({
+    id: w.userId,
+    userId: w.userId,
+    pendingAssignments: w.pendingAssignments,
+  }));
+
   return (
     <PageLayout>
       <PageHeader
-        title="Dashboard BPM"
+        title="Indicadores de procesos"
         subtitle="KPIs · cuellos de botella · carga de trabajo"
         actions={
           <PageActions>
             <Link to="/procesos" className="btn">Catálogo</Link>
             <Link to="/procesos/bandeja" className="btn">Bandeja</Link>
-            <Link to="/procesos/instancias" className="btn">Instancias</Link>
+            <Link to="/procesos/instancias" className="btn">Solicitudes</Link>
           </PageActions>
         }
       />
@@ -72,51 +125,30 @@ export function WorkflowDashboardPage() {
 
       <div className="split-layout">
         <PageSection title="Cuellos de botella por estado">
-          {bottlenecks.length === 0 ? (
+          {bottleneckRows.length === 0 ? (
             <PageState variant="empty" title="Aún no hay información" loadingVariant="inline" />
           ) : (
-            <div className="table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr><th>Estado</th><th>Instancias</th></tr>
-                </thead>
-                <tbody>
-                  {bottlenecks.map((b) => (
-                    <tr key={b.state}>
-                      <td><code>{b.state}</code></td>
-                      <td>
-                        <div className="bar-meter">
-                          <div className="bar-fill" style={{ width: `${Math.min(100, b.count * 10)}%` }} />
-                          <span>{b.count}</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <EnterpriseDataGrid
+              gridId="workflow-bottlenecks"
+              columns={bottleneckColumns}
+              data={bottleneckRows}
+              selectable={false}
+              emptyMessage="Aún no hay información"
+            />
           )}
         </PageSection>
 
         <PageSection title="Carga por usuario">
-          {workloadByUser.length === 0 ? (
+          {workloadRows.length === 0 ? (
             <PageState variant="empty" title="Sin asignaciones pendientes" loadingVariant="inline" />
           ) : (
-            <div className="table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr><th>Usuario</th><th>Tareas</th></tr>
-                </thead>
-                <tbody>
-                  {workloadByUser.map((w) => (
-                    <tr key={w.userId}>
-                      <td><code>{w.userId.slice(0, 8)}…</code></td>
-                      <td>{w.pendingAssignments}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <EnterpriseDataGrid
+              gridId="workflow-workload"
+              columns={workloadColumns}
+              data={workloadRows}
+              selectable={false}
+              emptyMessage="Sin asignaciones pendientes"
+            />
           )}
         </PageSection>
       </div>

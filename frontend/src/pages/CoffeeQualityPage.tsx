@@ -12,6 +12,8 @@ import {
   FormActions,
   EmptyPanel,
 } from '../components/page';
+import { EnterpriseDataGrid } from '../components/data-workspace/EnterpriseDataGrid';
+import type { GridColumnDef, RowAction } from '../lib/data-grid/types';
 import {
   getQualityIndicators,
   getQualitySession,
@@ -25,6 +27,7 @@ import {
   startQualitySession,
   type CoffeeTicket,
 } from '../api/coffee';
+import { labelTicketStatus } from '../lib/productLabels';
 import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
 const emptyParams = {
@@ -145,6 +148,31 @@ export function CoffeeQualityPage() {
   const flow = (session?.flow ?? []) as Array<Record<string, unknown>>;
   const ticket = session?.ticket as Record<string, unknown> | undefined;
 
+  const gridRows = pending.map((t) => ({ ...t, id: t.id || t.ticketKey }));
+
+  const columns: GridColumnDef<CoffeeTicket>[] = [
+    { key: 'ticketKey', label: 'Ticket', getValue: (r) => r.ticketKey },
+    { key: 'producerName', label: 'Productor', getValue: (r) => r.producerName ?? '—' },
+    { key: 'lotCode', label: 'Lote', getValue: (r) => r.lotCode ?? '—' },
+    {
+      key: 'netWeightKg',
+      label: 'Neto',
+      getValue: (r) => (r.netWeightKg != null ? `${r.netWeightKg} kg` : '—'),
+    },
+    { key: 'status', label: 'Estado', render: (r) => labelTicketStatus(r.status) },
+  ];
+
+  const rowActions: RowAction<CoffeeTicket>[] = [
+    {
+      id: 'evaluate',
+      label: 'Evaluar',
+      onAction: (r) => {
+        if (busy) return;
+        start(r.ticketKey);
+      },
+    },
+  ];
+
   return (
     <PageLayout>
       <PageHeader
@@ -176,25 +204,14 @@ export function CoffeeQualityPage() {
         {pending.length === 0 ? (
           <EmptyPanel title="Sin tickets" description="No hay tickets pendientes de evaluación de calidad." />
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr><th>Ticket</th><th>Productor</th><th>Lote</th><th>Neto</th><th>Estado</th><th></th></tr>
-              </thead>
-              <tbody>
-                {pending.map((t) => (
-                  <tr key={t.id}>
-                    <td>{t.ticketKey}</td>
-                    <td>{t.producerName ?? '—'}</td>
-                    <td>{t.lotCode ?? '—'}</td>
-                    <td>{t.netWeightKg != null ? `${t.netWeightKg} kg` : '—'}</td>
-                    <td>{t.status}</td>
-                    <td><button className="btn" disabled={busy} onClick={() => start(t.ticketKey)}>Evaluar</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <EnterpriseDataGrid
+            gridId="coffee-quality-queue"
+            columns={columns}
+            data={gridRows}
+            selectable={false}
+            rowActions={rowActions}
+            emptyMessage="No hay tickets pendientes de calidad."
+          />
         )}
       </PageSection>
 

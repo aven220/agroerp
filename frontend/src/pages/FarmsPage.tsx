@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSummary,
+  MetricCard,
+  PageState,
+} from '../components/page';
 import { DataTable, type RowAction } from '../components/ui/DataTable';
-import { EmptyState } from '../components/ui/EmptyState';
 import { useAuth } from '../context/AuthContext';
 import { createStandardBulkActions } from '../lib/gridBulkActions';
 import type { GridColumnDef } from '../lib/data-grid/types';
@@ -167,14 +173,15 @@ export function FarmsPage() {
   ], []);
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Fincas"
         subtitle="Administre predios, ubicación y vínculos con productores"
+        showExperience={false}
         actions={
-          <div className="row-actions">
+          <PageActions>
             <Link to="/fincas/dashboard" className="btn">
-              Dashboard
+              Indicadores
             </Link>
             <Link to="/fincas/mapa" className="btn">
               Mapa
@@ -188,41 +195,28 @@ export function FarmsPage() {
                 + Nueva finca
               </button>
             ) : null}
-          </div>
+          </PageActions>
         }
       />
 
       {dashboard && (
-        <div className="kpi-grid">
-          <div className="kpi-card">
-            <span className="kpi-label">Total</span>
-            <span className="kpi-value">{dashboard.kpis.total}</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Activas</span>
-            <span className="kpi-value">{dashboard.kpis.active}</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Georreferenciadas</span>
-            <span className="kpi-value">{dashboard.kpis.georeferenced}</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">% con ubicación</span>
-            <span className="kpi-value">{dashboard.kpis.georefRatePct}%</span>
-          </div>
-        </div>
+        <PageSummary>
+          <MetricCard label="Total" value={dashboard.kpis.total} />
+          <MetricCard label="Activas" value={dashboard.kpis.active} tone="green" />
+          <MetricCard label="Georreferenciadas" value={dashboard.kpis.georeferenced} />
+          <MetricCard label="% con ubicación" value={`${dashboard.kpis.georefRatePct}%`} />
+        </PageSummary>
       )}
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error ? <PageState variant="error" message={error} onRetry={loadList} /> : null}
 
       {!loading && items.length === 0 && !error ? (
-        <EmptyState
-          illustration="data"
+        <PageState
+          variant="empty"
           title="Aún no hay fincas registradas"
-          description="Las fincas representan los predios de su operación. Registre la primera para asociar lotes y productores."
+          message="Las fincas representan los predios de su operación. Registre la primera para asociar lotes y productores."
           hint="Puede georreferenciar la finca después desde el detalle o el mapa."
-          action={canCreate ? { label: 'Registrar finca', to: '/fincas/nueva' } : undefined}
-          secondaryAction={{ label: 'Ver mapa', to: '/fincas/mapa' }}
+          action={canCreate ? { label: 'Registrar finca', to: '/fincas/nueva' } : { label: 'Ver mapa', to: '/fincas/mapa' }}
         />
       ) : (
       <DataTable<FarmUnit>
@@ -280,6 +274,6 @@ export function FarmsPage() {
         columns={columns}
       />
       )}
-    </>
+    </PageLayout>
   );
 }

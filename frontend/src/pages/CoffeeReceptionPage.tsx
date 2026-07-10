@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   PageLayout,
   PageHeader,
@@ -11,15 +11,19 @@ import {
   FormActions,
   EmptyPanel,
 } from '../components/page';
+import { EnterpriseDataGrid } from '../components/data-workspace/EnterpriseDataGrid';
+import type { GridColumnDef, RowAction } from '../lib/data-grid/types';
 import {
   createCoffeeTicket,
   listCoffeeTickets,
   searchCoffeeProducers,
   type CoffeeTicket,
 } from '../api/coffee';
+import { labelTicketStatus } from '../lib/productLabels';
 import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 
 export function CoffeeReceptionPage() {
+  const navigate = useNavigate();
   const [tickets, setTickets] = useState<CoffeeTicket[]>([]);
   const [producerName, setProducerName] = useState('');
   const [identityDoc, setIdentityDoc] = useState('');
@@ -80,6 +84,25 @@ export function CoffeeReceptionPage() {
     }
   };
 
+  const gridRows = tickets.map((t) => ({ ...t, id: t.id || t.ticketKey }));
+
+  const columns: GridColumnDef<CoffeeTicket>[] = [
+    { key: 'ticketKey', label: 'Ticket', getValue: (r) => r.ticketKey },
+    { key: 'producerName', label: 'Productor', getValue: (r) => r.producerName ?? '—' },
+    { key: 'status', label: 'Estado', render: (r) => labelTicketStatus(r.status) },
+    { key: 'turnNumber', label: 'Turno', getValue: (r) => r.turnNumber ?? '—' },
+    { key: 'netWeightKg', label: 'Neto kg', getValue: (r) => r.netWeightKg ?? '—' },
+  ];
+
+  const rowActions: RowAction<CoffeeTicket>[] = [
+    {
+      id: 'weigh',
+      label: 'Ir a pesaje',
+      hidden: (r) => r.status !== 'arrived',
+      onAction: (r) => navigate(`/compras/pesaje?ticket=${encodeURIComponent(r.ticketKey)}`),
+    },
+  ];
+
   return (
     <PageLayout>
       <PageHeader
@@ -115,33 +138,19 @@ export function CoffeeReceptionPage() {
 
       <PageSection title="Tickets de recepción">
         {tickets.length === 0 ? (
-          <EmptyPanel title="Sin tickets" description="Registre la primera llegada para iniciar el flujo CPEP." />
+          <EmptyPanel
+            title="Sin tickets"
+            description="Registre la primera llegada para iniciar el flujo de compras de café."
+          />
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr><th>Ticket</th><th>Productor</th><th>Estado</th><th>Turno</th><th>Neto kg</th><th></th></tr>
-              </thead>
-              <tbody>
-                {tickets.map((t) => (
-                  <tr key={t.id}>
-                    <td>{t.ticketKey}</td>
-                    <td>{t.producerName}</td>
-                    <td>{t.status}</td>
-                    <td>{t.turnNumber ?? '—'}</td>
-                    <td>{t.netWeightKg ?? '—'}</td>
-                    <td>
-                      {t.status === 'arrived' ? (
-                        <Link to={`/compras/pesaje?ticket=${encodeURIComponent(t.ticketKey)}`} className="btn btn-sm">
-                          Ir a pesaje
-                        </Link>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <EnterpriseDataGrid
+            gridId="coffee-reception-tickets"
+            columns={columns}
+            data={gridRows}
+            selectable={false}
+            rowActions={rowActions}
+            emptyMessage="No hay tickets de recepción."
+          />
         )}
       </PageSection>
     </PageLayout>

@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSummary,
+  MetricCard,
+  PageState,
+} from '../components/page';
 import { DataTable, type RowAction } from '../components/ui/DataTable';
-import { EmptyState } from '../components/ui/EmptyState';
 import { useAuth } from '../context/AuthContext';
 import { createStandardBulkActions } from '../lib/gridBulkActions';
 import type { GridColumnDef } from '../lib/data-grid/types';
@@ -167,14 +173,15 @@ export function LotsPage() {
   ], []);
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Lotes"
         subtitle="Gestione lotes productivos, cultivos y rendimiento por parcela"
+        showExperience={false}
         actions={
-          <div className="row-actions">
+          <PageActions>
             <Link to="/lotes/dashboard" className="btn">
-              Dashboard
+              Indicadores
             </Link>
             <Link to="/lotes/mapa" className="btn">
               Mapa
@@ -193,49 +200,39 @@ export function LotsPage() {
                 + Nuevo lote
               </button>
             ) : null}
-          </div>
+          </PageActions>
         }
       />
 
       {dashboard && (
-        <div className="kpi-grid">
-          <div className="kpi-card">
-            <span className="kpi-label">Total</span>
-            <span className="kpi-value">{dashboard.kpis.total}</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Activos</span>
-            <span className="kpi-value">{dashboard.kpis.active}</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Producción del año (kg)</span>
-            <span className="kpi-value">{Number(dashboard.kpis.totalProductionYtdKg).toLocaleString('es-CO')}</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Rendimiento promedio (kg/ha)</span>
-            <span className="kpi-value">{dashboard.kpis.avgYieldKgHa}</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Riesgos activos</span>
-            <span className="kpi-value">{dashboard.kpis.activeRisks}</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Georreferenciados</span>
-            <span className="kpi-value">{dashboard.kpis.georeferenced}</span>
-          </div>
-        </div>
+        <PageSummary>
+          <MetricCard label="Total" value={dashboard.kpis.total} />
+          <MetricCard label="Activos" value={dashboard.kpis.active} tone="green" />
+          <MetricCard
+            label="Producción del año (kg)"
+            value={Number(dashboard.kpis.totalProductionYtdKg).toLocaleString('es-CO')}
+          />
+          <MetricCard label="Rendimiento promedio (kg/ha)" value={dashboard.kpis.avgYieldKgHa} />
+          <MetricCard label="Riesgos activos" value={dashboard.kpis.activeRisks} />
+          <MetricCard label="Georreferenciados" value={dashboard.kpis.georeferenced} />
+        </PageSummary>
       )}
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error ? <PageState variant="error" message={error} onRetry={loadList} /> : null}
 
       {!loading && items.length === 0 && !error ? (
-        <EmptyState
-          illustration="data"
+        <PageState
+          variant="empty"
           title="Aún no hay lotes registrados"
-          description="Los lotes son las unidades productivas dentro de cada finca. Registre el primero para llevar seguimiento agronómico y de cosecha."
+          message="Los lotes son las unidades productivas dentro de cada finca. Registre el primero para llevar seguimiento agronómico y de cosecha."
           hint="Si ya tiene fincas, puede crear lotes vinculados desde el detalle de la finca."
-          action={canCreate ? { label: 'Registrar lote', to: '/lotes/nuevo' } : undefined}
-          secondaryAction={canImport ? { label: 'Importar lotes', to: '/lotes/importar' } : { label: 'Ver mapa', to: '/lotes/mapa' }}
+          action={
+            canCreate
+              ? { label: 'Registrar lote', to: '/lotes/nuevo' }
+              : canImport
+                ? { label: 'Importar lotes', to: '/lotes/importar' }
+                : { label: 'Ver mapa', to: '/lotes/mapa' }
+          }
         />
       ) : (
       <DataTable<FieldLotProfile>
@@ -278,6 +275,6 @@ export function LotsPage() {
         columns={columns}
       />
       )}
-    </>
+    </PageLayout>
   );
 }

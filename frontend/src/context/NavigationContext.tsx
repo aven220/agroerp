@@ -12,6 +12,7 @@ import {
   ALL_NAV_ITEMS,
   DEFAULT_EXPANDED_CATEGORIES,
   NAV_CATEGORIES,
+  type NavCategory,
   type NavCategoryId,
   type NavItem,
   findNavItemByPath,
@@ -22,6 +23,7 @@ import { resolveDashboardRole } from '../config/navigation';
 import { canAccessPath } from '../config/routePermissions';
 import { parseEntityFromPath, recordWorkEntityVisit } from '../lib/workEntityHistory';
 import { useAuth } from './AuthContext';
+import { useExperienceCenterOptional } from './ExperienceCenterContext';
 
 export interface FavoriteItem {
   id: string;
@@ -50,7 +52,7 @@ interface NavigationContextValue {
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
   filterNavItem: (item: NavItem) => boolean;
-  visibleCategories: typeof NAV_CATEGORIES;
+  visibleCategories: NavCategory[];
   widgetLayout: { order: string[]; hidden: string[] };
   setWidgetOrder: (order: string[]) => void;
   toggleWidget: (id: string) => void;
@@ -67,6 +69,7 @@ function storageKey(userId: string | undefined, key: string) {
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const { user, hasPermission } = useAuth();
   const location = useLocation();
+  const experience = useExperienceCenterOptional();
   const userId = user?.id;
 
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
@@ -145,8 +148,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     [hasPermission],
   );
 
+  const baseCategories = experience?.experienceNav ?? NAV_CATEGORIES;
+
   const visibleCategories = useMemo(() => {
-    return NAV_CATEGORIES.map((cat) => {
+    return baseCategories.map((cat) => {
       if (cat.id === 'favorites') {
         const favItems: NavItem[] = favorites
           .filter((f) => canAccessPath(f.to, hasPermission))
@@ -157,17 +162,17 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       const items = cat.items.filter(filterNavItem);
       if (items.length === 0 && cat.id !== 'home') return null;
       return { ...cat, items };
-    }).filter(Boolean) as typeof NAV_CATEGORIES;
-  }, [favorites, filterNavItem, hasPermission]);
+    }).filter(Boolean) as NavCategory[];
+  }, [baseCategories, favorites, filterNavItem, hasPermission]);
 
   const toggleGroup = useCallback((id: NavCategoryId) => {
     setCollapsedGroups((prev) => {
-      const cat = NAV_CATEGORIES.find((c) => c.id === id);
+      const cat = baseCategories.find((c) => c.id === id) ?? NAV_CATEGORIES.find((c) => c.id === id);
       const defaultCollapsed = cat?.defaultCollapsed ?? !DEFAULT_EXPANDED_CATEGORIES.includes(id);
       const currentlyCollapsed = prev[id] ?? defaultCollapsed;
       return { ...prev, [id]: !currentlyCollapsed };
     });
-  }, []);
+  }, [baseCategories]);
 
   const expandGroup = useCallback((id: NavCategoryId) => {
     setCollapsedGroups((prev) => {
@@ -205,13 +210,19 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const clearRecentSearches = useCallback(() => setRecentSearches([]), []);
 
   const recordVisit = useCallback((pathname: string) => {
-    const match = findNavItemByPath(pathname) ?? ALL_NAV_ITEMS.find((i) => i.to === pathname);
+    const experienceItems = experience?.experienceNav.flatMap((c) => c.items) ?? [];
+    const match =
+      findNavItemByPath(pathname) ??
+      experienceItems.find((i) =>
+        i.exact ? pathname === i.to : pathname === i.to || pathname.startsWith(`${i.to}/`),
+      ) ??
+      ALL_NAV_ITEMS.find((i) => i.to === pathname);
     if (!match || match.to === '/') return;
     setNavHistory((prev) => {
       if (prev[0]?.id === match.id) return prev;
       return [match, ...prev.filter((h) => h.id !== match.id)].slice(0, 15);
     });
-  }, []);
+  }, [experience?.experienceNav]);
 
   useEffect(() => {
     recordVisit(location.pathname);
@@ -222,14 +233,14 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       if (favorites.some((f) => f.id === match.id)) {
         expandGroup('favorites');
       }
-      for (const cat of NAV_CATEGORIES) {
+      for (const cat of baseCategories) {
         if (cat.items.some((i) => i.id === match.id)) {
           expandGroup(cat.id);
           break;
         }
       }
     }
-  }, [location.pathname, recordVisit, expandGroup, favorites, userId]);
+  }, [location.pathname, recordVisit, expandGroup, favorites, userId, baseCategories]);
 
   const setWidgetOrder = useCallback((order: string[]) => {
     setWidgetLayout((prev) => ({ ...prev, order }));
