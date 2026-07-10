@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import {
+  PageActions,
+  PageState,
+  EntityMetadata,
+  MetadataChip,
+  EntityDetailLayout,
+  type EntityTab,
+} from '../components/page';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { ProcessWorkspacePanel } from '../components/process/ProcessWorkspacePanel';
 import { PinRecordButton } from '../components/guided-workspace/PinRecordButton';
-import { LoadingState } from '../components/ux/LoadingState';
 import { useAuth } from '../context/AuthContext';
 import { updateWorkEntityLabel } from '../lib/workEntityHistory';
 import { buildRecordExplorerPath } from '../record-explorer/types';
@@ -32,7 +39,18 @@ const STATUS_LABELS: Record<string, string> = {
   abandoned: 'Abandonada',
 };
 
-type Tab = 'perfil' | 'twin' | 'lotes' | 'geometria' | 'documentos' | 'galeria' | 'timeline' | 'productores';
+const FARM_TABS: EntityTab[] = [
+  { id: 'perfil', label: 'Perfil' },
+  { id: 'twin', label: 'Indicadores' },
+  { id: 'lotes', label: 'Lotes' },
+  { id: 'geometria', label: 'Geometria' },
+  { id: 'documentos', label: 'Documentos' },
+  { id: 'galeria', label: 'Galeria' },
+  { id: 'timeline', label: 'Historial' },
+  { id: 'productores', label: 'Productores' },
+];
+
+type Tab = (typeof FARM_TABS)[number]['id'];
 
 export function FarmDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -159,8 +177,10 @@ export function FarmDetailPage() {
     }
   }
 
-  if (loading) return <LoadingState variant="page" message="Cargando expediente..." />;
-  if (error || !farm) return <div className="alert alert-error">{error ?? 'No encontrado'}</div>;
+  if (loading) return <PageState variant="loading" message="Cargando expediente..." />;
+  if (error || !farm) {
+    return <PageState variant="error" message={error ?? 'Finca no encontrada'} onRetry={() => reload().catch(() => undefined)} />;
+  }
 
   const mediaDocs = (farm.documents ?? []).filter((d) =>
     ['photo', 'video', 'image'].some((t) => d.documentTypeCode.includes(t) || d.mediaType?.includes('image') || d.mediaType?.includes('video')),
@@ -172,7 +192,7 @@ export function FarmDetailPage() {
         title={farm.farmName}
         subtitle={`${farm.farmCode} · ${STATUS_LABELS[farm.status] ?? farm.status}`}
         actions={
-          <div className="row-actions">
+          <PageActions>
             {id ? (
               <PinRecordButton
                 kind="farm"
@@ -199,7 +219,7 @@ export function FarmDetailPage() {
                 Editar
               </Link>
             ) : null}
-          </div>
+          </PageActions>
         }
       />
 
@@ -263,31 +283,23 @@ export function FarmDetailPage() {
         />
       ) : null}
 
-      {twin && (
-        <div className="detail-scores">
-          <div className="score-chip">Lotes: {twin.lotCount}</div>
-          <div className="score-chip">Cultivos activos: {twin.activeCropStandCount}</div>
-          <div className="score-chip">Docs: {twin.documentCompletenessPct}%</div>
-          {twin.productionYtdKg != null && (
-            <div className="score-chip">Prod. YTD: {twin.productionYtdKg} kg</div>
-          )}
-        </div>
-      )}
-
-      <nav className="tab-nav">
-        {(['perfil', 'twin', 'lotes', 'geometria', 'documentos', 'galeria', 'timeline', 'productores'] as Tab[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            className={`tab-btn ${tab === t ? 'active' : ''}`}
-            onClick={() => setTab(t)}
-          >
-            {t === 'twin' ? 'Indicadores' : t === 'timeline' ? 'Historial' : t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </nav>
-
-      <div className="tab-panel">
+      <EntityDetailLayout
+        tabs={FARM_TABS}
+        activeTab={tab}
+        onTabChange={(id) => setTab(id as Tab)}
+        metadata={
+          twin ? (
+            <EntityMetadata>
+              <MetadataChip>Lotes: {twin.lotCount}</MetadataChip>
+              <MetadataChip>Cultivos activos: {twin.activeCropStandCount}</MetadataChip>
+              <MetadataChip>Docs: {twin.documentCompletenessPct}%</MetadataChip>
+              {twin.productionYtdKg != null ? (
+                <MetadataChip>Prod. YTD: {twin.productionYtdKg} kg</MetadataChip>
+              ) : null}
+            </EntityMetadata>
+          ) : null
+        }
+      >
         {tab === 'perfil' && (
           <div className="detail-grid">
             <div className="detail-section">
@@ -536,7 +548,7 @@ export function FarmDetailPage() {
             )}
           </div>
         )}
-      </div>
+      </EntityDetailLayout>
 
       {lifecycleOpen && (
         <div className="modal-backdrop" onClick={() => setLifecycleOpen(false)}>

@@ -1,0 +1,403 @@
+/* =========================================================
+   PM-15B — Enterprise Visual Audit & UX Consolidation
+   Visual-only layer. No brand change. Loaded last.
+   ========================================================= */
+
+/* ─── Spacing utilities (replace inline margins) ─── */
+.ds-mb-3 { margin-bottom: var(--ds-space-3); }
+.ds-mb-4 { margin-bottom: var(--ds-space-4); }
+.ds-mb-5 { margin-bottom: var(--ds-space-5); }
+.ds-mb-0 { margin-bottom: 0; }
+.ds-mt-1 { margin-top: var(--ds-space-1); }
+.ds-mt-3 { margin-top: var(--ds-space-3); }
+.ds-mt-4 { margin-top: var(--ds-space-4); }
+
+/* ─── Page rhythm ─── */
+.page-stack > * + *,
+.erp-content > header.topbar + *,
+.erp-content > .page-topbar + * {
+  margin-top: 0;
+}
+
+.page-help,
+.page-header-desc,
+.page-header-help,
+.page-header-next {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+  line-height: var(--ds-leading-normal);
+  max-width: 52rem;
+}
+
+.page-header-experience {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  margin-top: var(--ds-space-3);
+}
+
+.page-header-help {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3);
+  background: var(--ds-info-subtle);
+  border: 1px solid var(--ds-info-border);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text-secondary);
+}
+
+.page-help {
+  margin-bottom: var(--ds-space-4);
+}
+
+.admin-help-card {
+  margin-bottom: var(--ds-space-4);
+}
+
+.admin-help-card p {
+  margin: var(--ds-space-1) 0 0;
+}
+
+/* ─── Legacy sidebar hardcodes → DS tokens ─── */
+.sidebar {
+  background: var(--ds-sidebar-bg);
+  color: var(--ds-sidebar-text);
+}
+
+.sidebar-brand {
+  border-bottom-color: color-mix(in srgb, var(--ds-sidebar-text) 10%, transparent);
+}
+
+.sidebar-brand span {
+  color: var(--ds-sidebar-muted);
+}
+
+.nav-item {
+  color: var(--ds-sidebar-muted);
+}
+
+.nav-item:hover {
+  background: var(--ds-sidebar-hover);
+  color: var(--ds-sidebar-text);
+}
+
+.nav-item.active {
+  background: var(--ds-sidebar-active);
+  color: var(--ds-text-on-primary);
+}
+
+.sidebar-footer {
+  border-top-color: color-mix(in srgb, var(--ds-sidebar-text) 10%, transparent);
+}
+
+/* ─── Bare data-table chrome (pages without .table-wrap) ─── */
+.erp-content > table.data-table,
+.panel-body > table.data-table:only-child,
+.tab-panel > table.data-table:only-child,
+.page-stack > table.data-table {
+  width: 100%;
+  max-width: 100%;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-sm);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.erp-content > table.data-table thead th,
+.panel-body > table.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--ds-surface-sunken);
+}
+
+/* Scroll wrapper for wide bare tables */
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-sm);
+  background: var(--ds-surface);
+}
+
+.table-scroll > table.data-table {
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  min-width: 640px;
+}
+
+/* ─── Tables: unified row height & zebra optional ─── */
+.data-table tbody tr,
+.ds-table tbody tr,
+.edw-table tbody tr {
+  min-height: var(--ux-table-row-h, 44px);
+}
+
+.data-table tbody tr:nth-child(even):not(.selected):not(:hover),
+.ds-table tbody tr:nth-child(even):not(.selected):not(:hover) {
+  background: color-mix(in srgb, var(--ds-surface-sunken) 45%, transparent);
+}
+
+.data-table:focus-within tbody tr.selected,
+.ds-table:focus-within tbody tr.selected {
+  outline: none;
+}
+
+/* ─── Pagination — single language ─── */
+.pagination-bar,
+.ds-pagination,
+.edw-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  background: var(--ds-surface);
+  border-top: 1px solid var(--ds-border);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+/* ─── Forms: sticky footer polish ─── */
+.edw-form-actions,
+.form-actions.form-sticky,
+.form-page-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  margin-top: var(--ds-space-4);
+  padding-top: var(--ds-space-4);
+  background: color-mix(in srgb, var(--ds-surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--ds-border);
+}
+
+.edw-form-section.form-section,
+.form-section {
+  padding: var(--ux-card-pad, var(--ds-space-5));
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-xs);
+}
+
+.form-section + .form-section,
+.edw-form-section + .edw-form-section {
+  margin-top: var(--ds-space-3);
+}
+
+/* ─── Layout: shell equilibrium ─── */
+.erp-shell {
+  min-height: 100dvh;
+}
+
+.erp-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.erp-content {
+  flex: 1;
+  min-height: 0;
+}
+
+.app-shell-bar {
+  flex-shrink: 0;
+}
+
+/* Workspace / dashboard noise reduction */
+.ws-toolbar,
+.dashboard-toolbar {
+  margin-bottom: var(--ds-space-4);
+}
+
+.ws-widget,
+.ure-widget-slot > .panel,
+.ure-widget-slot > .card {
+  overflow: hidden;
+}
+
+.ws-widget-header,
+.ure-summary-head {
+  padding-bottom: var(--ds-space-3);
+  border-bottom: 1px solid var(--ds-border);
+  margin-bottom: var(--ds-space-3);
+}
+
+.guided-workspace-panel,
+.smart-assistant-panel {
+  border-left: 1px solid var(--ds-border);
+  box-shadow: var(--ds-shadow-lg);
+}
+
+/* Flow / next-actions cards — calmer chrome */
+.flow-next-actions,
+.flow-progress {
+  margin-bottom: var(--ds-space-4);
+}
+
+.flow-next-actions-card {
+  border-radius: var(--ds-radius-lg);
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface);
+  box-shadow: var(--ds-shadow-xs);
+}
+
+/* ─── Micro UX: focus, loading, feedback ─── */
+.btn:focus-visible,
+.nav-item:focus-visible,
+.tab:focus-visible,
+.tab-btn:focus-visible,
+.filter-chip:focus-visible,
+.ds-pagination-btn:focus-visible,
+.ws-view-tab:focus-visible {
+  outline: 2px solid var(--ds-primary);
+  outline-offset: 2px;
+}
+
+.loading-inline,
+.loading-state,
+.ds-loading-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-8);
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-sm);
+}
+
+.empty-state,
+.ds-empty-state {
+  margin: var(--ds-space-4) 0;
+}
+
+.alert + .table-wrap,
+.alert + table.data-table,
+.alert + .data-table,
+.admin-help-card + table.data-table {
+  margin-top: var(--ds-space-4);
+}
+
+/* Skeleton pulse consistency */
+.ds-skeleton,
+.skeleton,
+.loading-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--ds-surface-sunken) 25%,
+    var(--ds-border) 50%,
+    var(--ds-surface-sunken) 75%
+  );
+  background-size: 200% 100%;
+  animation: ds-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--ds-radius-sm);
+}
+
+/* ─── Modals & drawers ─── */
+.modal-overlay,
+.modal-backdrop,
+.ds-drawer-backdrop {
+  backdrop-filter: blur(4px);
+}
+
+.modal-footer,
+.ds-drawer-footer {
+  position: sticky;
+  bottom: 0;
+  background: var(--ds-surface-sunken);
+}
+
+/* ─── Responsive: overflow & double-scroll guards ─── */
+@media (max-width: 1024px) {
+  .erp-content {
+    --ux-page-pad-x: var(--ds-space-4);
+  }
+
+  .edw-table-scroll {
+    max-height: min(60vh, 520px);
+  }
+
+  .admin-wizard-perms-layout,
+  .designer-layout,
+  .bi-designer-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .topbar,
+  .page-topbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding-top: var(--ds-space-4);
+  }
+
+  .topbar-right,
+  .page-topbar .topbar-right {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .topbar-right .btn,
+  .row-actions .btn {
+    flex: 1;
+  }
+
+  .edw-form-actions,
+  .form-actions.form-sticky {
+    padding-inline: 0;
+  }
+
+  .erp-shell-mobile .erp-content {
+    padding-bottom: calc(var(--ux-page-pad-b) + 72px);
+  }
+
+  .ure-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ure-sidebar {
+    max-height: none;
+    position: static;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .iam-hub-grid,
+  .admin-hub-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Prevent nested scroll traps */
+.erp-content .panel .edw-table-scroll,
+.erp-content .card .edw-table-scroll {
+  max-height: min(50vh, 480px);
+}
+
+/* Login — token alignment (no gradient change) */
+.login-panel {
+  border-radius: var(--ds-radius-2xl);
+  box-shadow: var(--ds-shadow-xl);
+}
+
+.login-brand {
+  background: var(--ds-primary);
+}

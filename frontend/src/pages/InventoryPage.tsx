@@ -1,6 +1,11 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { LoadingState } from '../components/ux/LoadingState';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageState,
+  FieldGroup,
+  FormActions,
+} from '../components/page';
 import { DataTable } from '../components/ui/DataTable';
 import { Modal } from '../components/ui/Modal';
 import { listEimsStock, postEimsMovement, listEimsWarehouses } from '../api/eims';
@@ -128,8 +133,8 @@ export function InventoryPage() {
   ], []);
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Inventario"
         subtitle={`Existencias EIMS · ${totalStock.toLocaleString('es-CO')} unidades en vista`}
         actions={
@@ -141,10 +146,10 @@ export function InventoryPage() {
         }
       />
 
-      {error ? <div className="alert alert-error">{error}</div> : null}
+      {error ? <PageState variant="error" message={error} onRetry={load} /> : null}
 
       {loading ? (
-        <LoadingState variant="table" />
+        <PageState variant="loading" loadingVariant="table" message="Cargando inventario…" />
       ) : (
         <DataTable<EimsStockRow>
           gridId="inventory"
@@ -156,16 +161,14 @@ export function InventoryPage() {
 
       <Modal open={modalOpen} title="Registrar entrada" onClose={() => setModalOpen(false)}>
         <form onSubmit={handleSave} className="form-grid">
-          <label>
-            Código de artículo *
+          <FieldGroup label="Código de artículo *" required>
             <input
               value={form.itemKey}
               onChange={(e) => setForm({ ...form, itemKey: e.target.value })}
               required
             />
-          </label>
-          <label>
-            Bodega *
+          </FieldGroup>
+          <FieldGroup label="Bodega *" required>
             <select
               value={form.warehouseKey}
               onChange={(e) => setForm({ ...form, warehouseKey: e.target.value })}
@@ -175,9 +178,8 @@ export function InventoryPage() {
                 <option key={w.warehouseKey} value={w.warehouseKey}>{w.name}</option>
               ))}
             </select>
-          </label>
-          <label>
-            Cantidad *
+          </FieldGroup>
+          <FieldGroup label="Cantidad *" required>
             <input
               type="number"
               min="0"
@@ -186,19 +188,18 @@ export function InventoryPage() {
               onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
               required
             />
-          </label>
-          <label>
-            Notas
+          </FieldGroup>
+          <FieldGroup label="Notas">
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
-          </label>
-          <div className="form-actions">
+          </FieldGroup>
+          <FormActions>
             <button type="button" className="btn" onClick={() => setModalOpen(false)}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? 'Guardando...' : 'Registrar'}
             </button>
-          </div>
+          </FormActions>
         </form>
       </Modal>
-    </>
+    </PageLayout>
   );
 }

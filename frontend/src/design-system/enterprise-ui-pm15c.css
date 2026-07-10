@@ -1,0 +1,435 @@
+/* =========================================================
+   PM-15C — Enterprise UX Consolidation
+   Final visual layer. Tokens only. No brand change.
+   ========================================================= */
+
+:root {
+  --page-layout-gap: var(--ds-space-4);
+  --page-toolbar-gap: var(--ds-space-3);
+}
+
+/* ─── FASE 2: Unified page layout ─── */
+.erp-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-layout-gap);
+}
+
+.page-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-layout-gap);
+  min-width: 0;
+  flex: 1;
+}
+
+.page-layout-header,
+.erp-content > header.topbar,
+.erp-content > .page-topbar {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.page-toolbar,
+.erp-content > .filter-bar,
+.erp-content > .filter-form,
+.erp-content > .ds-toolbar,
+.erp-content > .edw-toolbar,
+.erp-content > .ws-toolbar,
+.erp-content > .tab-nav,
+.erp-content > .tabs,
+.erp-content > .admin-tabs,
+.erp-content > .flow-progress,
+.erp-content > .flow-next-actions {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.page-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-layout-gap);
+  min-width: 0;
+  flex: 1;
+}
+
+.page-footer,
+.erp-content > .form-actions,
+.erp-content > .edw-form-actions,
+.erp-content > .pagination-bar,
+.erp-content > .ds-pagination {
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+/* Auto-toolbar: filter bars directly after header */
+.page-topbar + .filter-bar,
+.topbar + .filter-bar,
+.page-topbar + .filter-form,
+.topbar + .admin-tabs,
+.page-topbar + .tabs {
+  margin-top: calc(var(--page-layout-gap) * -0.5);
+}
+
+/* ─── FASE 3: Tables enterprise ─── */
+.table-wrap,
+.table-scroll,
+.edw-grid-wrap {
+  width: 100%;
+  max-width: 100%;
+}
+
+.data-table thead th,
+.ds-table thead th,
+.edw-table thead th {
+  height: var(--ux-table-row-h, 44px);
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--ds-border);
+  box-shadow: 0 1px 0 var(--ds-border);
+}
+
+.data-table tbody td,
+.ds-table tbody td,
+.edw-table tbody td {
+  height: var(--ux-table-row-h, 44px);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.data-table tbody tr:last-child td,
+.ds-table tbody tr:last-child td,
+.edw-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover td,
+.ds-table tbody tr:hover td,
+.edw-table tbody tr:hover td {
+  background: var(--ds-surface-sunken);
+}
+
+.data-table tr.selected td,
+.ds-table tr.selected td,
+.edw-table tr.selected td {
+  background: var(--ds-primary-subtle);
+}
+
+.data-table .col-checkbox,
+.ds-table .col-checkbox,
+.edw-table .col-checkbox {
+  width: 44px;
+  text-align: center;
+}
+
+/* ─── FASE 4: Forms enterprise ─── */
+.form-group label,
+.ds-field-label,
+.form-grid > label {
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-secondary);
+}
+
+.field-hint,
+.ds-field-hint,
+.form-hint {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+  line-height: var(--ds-leading-normal);
+  margin-top: var(--ds-space-1);
+}
+
+.field-error,
+.ds-field-error,
+.form-error,
+.error-text {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-error);
+  margin-top: var(--ds-space-1);
+}
+
+.form-page {
+  max-width: var(--ds-content-max);
+  width: 100%;
+}
+
+.form-divider,
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--ds-border);
+  margin: var(--ds-space-4) 0;
+}
+
+/* ─── FASE 5: Workspace unification ─── */
+.ws-workspace,
+.dashboard-workspace,
+.ure-layout {
+  gap: var(--page-layout-gap);
+}
+
+.ws-widget,
+.ure-widget-slot > .panel,
+.ure-widget-slot > .card,
+.ure-widget-slot > .ure-summary,
+.kpi-card,
+.inbox-card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-sm);
+}
+
+.ws-widget-header,
+.ure-summary-head,
+.gwp-panel-header,
+.smart-assistant-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  padding-bottom: var(--ds-space-3);
+  margin-bottom: var(--ds-space-3);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.gwp-shell-toggle,
+.smart-assistant-trigger {
+  border-radius: var(--ds-radius-md);
+}
+
+.flow-next-actions-grid,
+.flow-progress-steps {
+  gap: var(--ds-space-3);
+}
+
+/* ─── FASE 6: Micro-interactions ─── */
+.btn {
+  transition:
+    background var(--ds-duration-fast) var(--ds-ease),
+    border-color var(--ds-duration-fast) var(--ds-ease),
+    color var(--ds-duration-fast) var(--ds-ease),
+    box-shadow var(--ds-duration-fast) var(--ds-ease),
+    transform var(--ds-duration-fast) var(--ds-ease);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.card-interactive:active,
+.iam-hub-card:active,
+.admin-hub-card:active {
+  transform: translateY(1px);
+}
+
+.ds-toast {
+  animation: ds-slide-up var(--ds-duration-normal) var(--ds-ease-out);
+}
+
+.alert,
+.ds-alert {
+  animation: ds-fade-in var(--ds-duration-fast) var(--ds-ease-out);
+}
+
+.empty-state,
+.ds-empty-state {
+  animation: ds-fade-in var(--ds-duration-normal) var(--ds-ease-out);
+}
+
+/* ─── FASE 7: Responsive breakpoints ─── */
+@media (max-width: 1600px) {
+  .erp-content {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 1280px) {
+  .designer-layout,
+  .bi-designer-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 280px);
+  }
+}
+
+@media (max-width: 1024px) {
+  .erp-content {
+    --ux-page-pad-x: var(--ds-space-5);
+  }
+
+  .panel-grid,
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-content {
+    --ux-page-pad-x: var(--ds-space-4);
+    --page-layout-gap: var(--ds-space-3);
+  }
+
+  .erp-shell-mobile .erp-content {
+    padding-bottom: calc(var(--ux-page-pad-b) + 80px);
+  }
+
+  .mobile-fab,
+  .m-fab {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    z-index: 90;
+  }
+
+  .bottom-nav {
+    z-index: 100;
+  }
+}
+
+@media (max-width: 414px) {
+  .erp-content {
+    --ux-page-pad-x: var(--ds-space-3);
+  }
+
+  .topbar h1,
+  .page-topbar h1 {
+    font-size: var(--ds-text-2xl);
+  }
+}
+
+@media (max-width: 390px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 375px) {
+  .global-search-trigger-text {
+    display: none;
+  }
+}
+
+@media (max-width: 320px) {
+  .erp-content {
+    --ux-page-pad-x: var(--ds-space-2);
+    --ux-page-pad-b: var(--ds-space-4);
+  }
+
+  .topbar h1,
+  .page-topbar h1 {
+    font-size: var(--ds-text-xl);
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .row-actions,
+  .topbar-right {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .row-actions .btn,
+  .topbar-right .btn {
+    width: 100%;
+  }
+}
+
+/* ─── FASE 8: Dark mode — neutralize legacy hardcodes ─── */
+.bpm-node-initial { border-color: var(--ds-success); }
+.bpm-node-final { border-color: var(--ds-info); }
+.bpm-node-cancelled { border-color: var(--ds-error); opacity: 0.85; }
+
+.sidebar-overlay {
+  background: var(--ds-overlay);
+}
+
+.admin-wizard-overlay {
+  background: var(--ds-overlay);
+}
+
+.note-card {
+  background: var(--ds-surface-sunken);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+}
+
+.code-block,
+.code-sm {
+  background: var(--ds-surface-sunken);
+  border: 1px solid var(--ds-border);
+  color: var(--ds-text-secondary);
+}
+
+/* Legacy status pills → tokens */
+.status-pill,
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--ds-space-1) var(--ds-space-2);
+  border-radius: var(--ds-radius-full);
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-semibold);
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text-secondary);
+}
+
+.status-pill.active,
+.status-badge.active {
+  background: var(--ds-success-subtle);
+  color: var(--ds-success);
+  border-color: var(--ds-success-border);
+}
+
+.status-pill.pending,
+.status-badge.pending {
+  background: var(--ds-warning-subtle);
+  color: var(--ds-warning);
+  border-color: var(--ds-warning-border);
+}
+
+.status-pill.error,
+.status-badge.error {
+  background: var(--ds-error-subtle);
+  color: var(--ds-error);
+  border-color: var(--ds-error-border);
+}
+
+/* Panel sections without inline margin */
+.panel.card,
+section.panel {
+  margin-bottom: 0;
+}
+
+.page-body > .panel + .panel,
+.page-body > section.panel + section.panel {
+  margin-top: 0;
+}
+
+.text-muted {
+  color: var(--ds-text-muted);
+}
+
+/* Guard: single scroll axis */
+html,
+body,
+#root {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+.erp-shell,
+.erp-main,
+.page-layout,
+.page-body {
+  max-width: 100%;
+  min-width: 0;
+}

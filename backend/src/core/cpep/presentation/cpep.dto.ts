@@ -1,4 +1,22 @@
-import { IsNumber, IsObject, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsNumber, IsObject, IsOptional, IsString } from 'class-validator';
+
+const CPEP_SCALE_CONNECTION_TYPES = [
+  'usb',
+  'serial_rs232',
+  'ethernet',
+  'tcp_ip',
+  'bluetooth',
+  'wifi',
+  'iot_gateway',
+] as const;
+
+const CPEP_QUALITY_DECISIONS = [
+  'accepted',
+  'accepted_with_observations',
+  'conditioned',
+  'rejected',
+  'requires_lab',
+] as const;
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTicketDto {
@@ -40,7 +58,9 @@ export class IotWeighDto {
 export class ScaleDto {
   @ApiProperty() @IsString() scaleKey!: string;
   @ApiProperty() @IsString() name!: string;
-  @ApiProperty() @IsString() connectionType!: string;
+  @ApiProperty({ enum: CPEP_SCALE_CONNECTION_TYPES })
+  @IsIn(CPEP_SCALE_CONNECTION_TYPES)
+  connectionType!: (typeof CPEP_SCALE_CONNECTION_TYPES)[number];
   @ApiPropertyOptional() @IsOptional() @IsString() iotDeviceKey?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() purchaseCenterId?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() driverKey?: string;
@@ -114,7 +134,10 @@ export class QualityDto {
   @ApiPropertyOptional() @IsOptional() @IsString() grade?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() observations?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() inspectorComments?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() decision?: string;
+  @ApiPropertyOptional({ enum: CPEP_QUALITY_DECISIONS })
+  @IsOptional()
+  @IsIn(CPEP_QUALITY_DECISIONS)
+  decision?: (typeof CPEP_QUALITY_DECISIONS)[number];
   @ApiPropertyOptional() @IsOptional() @IsObject() labResults?: Record<string, unknown>;
   @ApiPropertyOptional() @IsOptional() photoKeys?: string[];
 }

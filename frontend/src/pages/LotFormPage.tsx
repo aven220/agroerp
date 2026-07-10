@@ -187,7 +187,7 @@ export function LotFormPage() {
       {error && <div className="alert alert-error">{error}</div>}
 
       {!isEdit ? (
-        <div className="admin-help-card" style={{ marginBottom: '1rem' }}>
+        <div className="admin-help-card">
           <strong>¿Cómo registrar un lote?</strong>
           <p className="muted" style={{ margin: '0.35rem 0 0' }}>
             Primero elija la finca. Luego seleccione el espacio o parcela dentro de esa finca.

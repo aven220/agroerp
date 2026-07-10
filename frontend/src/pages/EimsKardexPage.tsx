@@ -1,6 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  PageSummary,
+  MetricCard,
+  TableToolbar,
+  FieldGroup,
+  FormActions,
+  EmptyPanel,
+} from '../components/page';
 import {
   compareEimsValuationMethods,
   getEimsCostHistory,
@@ -48,31 +60,31 @@ export function EimsKardexPage() {
   useEffect(() => { reload().catch((e) => setError(e.message)); }, []);
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Centro de Kardex y valoración"
         subtitle="Saldo permanente, costos y comparación de métodos"
         actions={
-          <>
+          <PageActions>
             <Link to="/inventario/cierres" className="btn">Cierres</Link>
             <Link to="/inventario/movimientos" className="btn">Movimientos</Link>
             <Link to="/inventario" className="btn">Inventario</Link>
-          </>
+          </PageActions>
         }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
+      {error ? <PageState variant="error" message={error} /> : null}
 
       {value ? (
-        <section className="panel grid-4">
-          <div><strong>Valor inventario</strong><div>{Number(value.total ?? 0).toLocaleString()}</div></div>
-          <div><strong>Artículos valorados</strong><div>{Object.keys((value.byItem as object) ?? {}).length}</div></div>
-          <div><strong>Bodegas</strong><div>{Object.keys((value.byWarehouse as object) ?? {}).length}</div></div>
-          <div><strong>Eventos de costo</strong><div>{costs.length}</div></div>
-        </section>
+        <PageSummary>
+          <MetricCard label="Valor inventario" value={Number(value.total ?? 0).toLocaleString()} tone="green" />
+          <MetricCard label="Artículos valorados" value={Object.keys((value.byItem as object) ?? {}).length} />
+          <MetricCard label="Bodegas" value={Object.keys((value.byWarehouse as object) ?? {}).length} tone="blue" />
+          <MetricCard label="Eventos de costo" value={costs.length} />
+        </PageSummary>
       ) : null}
 
-      <section className="panel">
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <PageSection title="Consulta">
+        <TableToolbar>
           <select value={itemKey} onChange={(e) => setItemKey(e.target.value)}>
             <option value="">Artículo...</option>
             {items.map((i) => <option key={String(i.itemKey)} value={String(i.itemKey)}>{String(i.itemKey)}</option>)}
@@ -82,6 +94,8 @@ export function EimsKardexPage() {
             {warehouses.map((w) => <option key={String(w.warehouseKey)} value={String(w.warehouseKey)}>{String(w.warehouseKey)}</option>)}
           </select>
           <input placeholder="Código de lote" value={lotKey} onChange={(e) => setLotKey(e.target.value)} />
+        </TableToolbar>
+        <FormActions sticky={false}>
           <button className="btn" onClick={() => reload()}>Consultar Kardex</button>
           <button
             className="btn"
@@ -96,87 +110,95 @@ export function EimsKardexPage() {
           >
             Comparar métodos
           </button>
-        </div>
-      </section>
+        </FormActions>
+      </PageSection>
 
-      <section className="panel">
-        <h3>Kardex permanente</h3>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Fecha</th><th>Artículo</th><th>Bodega</th><th>Movimiento</th><th>Saldo ant.</th>
-              <th>Entrada</th><th>Salida</th><th>Saldo</th><th>Costo unit.</th><th>Costo total</th>
-              <th>Saldo $</th><th>Método</th><th>Documento</th><th>Usuario</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => {
-              const item = r.item as Record<string, unknown> | undefined;
-              const warehouse = r.warehouse as Record<string, unknown> | undefined;
-              return (
-                <tr key={i}>
-                  <td>{r.postedAt ? new Date(String(r.postedAt)).toLocaleString() : '—'}</td>
-                  <td>{String(item?.itemKey ?? '')}</td>
-                  <td>{String(warehouse?.warehouseKey ?? '')}</td>
-                  <td>{String(r.movementType)}</td>
-                  <td>{String(r.previousBalanceQty)}</td>
-                  <td>{String(r.entryQty)}</td>
-                  <td>{String(r.exitQty)}</td>
-                  <td>{String(r.balanceQty)}</td>
-                  <td>{Number(r.unitCost ?? 0).toLocaleString()}</td>
-                  <td>{Number(r.totalCost ?? 0).toLocaleString()}</td>
-                  <td>{Number(r.balanceCost ?? 0).toLocaleString()}</td>
-                  <td>{String(r.valuationMethod)}</td>
-                  <td>{String(r.documentKey ?? '—')}</td>
-                  <td>{String(r.postedBy ?? '—')}</td>
+      <PageSection title="Kardex permanente">
+        {rows.length === 0 ? (
+          <EmptyPanel title="Sin movimientos" description="Ajuste los filtros y consulte el kardex." />
+        ) : (
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th><th>Artículo</th><th>Bodega</th><th>Movimiento</th><th>Saldo ant.</th>
+                  <th>Entrada</th><th>Salida</th><th>Saldo</th><th>Costo unit.</th><th>Costo total</th>
+                  <th>Saldo $</th><th>Método</th><th>Documento</th><th>Usuario</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => {
+                  const item = r.item as Record<string, unknown> | undefined;
+                  const warehouse = r.warehouse as Record<string, unknown> | undefined;
+                  return (
+                    <tr key={i}>
+                      <td>{r.postedAt ? new Date(String(r.postedAt)).toLocaleString() : '—'}</td>
+                      <td>{String(item?.itemKey ?? '')}</td>
+                      <td>{String(warehouse?.warehouseKey ?? '')}</td>
+                      <td>{String(r.movementType)}</td>
+                      <td>{String(r.previousBalanceQty)}</td>
+                      <td>{String(r.entryQty)}</td>
+                      <td>{String(r.exitQty)}</td>
+                      <td>{String(r.balanceQty)}</td>
+                      <td>{Number(r.unitCost ?? 0).toLocaleString()}</td>
+                      <td>{Number(r.totalCost ?? 0).toLocaleString()}</td>
+                      <td>{Number(r.balanceCost ?? 0).toLocaleString()}</td>
+                      <td>{String(r.valuationMethod)}</td>
+                      <td>{String(r.documentKey ?? '—')}</td>
+                      <td>{String(r.postedBy ?? '—')}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PageSection>
 
       {compare ? (
-        <section className="panel">
-          <h3>Comparación de métodos de valoración</h3>
+        <PageSection title="Comparación de métodos de valoración">
           <pre className="code-block">{JSON.stringify(compare, null, 2)}</pre>
-        </section>
+        </PageSection>
       ) : null}
 
-      <section className="panel">
-        <h3>Historial de costos</h3>
-        <table className="data-table">
-          <thead>
-            <tr><th>Artículo</th><th>Evento</th><th>Método</th><th>Unit. ant.</th><th>Unit. nuevo</th><th>Prom. nuevo</th><th>Transporte</th><th>Almacenamiento</th><th>Transformación</th></tr>
-          </thead>
-          <tbody>
-            {costs.map((c, i) => {
-              const item = c.item as Record<string, unknown> | undefined;
-              return (
-                <tr key={i}>
-                  <td>{String(item?.itemKey ?? '')}</td>
-                  <td>{String(c.eventType)}</td>
-                  <td>{String(c.valuationMethod)}</td>
-                  <td>{Number(c.previousUnitCost ?? 0).toLocaleString()}</td>
-                  <td>{Number(c.newUnitCost ?? 0).toLocaleString()}</td>
-                  <td>{Number(c.newAverageCost ?? 0).toLocaleString()}</td>
-                  <td>{Number(c.transportCost ?? 0).toLocaleString()}</td>
-                  <td>{Number(c.storageCost ?? 0).toLocaleString()}</td>
-                  <td>{Number(c.transformCost ?? 0).toLocaleString()}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
+      <PageSection title="Historial de costos">
+        {costs.length === 0 ? (
+          <EmptyPanel title="Sin eventos de costo" description="Los eventos de costo aparecerán tras movimientos valorados." />
+        ) : (
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr><th>Artículo</th><th>Evento</th><th>Método</th><th>Unit. ant.</th><th>Unit. nuevo</th><th>Prom. nuevo</th><th>Transporte</th><th>Almacenamiento</th><th>Transformación</th></tr>
+              </thead>
+              <tbody>
+                {costs.map((c, i) => {
+                  const item = c.item as Record<string, unknown> | undefined;
+                  return (
+                    <tr key={i}>
+                      <td>{String(item?.itemKey ?? '')}</td>
+                      <td>{String(c.eventType)}</td>
+                      <td>{String(c.valuationMethod)}</td>
+                      <td>{Number(c.previousUnitCost ?? 0).toLocaleString()}</td>
+                      <td>{Number(c.newUnitCost ?? 0).toLocaleString()}</td>
+                      <td>{Number(c.newAverageCost ?? 0).toLocaleString()}</td>
+                      <td>{Number(c.transportCost ?? 0).toLocaleString()}</td>
+                      <td>{Number(c.storageCost ?? 0).toLocaleString()}</td>
+                      <td>{Number(c.transformCost ?? 0).toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PageSection>
 
       {report ? (
-        <section className="panel">
-          <h3>Reporte financiero</h3>
+        <PageSection title="Reporte financiero">
           <p>Valor total: <strong>{Number(report.inventoryValue ?? 0).toLocaleString()}</strong></p>
           <pre className="code-block">{JSON.stringify({ byWarehouse: report.byWarehouse, byItem: report.byItem }, null, 2)}</pre>
-        </section>
+        </PageSection>
       ) : null}
-    </>
+    </PageLayout>
   );
 }

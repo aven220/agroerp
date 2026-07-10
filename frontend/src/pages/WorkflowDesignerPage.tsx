@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  FieldGroup,
+  FormActions,
+} from '../components/page';
 import {
   PROCESS_CATEGORIES,
   STATE_TYPE_LABELS,
@@ -141,17 +149,17 @@ export function WorkflowDesignerPage() {
     : null;
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title={isNew ? 'Nuevo proceso' : `Diseñar — ${name}`}
         subtitle="Defina etapas, aprobaciones y reglas del flujo de trabajo"
         actions={
-          <div className="row-actions">
+          <PageActions>
             <button type="button" className="btn" onClick={() => navigate('/procesos')}>Volver</button>
             <button type="button" className="btn btn-primary" disabled={saving} onClick={handleSave}>
               {saving ? 'Guardando...' : 'Guardar'}
             </button>
-          </div>
+          </PageActions>
         }
       />
 
@@ -164,15 +172,23 @@ export function WorkflowDesignerPage() {
       </nav>
 
       {isNew && (
-        <div className="panel form-row">
-          <input placeholder="Código interno (opcional, se genera si se deja vacío)" value={workflowKey} onChange={(e) => setWorkflowKey(e.target.value)} aria-label="Código interno del proceso" />
-          <input placeholder="Nombre del proceso" value={name} onChange={(e) => setName(e.target.value)} />
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            {PROCESS_CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>
-            ))}
-          </select>
-        </div>
+        <PageSection title="Datos del proceso">
+          <div className="form-grid">
+            <FieldGroup label="Código interno">
+              <input placeholder="Opcional, se genera si se deja vacío" value={workflowKey} onChange={(e) => setWorkflowKey(e.target.value)} aria-label="Código interno del proceso" />
+            </FieldGroup>
+            <FieldGroup label="Nombre">
+              <input placeholder="Nombre del proceso" value={name} onChange={(e) => setName(e.target.value)} />
+            </FieldGroup>
+            <FieldGroup label="Categoría">
+              <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                {PROCESS_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+            </FieldGroup>
+          </div>
+        </PageSection>
       )}
 
       {tab === 'flow' && (
@@ -254,7 +270,7 @@ export function WorkflowDesignerPage() {
                 <button type="button" className="btn btn-sm btn-danger" onClick={() => removeState(stateObj.key)}>Eliminar</button>
               </>
             ) : (
-              <p className="text-muted">Seleccione un estado</p>
+              <PageState variant="empty" title="Seleccione un estado" loadingVariant="inline" />
             )}
           </aside>
         </div>
@@ -302,19 +318,19 @@ export function WorkflowDesignerPage() {
                 <button type="button" className="btn btn-sm btn-danger" onClick={() => removeTransition(transitionObj.key)}>Eliminar</button>
               </>
             ) : (
-              <p className="text-muted">Seleccione una transición</p>
+              <PageState variant="empty" title="Seleccione una transición" loadingVariant="inline" />
             )}
           </aside>
         </div>
       )}
 
       {tab === 'rules' && (
-        <div className="panel">
+        <PageSection title="Reglas avanzadas">
           <p>Reglas avanzadas del proceso. Para configuraciones complejas, use importación desde archivo o contacte al administrador.</p>
           <pre className="code-block">{JSON.stringify(schema.rules ?? [], null, 2)}</pre>
-          <p className="text-muted">Las reglas permiten condiciones por rol, datos del formulario o eventos del negocio.</p>
-        </div>
+          <p className="page-help">Las reglas permiten condiciones por rol, datos del formulario o eventos del negocio.</p>
+        </PageSection>
       )}
-    </>
+    </PageLayout>
   );
 }

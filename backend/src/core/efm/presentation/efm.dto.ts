@@ -1,4 +1,4 @@
-import { IsArray, IsBoolean, IsNumber, IsObject, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class EfmCoaVersionDto {
@@ -39,8 +39,8 @@ export class EfmParameterDto {
 }
 
 export class EfmCompanyDto {
-  @ApiProperty() companyKey!: string;
-  @ApiProperty() legalName!: string;
+  @ApiProperty() @IsString() @IsNotEmpty() companyKey!: string;
+  @ApiProperty() @IsString() @IsNotEmpty() legalName!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() taxId?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() countryCode?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() baseCurrency?: string;

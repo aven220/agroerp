@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import {
+  PageActions,
+  PageState,
+  EntityMetadata,
+  MetadataChip,
+  EntityDetailLayout,
+  type EntityTab,
+} from '../components/page';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { ProcessWorkspacePanel } from '../components/process/ProcessWorkspacePanel';
 import { PinRecordButton } from '../components/guided-workspace/PinRecordButton';
-import { LoadingState } from '../components/ux/LoadingState';
 import { useAuth } from '../context/AuthContext';
 import { updateWorkEntityLabel } from '../lib/workEntityHistory';
 import { buildRecordExplorerPath } from '../record-explorer/types';
@@ -33,7 +40,19 @@ const STATUS_LABELS: Record<string, string> = {
   abandoned: 'Abandonado',
 };
 
-type Tab = 'perfil' | 'twin' | 'labores' | 'costos' | 'cosechas' | 'geometria' | 'documentos' | 'galeria' | 'timeline';
+const LOT_TABS: EntityTab[] = [
+  { id: 'perfil', label: 'Perfil' },
+  { id: 'twin', label: 'Indicadores' },
+  { id: 'labores', label: 'Labores' },
+  { id: 'costos', label: 'Costos' },
+  { id: 'cosechas', label: 'Cosechas' },
+  { id: 'geometria', label: 'Geometria' },
+  { id: 'documentos', label: 'Documentos' },
+  { id: 'galeria', label: 'Galeria' },
+  { id: 'timeline', label: 'Historial' },
+];
+
+type Tab = (typeof LOT_TABS)[number]['id'];
 
 export function LotDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -167,8 +186,10 @@ export function LotDetailPage() {
     }
   }
 
-  if (loading) return <LoadingState variant="page" message="Cargando expediente..." />;
-  if (error || !lot) return <div className="alert alert-error">{error ?? 'No encontrado'}</div>;
+  if (loading) return <PageState variant="loading" message="Cargando expediente..." />;
+  if (error || !lot) {
+    return <PageState variant="error" message={error ?? 'Lote no encontrado'} onRetry={() => reload().catch(() => undefined)} />;
+  }
 
   const mediaDocs = (lot.documents ?? []).filter((d) =>
     ['photo', 'video', 'image'].some((t) => d.documentTypeCode.includes(t) || d.mediaType?.includes('image') || d.mediaType?.includes('video')),
@@ -180,7 +201,7 @@ export function LotDetailPage() {
         title={lot.lotName}
         subtitle={`${lot.lotCode} · ${STATUS_LABELS[lot.status] ?? lot.status}`}
         actions={
-          <div className="row-actions">
+          <PageActions>
             {id ? (
               <PinRecordButton
                 kind="lot"
@@ -212,7 +233,7 @@ export function LotDetailPage() {
                 Editar
               </Link>
             ) : null}
-          </div>
+          </PageActions>
         }
       />
 
@@ -274,32 +295,24 @@ export function LotDetailPage() {
         />
       ) : null}
 
-      {twin && (
-        <div className="detail-scores">
-          <div className="score-chip">Prod. YTD: {twin.productionYtdKg ?? 0} kg</div>
-          <div className="score-chip">Rend.: {twin.avgYieldKgHa ?? 0} kg/ha</div>
-          <div className="score-chip">Calidad: {twin.qualityAvgScore ?? '—'}</div>
-          <div className="score-chip">Labores YTD: {twin.operationsCountYtd}</div>
-          {twin.riskFlags.length > 0 && (
-            <div className="score-chip score-warn">Riesgos: {twin.riskFlags.length}</div>
-          )}
-        </div>
-      )}
-
-      <nav className="tab-nav">
-        {(['perfil', 'twin', 'labores', 'costos', 'cosechas', 'geometria', 'documentos', 'galeria', 'timeline'] as Tab[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            className={`tab-btn ${tab === t ? 'active' : ''}`}
-            onClick={() => setTab(t)}
-          >
-            {t === 'twin' ? 'Indicadores' : t === 'timeline' ? 'Historial' : t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </nav>
-
-      <div className="tab-panel">
+      <EntityDetailLayout
+        tabs={LOT_TABS}
+        activeTab={tab}
+        onTabChange={(id) => setTab(id as Tab)}
+        metadata={
+          twin ? (
+            <EntityMetadata>
+              <MetadataChip>Prod. YTD: {twin.productionYtdKg ?? 0} kg</MetadataChip>
+              <MetadataChip>Rend.: {twin.avgYieldKgHa ?? 0} kg/ha</MetadataChip>
+              <MetadataChip>Calidad: {twin.qualityAvgScore ?? '—'}</MetadataChip>
+              <MetadataChip>Labores YTD: {twin.operationsCountYtd}</MetadataChip>
+              {twin.riskFlags.length > 0 ? (
+                <MetadataChip>Riesgos: {twin.riskFlags.length}</MetadataChip>
+              ) : null}
+            </EntityMetadata>
+          ) : null
+        }
+      >
         {tab === 'perfil' && (
           <div className="detail-grid">
             <div className="detail-section">
@@ -583,7 +596,7 @@ export function LotDetailPage() {
             )}
           </ul>
         )}
-      </div>
+      </EntityDetailLayout>
 
       {lifecycleOpen && (
         <div className="modal-overlay" onClick={() => setLifecycleOpen(false)}>

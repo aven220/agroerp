@@ -1,6 +1,11 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { LoadingState } from '../components/ux/LoadingState';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageState,
+  FieldGroup,
+  FormActions,
+} from '../components/page';
 import { DataTable, type RowAction } from '../components/ui/DataTable';
 import { Modal } from '../components/ui/Modal';
 import { listProducers, type Producer } from '../api/prm';
@@ -130,8 +135,8 @@ export function PurchasesPage() {
   ], [producerMap]);
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Compras de café"
         subtitle="Tickets de recepción CPEP vinculados a productores PRM"
         actions={
@@ -149,10 +154,10 @@ export function PurchasesPage() {
         }
       />
 
-      {loadError ? <div className="alert alert-error">{loadError}</div> : null}
+      {loadError ? <PageState variant="error" message={loadError} onRetry={loadTickets} /> : null}
 
       {loading ? (
-        <LoadingState variant="table" />
+        <PageState variant="loading" loadingVariant="table" message="Cargando compras…" />
       ) : (
         <DataTable<CoffeeTicket>
           gridId="purchases"
@@ -169,8 +174,7 @@ export function PurchasesPage() {
         onClose={() => setModalOpen(false)}
       >
         <form onSubmit={handleSave} className="form-grid">
-          <label>
-            Productor *
+          <FieldGroup label="Productor *" required>
             <select
               value={producerId}
               onChange={(e) => setProducerId(e.target.value)}
@@ -183,9 +187,8 @@ export function PurchasesPage() {
                 </option>
               ))}
             </select>
-          </label>
-          <label>
-            Peso neto (kg)
+          </FieldGroup>
+          <FieldGroup label="Peso neto (kg)">
             <input
               type="number"
               min="0"
@@ -193,22 +196,21 @@ export function PurchasesPage() {
               value={netWeightKg}
               onChange={(e) => setNetWeightKg(Number(e.target.value))}
             />
-          </label>
-          <label>
-            Notas
+          </FieldGroup>
+          <FieldGroup label="Notas">
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-          </label>
-          {formError ? <div className="alert alert-error">{formError}</div> : null}
-          <div className="form-actions">
+          </FieldGroup>
+          {formError ? <PageState variant="error" message={formError} loadingVariant="inline" /> : null}
+          <FormActions>
             <button type="button" className="btn" onClick={() => setModalOpen(false)}>
               Cancelar
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? 'Guardando...' : 'Registrar ticket'}
             </button>
-          </div>
+          </FormActions>
         </form>
       </Modal>
-    </>
+    </PageLayout>
   );
 }

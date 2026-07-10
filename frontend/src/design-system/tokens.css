@@ -143,6 +143,20 @@
   --ds-bp-xl: 1280px;
   --ds-bp-2xl: 1536px;
 
+  /* Semantic color aliases (admin-experience, legacy modules) */
+  --ds-color-primary: var(--ds-primary);
+  --ds-color-primary-hover: var(--ds-primary-hover);
+  --ds-color-border: var(--ds-border);
+  --ds-color-surface: var(--ds-surface);
+  --ds-color-surface-muted: var(--ds-surface-sunken);
+  --ds-color-text: var(--ds-text);
+  --ds-color-text-muted: var(--ds-text-muted);
+  --ds-color-text-secondary: var(--ds-text-secondary);
+  --ds-color-success: var(--ds-success);
+  --ds-color-warning: var(--ds-warning);
+  --ds-color-error: var(--ds-error);
+  --ds-color-info: var(--ds-info);
+
   /* Legacy aliases (backward compatible) */
   --bg: var(--ds-bg);
   --surface: var(--ds-surface);

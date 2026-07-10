@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { PageActions, PageState, EntityMetadata, MetadataChip, EntityDetailLayout, InfoGrid, InfoSection, EmptyPanel, type EntityTab } from '../components/page';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { ProcessWorkspacePanel } from '../components/process/ProcessWorkspacePanel';
 import { PinRecordButton } from '../components/guided-workspace/PinRecordButton';
-import { LoadingState } from '../components/ux/LoadingState';
 import { useAuth } from '../context/AuthContext';
 import { updateWorkEntityLabel } from '../lib/workEntityHistory';
 import { buildRecordExplorerPath } from '../record-explorer/types';
@@ -30,7 +30,17 @@ const LIFECYCLE_LABELS: Record<string, string> = {
   archived: 'Archivado',
 };
 
-type Tab = 'perfil' | 'contactos' | 'fincas' | 'certificaciones' | 'documentos' | 'timeline' | 'notas';
+const PRODUCER_TABS: EntityTab[] = [
+  { id: 'perfil', label: 'Perfil' },
+  { id: 'contactos', label: 'Contactos' },
+  { id: 'fincas', label: 'Fincas' },
+  { id: 'certificaciones', label: 'Certificaciones' },
+  { id: 'documentos', label: 'Documentos' },
+  { id: 'timeline', label: 'Timeline' },
+  { id: 'notas', label: 'Notas' },
+];
+
+type Tab = (typeof PRODUCER_TABS)[number]['id'];
 
 export function ProducerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -125,8 +135,10 @@ export function ProducerDetailPage() {
     }
   }
 
-  if (loading) return <LoadingState variant="page" message="Cargando expediente..." />;
-  if (error || !producer) return <div className="alert alert-error">{error ?? 'No encontrado'}</div>;
+  if (loading) return <PageState variant="loading" message="Cargando expediente..." />;
+  if (error || !producer) {
+    return <PageState variant="error" message={error ?? 'Productor no encontrado'} onRetry={reload} />;
+  }
 
   return (
     <>
@@ -134,7 +146,7 @@ export function ProducerDetailPage() {
         title={producer.legalName}
         subtitle={`${producer.producerNumber} · ${LIFECYCLE_LABELS[producer.lifecycleStatus] ?? producer.lifecycleStatus}`}
         actions={
-          <div className="row-actions">
+          <PageActions>
             {id ? (
               <PinRecordButton
                 kind="producer"
@@ -161,7 +173,7 @@ export function ProducerDetailPage() {
                 Editar
               </Link>
             ) : null}
-          </div>
+          </PageActions>
         }
       />
 
@@ -234,55 +246,50 @@ export function ProducerDetailPage() {
       ) : null}
 
       {actionError ? <div className="alert alert-error">{actionError}</div> : null}
-      <div className="detail-scores">
-        <div className="score-chip">Calidad: {producer.qualityScore}</div>
-        <div className="score-chip">Riesgo: {producer.riskScore}</div>
-        {producer.categoryCode && (
-          <div className="score-chip">
-            Categoría {producer.categoryCode}
-          </div>
-        )}
-      </div>
 
-      <nav className="tab-nav">
-        {(['perfil', 'contactos', 'fincas', 'certificaciones', 'documentos', 'timeline', 'notas'] as Tab[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            className={`tab-btn ${tab === t ? 'active' : ''}`}
-            onClick={() => setTab(t)}
-          >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </nav>
-
-      <div className="tab-panel">
+      <EntityDetailLayout
+        tabs={PRODUCER_TABS}
+        activeTab={tab}
+        onTabChange={(id) => setTab(id as Tab)}
+        metadata={
+          <EntityMetadata>
+            <MetadataChip>Calidad: {producer.qualityScore}</MetadataChip>
+            <MetadataChip>Riesgo: {producer.riskScore}</MetadataChip>
+            {producer.categoryCode ? (
+              <MetadataChip>Categoría {producer.categoryCode}</MetadataChip>
+            ) : null}
+          </EntityMetadata>
+        }
+      >
         {tab === 'perfil' && (
-          <div className="detail-grid">
-            <div className="detail-section">
-              <h3>Identificación</h3>
-              <dl>
-                <dt>Tipo</dt><dd>{producer.producerTypeCode}</dd>
-                <dt>Documento</dt><dd>{producer.documentTypeCode} {producer.documentNumber}</dd>
-                <dt>Nombres</dt><dd>{producer.firstName} {producer.lastName}</dd>
-                <dt>Municipio</dt><dd>{producer.municipalityCode ?? '—'}</dd>
-                <dt>Vereda</dt><dd>{producer.veredaCode ?? '—'}</dd>
-                <dt>Experiencia</dt><dd>{producer.yearsExperience ?? '—'} años</dd>
-              </dl>
-            </div>
-            <div className="detail-section">
-              <h3>Comercial</h3>
-              <dl>
-                <dt>Categoría</dt><dd>{producer.categoryCode ?? '—'}</dd>
-                <dt>Origen</dt><dd>{producer.leadSourceCode ?? '—'}</dd>
-                <dt>Registrado</dt><dd>{new Date(producer.registeredAt).toLocaleDateString('es-CO')}</dd>
-                <dt>Activado</dt><dd>{producer.activatedAt ? new Date(producer.activatedAt).toLocaleDateString('es-CO') : '—'}</dd>
-              </dl>
-            </div>
-            {producer.latitude != null && producer.longitude != null && (
-              <div className="detail-section">
-                <h3>Ubicación</h3>
+          <InfoGrid>
+            <InfoSection
+              title="Identificación"
+              items={[
+                { term: 'Tipo', detail: producer.producerTypeCode },
+                { term: 'Documento', detail: `${producer.documentTypeCode} ${producer.documentNumber}` },
+                { term: 'Nombres', detail: `${producer.firstName ?? ''} ${producer.lastName ?? ''}`.trim() },
+                { term: 'Municipio', detail: producer.municipalityCode },
+                { term: 'Vereda', detail: producer.veredaCode },
+                { term: 'Experiencia', detail: producer.yearsExperience != null ? `${producer.yearsExperience} años` : '—' },
+              ]}
+            />
+            <InfoSection
+              title="Comercial"
+              items={[
+                { term: 'Categoría', detail: producer.categoryCode },
+                { term: 'Origen', detail: producer.leadSourceCode },
+                { term: 'Registrado', detail: new Date(producer.registeredAt).toLocaleDateString('es-CO') },
+                {
+                  term: 'Activado',
+                  detail: producer.activatedAt
+                    ? new Date(producer.activatedAt).toLocaleDateString('es-CO')
+                    : '—',
+                },
+              ]}
+            />
+            {producer.latitude != null && producer.longitude != null ? (
+              <InfoSection title="Ubicación">
                 <p>{Number(producer.latitude).toFixed(5)}, {Number(producer.longitude).toFixed(5)}</p>
                 <a
                   href={`https://www.google.com/maps?q=${producer.latitude},${producer.longitude}`}
@@ -292,15 +299,15 @@ export function ProducerDetailPage() {
                 >
                   Ver en mapa
                 </a>
-              </div>
-            )}
-          </div>
+              </InfoSection>
+            ) : null}
+          </InfoGrid>
         )}
 
         {tab === 'contactos' && (
           <div>
             {(producer.contacts ?? []).length === 0 ? (
-              <p className="muted">Sin contactos registrados</p>
+              <EmptyPanel title="Sin contactos" description="No hay contactos registrados para este productor." />
             ) : (
               <table className="data-table">
                 <thead>
@@ -425,7 +432,7 @@ export function ProducerDetailPage() {
             ))}
           </div>
         )}
-      </div>
+      </EntityDetailLayout>
 
       {lifecycleOpen && (
         <div className="modal-backdrop" onClick={() => setLifecycleOpen(false)}>

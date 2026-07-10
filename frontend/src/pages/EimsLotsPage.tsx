@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  TableToolbar,
+  TableSearch,
+  FieldGroup,
+  FormActions,
+  EmptyPanel,
+} from '../components/page';
 import {
   createEimsLot,
   listEimsItems,
@@ -71,23 +82,24 @@ export function EimsLotsPage() {
   };
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Lotes y trazabilidad"
         subtitle="Gestión de lotes, códigos QR/barras y consulta avanzada"
         actions={
-          <>
+          <PageActions>
             <Link to="/inventario/lotes/vencimientos" className="btn">Vencimientos</Link>
             <Link to="/inventario/lotes/alertas" className="btn">Alertas</Link>
             <Link to="/inventario/lotes/transformaciones" className="btn">Transformaciones</Link>
             <Link to="/inventario" className="btn">Inventario</Link>
-          </>
+          </PageActions>
         }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
-      <section className="panel">
-        <div className="row-actions">
-          <input placeholder="Buscar código/QR/productor/artículo" value={q} onChange={(e) => setQ(e.target.value)} />
+      {error ? <PageState variant="error" message={error} /> : null}
+
+      <PageSection title="Búsqueda">
+        <TableToolbar>
+          <TableSearch value={q} onChange={setQ} placeholder="Buscar código/QR/productor/artículo" aria-label="Buscar lotes" />
           <input placeholder="Productor" value={producer} onChange={(e) => setProducer(e.target.value)} />
           <input placeholder="Finca" value={farm} onChange={(e) => setFarm(e.target.value)} />
           <select value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -100,61 +112,88 @@ export function EimsLotsPage() {
             <option value="sold">sold</option>
           </select>
           <button className="btn" onClick={() => reload().catch((e) => setError(e.message))}>Buscar</button>
+        </TableToolbar>
+      </PageSection>
+
+      <PageSection title="Crear lote manual">
+        <div className="form-grid">
+          <FieldGroup label="Artículo">
+            <select value={form.itemKey} onChange={(e) => setForm({ ...form, itemKey: e.target.value })}>
+              <option value="">Artículo</option>
+              {items.map((i) => <option key={String(i.itemKey)} value={String(i.itemKey)}>{String(i.itemKey)}</option>)}
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Bodega">
+            <select value={form.warehouseKey} onChange={(e) => setForm({ ...form, warehouseKey: e.target.value })}>
+              <option value="">Bodega</option>
+              {warehouses.map((w) => <option key={String(w.warehouseKey)} value={String(w.warehouseKey)}>{String(w.warehouseKey)}</option>)}
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Código de lote">
+            <input placeholder="Código de lote (automático)" value={form.lotKey} onChange={(e) => setForm({ ...form, lotKey: e.target.value })} />
+          </FieldGroup>
+          <FieldGroup label="Cantidad">
+            <input placeholder="Cantidad" value={form.initialQty} onChange={(e) => setForm({ ...form, initialQty: e.target.value })} />
+          </FieldGroup>
+          <FieldGroup label="Costo">
+            <input placeholder="Costo" value={form.unitCost} onChange={(e) => setForm({ ...form, unitCost: e.target.value })} />
+          </FieldGroup>
+          <FieldGroup label="Vencimiento">
+            <input type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
+          </FieldGroup>
+          <FieldGroup label="Productor">
+            <input placeholder="Productor" value={form.producerName} onChange={(e) => setForm({ ...form, producerName: e.target.value })} />
+          </FieldGroup>
+          <FieldGroup label="Finca">
+            <input placeholder="Finca" value={form.farmName} onChange={(e) => setForm({ ...form, farmName: e.target.value })} />
+          </FieldGroup>
+          <FieldGroup label="Lote agrícola">
+            <input placeholder="Lote agrícola" value={form.agriculturalLotCode} onChange={(e) => setForm({ ...form, agriculturalLotCode: e.target.value })} />
+          </FieldGroup>
         </div>
-      </section>
-      <section className="panel">
-        <h3>Crear lote manual</h3>
-        <div className="row-actions">
-          <select value={form.itemKey} onChange={(e) => setForm({ ...form, itemKey: e.target.value })}>
-            <option value="">Artículo</option>
-            {items.map((i) => <option key={String(i.itemKey)} value={String(i.itemKey)}>{String(i.itemKey)}</option>)}
-          </select>
-          <select value={form.warehouseKey} onChange={(e) => setForm({ ...form, warehouseKey: e.target.value })}>
-            <option value="">Bodega</option>
-            {warehouses.map((w) => <option key={String(w.warehouseKey)} value={String(w.warehouseKey)}>{String(w.warehouseKey)}</option>)}
-          </select>
-          <input placeholder="Código de lote (automático)" value={form.lotKey} onChange={(e) => setForm({ ...form, lotKey: e.target.value })} />
-          <input placeholder="Cantidad" value={form.initialQty} onChange={(e) => setForm({ ...form, initialQty: e.target.value })} />
-          <input placeholder="Costo" value={form.unitCost} onChange={(e) => setForm({ ...form, unitCost: e.target.value })} />
-          <input type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
-          <input placeholder="Productor" value={form.producerName} onChange={(e) => setForm({ ...form, producerName: e.target.value })} />
-          <input placeholder="Finca" value={form.farmName} onChange={(e) => setForm({ ...form, farmName: e.target.value })} />
-          <input placeholder="Lote agrícola" value={form.agriculturalLotCode} onChange={(e) => setForm({ ...form, agriculturalLotCode: e.target.value })} />
+        <FormActions sticky={false}>
           <button className="btn btn-primary" onClick={() => create().catch((e) => setError(e.message))}>Crear</button>
-        </div>
-      </section>
-      <section className="panel">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Lote</th>
-              <th>Artículo</th>
-              <th>Bodega</th>
-              <th>Disponible</th>
-              <th>Costo acum.</th>
-              <th>Estado</th>
-              <th>Vence</th>
-              <th>Productor</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={String(r.id)}>
-                <td>{String(r.lotKey)}</td>
-                <td>{String((r.item as Record<string, unknown>)?.itemKey ?? '')}</td>
-                <td>{String((r.warehouse as Record<string, unknown>)?.warehouseKey ?? '')}</td>
-                <td>{String(r.onHandQty)}</td>
-                <td>{String(r.accumulatedCost)}</td>
-                <td>{String(r.status)}</td>
-                <td>{r.expiryDate ? String(r.expiryDate).slice(0, 10) : '—'}</td>
-                <td>{String(r.producerName ?? '—')}</td>
-                <td><Link to={`/inventario/lotes/${encodeURIComponent(String(r.lotKey))}`}>360°</Link></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </>
+        </FormActions>
+      </PageSection>
+
+      <PageSection title="Lotes registrados">
+        {rows.length === 0 ? (
+          <EmptyPanel title="Sin lotes" description="Cree un lote manual o registre movimientos de entrada." />
+        ) : (
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Lote</th>
+                  <th>Artículo</th>
+                  <th>Bodega</th>
+                  <th>Disponible</th>
+                  <th>Costo acum.</th>
+                  <th>Estado</th>
+                  <th>Vence</th>
+                  <th>Productor</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={String(r.id)}>
+                    <td>{String(r.lotKey)}</td>
+                    <td>{String((r.item as Record<string, unknown>)?.itemKey ?? '')}</td>
+                    <td>{String((r.warehouse as Record<string, unknown>)?.warehouseKey ?? '')}</td>
+                    <td>{String(r.onHandQty)}</td>
+                    <td>{String(r.accumulatedCost)}</td>
+                    <td>{String(r.status)}</td>
+                    <td>{r.expiryDate ? String(r.expiryDate).slice(0, 10) : '—'}</td>
+                    <td>{String(r.producerName ?? '—')}</td>
+                    <td><Link to={`/inventario/lotes/${encodeURIComponent(String(r.lotKey))}`}>360°</Link></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PageSection>
+    </PageLayout>
   );
 }

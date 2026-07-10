@@ -61,11 +61,12 @@ export class CoffeeReceptionService {
   async create(organizationId: string, userId: string, dto: CpepTicketDefinition) {
     const ticketKey = dto.ticketKey ?? `RCP-${Date.now()}`;
     const codes = generateTicketCodes(ticketKey);
+    const producerId = dto.producerId?.trim() ? dto.producerId : undefined;
     const ticket = await this.prisma.cpepReceptionTicket.create({
       data: {
         organizationId,
         ticketKey,
-        producerId: dto.producerId,
+        producerId,
         producerCode: dto.producerCode,
         producerName: dto.producerName,
         identityDoc: dto.identityDoc,

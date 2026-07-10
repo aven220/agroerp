@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  PageToolbar,
+  FieldGroup,
+  FormActions,
+  EmptyPanel,
+} from '../components/page';
 import {
   getInventoryLot,
   listInventoryLots,
@@ -29,69 +39,84 @@ export function CoffeeInventoryPage() {
   };
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Inventario generado por compras"
         subtitle="Lotes, existencias, costos y movimientos"
         actions={
-          <>
+          <PageActions>
             <Link to="/compras/trazabilidad" className="btn">Trazabilidad</Link>
             <Link to="/compras/inventario/kardex" className="btn">Kardex</Link>
             <Link to="/compras" className="btn">Centro</Link>
-          </>
+          </PageActions>
         }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
 
-      <section className="panel">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Lote</th><th>QR</th><th>Productor</th><th>Calidad</th><th>Disponible</th>
-              <th>Reservado</th><th>Costo prom.</th><th>Bodega</th><th>Estado</th><th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {lots.map((l) => (
-              <tr key={String(l.id)}>
-                <td>{String(l.lotKey)}</td>
-                <td>{String(l.qrCode ?? '—')}</td>
-                <td>{String(l.producerName ?? '—')}</td>
-                <td>{String(l.qualityGrade ?? '—')}</td>
-                <td>{String(l.availableKg)} kg</td>
-                <td>{String(l.reservedKg ?? 0)} kg</td>
-                <td>{Number(l.averageCost ?? 0).toLocaleString()}</td>
-                <td>{String(l.warehouse)}</td>
-                <td>{String(l.status)}</td>
-                <td><button className="btn" onClick={() => openLot(String(l.lotKey))}>Detalle</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      {error ? <PageState variant="error" message={error} /> : null}
+
+      <PageSection title="Lotes en inventario">
+        {lots.length === 0 ? (
+          <EmptyPanel title="Sin lotes" description="Los lotes aparecerán tras liquidar compras CPEP." />
+        ) : (
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Lote</th><th>QR</th><th>Productor</th><th>Calidad</th><th>Disponible</th>
+                  <th>Reservado</th><th>Costo prom.</th><th>Bodega</th><th>Estado</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {lots.map((l) => (
+                  <tr key={String(l.id)}>
+                    <td>{String(l.lotKey)}</td>
+                    <td>{String(l.qrCode ?? '—')}</td>
+                    <td>{String(l.producerName ?? '—')}</td>
+                    <td>{String(l.qualityGrade ?? '—')}</td>
+                    <td>{String(l.availableKg)} kg</td>
+                    <td>{String(l.reservedKg ?? 0)} kg</td>
+                    <td>{Number(l.averageCost ?? 0).toLocaleString()}</td>
+                    <td>{String(l.warehouse)}</td>
+                    <td>{String(l.status)}</td>
+                    <td><button type="button" className="btn btn-sm" onClick={() => openLot(String(l.lotKey))}>Detalle</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PageSection>
 
       {selected ? (
-        <section className="panel">
-          <h3>Detalle {String(selected.lotKey)}</h3>
-          <p>
+        <PageSection title={`Detalle ${String(selected.lotKey)}`}>
+          <p className="page-help">
             Ubicación {String(selected.locationLabel ?? '—')} · Neto {String(selected.netWeightKg)} kg ·
             Unitario {Number(selected.unitCost ?? 0).toLocaleString()} · Total{' '}
             {Number(selected.totalCost ?? 0).toLocaleString()}
           </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <select value={movementType} onChange={(e) => setMovementType(e.target.value)}>
-              <option value="transfer">Traslado</option>
-              <option value="adjustment">Ajuste</option>
-              <option value="reservation">Reserva</option>
-              <option value="block">Bloqueo</option>
-              <option value="release">Liberación</option>
-              <option value="transformation">Transformación</option>
-              <option value="exit">Salida</option>
-            </select>
-            <input value={qty} onChange={(e) => setQty(e.target.value)} />
-            <input value={toWarehouse} onChange={(e) => setToWarehouse(e.target.value)} placeholder="Bodega destino" />
+          <PageToolbar>
+            <FieldGroup label="Tipo de movimiento">
+              <select value={movementType} onChange={(e) => setMovementType(e.target.value)}>
+                <option value="transfer">Traslado</option>
+                <option value="adjustment">Ajuste</option>
+                <option value="reservation">Reserva</option>
+                <option value="block">Bloqueo</option>
+                <option value="release">Liberación</option>
+                <option value="transformation">Transformación</option>
+                <option value="exit">Salida</option>
+              </select>
+            </FieldGroup>
+            <FieldGroup label="Cantidad (kg)">
+              <input value={qty} onChange={(e) => setQty(e.target.value)} />
+            </FieldGroup>
+            <FieldGroup label="Bodega destino">
+              <input value={toWarehouse} onChange={(e) => setToWarehouse(e.target.value)} placeholder="Bodega destino" />
+            </FieldGroup>
+          </PageToolbar>
+          <FormActions>
             <button
-              className="btn"
+              type="button"
+              className="btn btn-primary"
               onClick={() => {
                 const quantityKg = Number(qty);
                 if (!quantityKg) {
@@ -110,12 +135,13 @@ export function CoffeeInventoryPage() {
                   })
                   .then(() => openLot(String(selected.lotKey)))
                   .then(reload)
-                  .catch((e) => setError(e.message));
+                  .catch((e) => setError(e instanceof Error ? e.message : 'Error al registrar movimiento'));
               }}
             >
               Registrar movimiento
             </button>
             <button
+              type="button"
               className="btn"
               onClick={() =>
                 revalueInventoryLot(String(selected.lotKey), Number(selected.unitCost) * 1.02, 'Revalorización operativa')
@@ -124,7 +150,7 @@ export function CoffeeInventoryPage() {
                   })
                   .then(() => openLot(String(selected.lotKey)))
                   .then(reload)
-                  .catch((e) => setError(e.message))
+                  .catch((e) => setError(e instanceof Error ? e.message : 'Error al revalorizar'))
               }
             >
               Revalorizar +2%
@@ -132,13 +158,13 @@ export function CoffeeInventoryPage() {
             <Link className="btn" to={`/compras/trazabilidad?mode=lot&q=${encodeURIComponent(String(selected.lotKey))}`}>
               Ver trazabilidad
             </Link>
-          </div>
-          <h4>Movimientos</h4>
-          <pre style={{ whiteSpace: 'pre-wrap' }}>
+          </FormActions>
+          <h4 className="form-section-title">Movimientos</h4>
+          <pre className="code-block">
             {JSON.stringify(selected.movements ?? [], null, 2)}
           </pre>
-        </section>
+        </PageSection>
       ) : null}
-    </>
+    </PageLayout>
   );
 }

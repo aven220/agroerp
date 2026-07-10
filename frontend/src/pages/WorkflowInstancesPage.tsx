@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
-import { LoadingState } from '../components/ux/LoadingState';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  TableToolbar,
+  EmptyPanel,
+  FormActions,
+} from '../components/page';
 import { useAuth } from '../context/AuthContext';
 import { useGuidedWorkspaceOptional } from '../context/GuidedWorkspaceContext';
 import { updateWorkEntityLabel } from '../lib/workEntityHistory';
@@ -120,151 +128,155 @@ export function WorkflowInstancesPage() {
   }
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Instancias de proceso"
         subtitle="Seguimiento y control de ejecución"
         actions={
-          <div className="row-actions">
+          <PageActions>
             <Link to="/procesos" className="btn">Catálogo</Link>
             <Link to="/procesos/bandeja" className="btn">Bandeja</Link>
             <Link to="/procesos/dashboard" className="btn">Dashboard</Link>
-          </div>
+          </PageActions>
         }
       />
 
-      {detailError ? <div className="alert alert-error">{detailError}</div> : null}
-      {error ? <div className="alert alert-error">{error}</div> : null}
+      {detailError ? <PageState variant="error" message={detailError} /> : null}
+      {error ? <PageState variant="error" message={error} onRetry={load} /> : null}
 
       <FlowProgress flowId="workflow" currentStepId="detail" />
 
-      <div className="filter-bar">
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">Todos los estados</option>
-          {Object.entries(STATUS_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
-      </div>
+      <PageSection title="Instancias">
+        <TableToolbar>
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">Todos los estados</option>
+            {Object.entries(STATUS_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+        </TableToolbar>
 
-      <div className="split-layout">
-        <div className="data-table-wrap">
-          {error ? <div className="alert alert-error">{error}</div> : null}
-          {loading ? (
-            <LoadingState variant="page" message="Cargando..." />
-          ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Proceso</th>
-                  <th>Paso actual</th>
-                  <th>Situación</th>
-                  <th>Inicio</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((row) => (
-                  <tr key={row.id} className={selected?.id === row.id ? 'selected-row' : ''}>
-                    <td>
-                      <strong>{row.workflowDefinition?.name ?? 'Solicitud'}</strong>
-                    </td>
-                    <td>{labelWorkflowStep(row.currentState)}</td>
-                    <td><span className={`badge badge-${row.status}`}>{STATUS_LABELS[row.status] ?? row.status}</span></td>
-                    <td>{new Date(row.startedAt).toLocaleString()}</td>
-                    <td>
-                      <button type="button" className="btn btn-sm" onClick={() => openDetail(row.id)}>Ver</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        {selected && (
-          <aside className="panel detail-panel">
-            <h3>{selected.workflowDefinition?.name}</h3>
-            <p>Estado actual: <strong>{labelWorkflowStep(selected.currentState)}</strong></p>
-            <p>Situación: {STATUS_LABELS[selected.status] ?? selected.status}</p>
-
-            <FlowNextActions
-              title="Continuar el proceso"
-              subtitle={
-                selected.status === 'completed'
-                  ? 'Esta solicitud finalizó. Revise el historial o atienda la siguiente tarea.'
-                  : 'Gestione esta instancia o vuelva a la bandeja de tareas.'
-              }
-              actions={[
-                ...(selected.status === 'active'
-                  ? [
-                      {
-                        label: 'Ir a bandeja',
-                        description: 'Atienda tareas pendientes de aprobación',
-                        to: '/procesos/bandeja',
-                        primary: true,
-                        icon: '📥',
-                      },
-                    ]
-                  : []),
-                ...(selected.status === 'completed'
-                  ? [
-                      {
-                        label: 'Siguiente tarea',
-                        description: 'Vuelva a la bandeja de aprobaciones',
-                        to: '/procesos/bandeja',
-                        primary: true,
-                        icon: '→',
-                      },
-                    ]
-                  : []),
-                {
-                  label: 'Ver catálogo de procesos',
-                  description: 'Consulte definiciones y versiones',
-                  to: '/procesos',
-                  icon: '📋',
-                },
-              ]}
-              className="flow-next-actions-inline"
-            />
-
-            {selected.assignments && selected.assignments.length > 0 && (
-              <div>
-                <h4>Asignaciones pendientes</h4>
-                <ul>
-                  {selected.assignments.map((a) => (
-                    <li key={a.id}>{labelWorkflowStep(a.stateKey)} — {labelWorkflowStatus(a.status)}</li>
-                  ))}
-                </ul>
+        <div className="split-layout">
+          <div className="data-table-wrap">
+            {loading ? (
+              <PageState variant="loading" message="Cargando instancias…" loadingVariant="table" />
+            ) : items.length === 0 ? (
+              <EmptyPanel title="Sin instancias" description="No hay instancias de proceso con los filtros actuales." />
+            ) : (
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Proceso</th>
+                      <th>Paso actual</th>
+                      <th>Situación</th>
+                      <th>Inicio</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((row) => (
+                      <tr key={row.id} className={selected?.id === row.id ? 'selected-row' : ''}>
+                        <td>
+                          <strong>{row.workflowDefinition?.name ?? 'Solicitud'}</strong>
+                        </td>
+                        <td>{labelWorkflowStep(row.currentState)}</td>
+                        <td><span className={`badge badge-${row.status}`}>{STATUS_LABELS[row.status] ?? row.status}</span></td>
+                        <td>{new Date(row.startedAt).toLocaleString()}</td>
+                        <td>
+                          <button type="button" className="btn btn-sm" onClick={() => openDetail(row.id)}>Ver</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
-            <div className="row-actions">
-              {selected.status === 'active' && (
-                <button type="button" className="btn btn-sm" onClick={() => handleSuspend(selected.id)}>Pausar</button>
-              )}
-              {selected.status === 'suspended' && (
-                <button type="button" className="btn btn-sm" onClick={() => handleResume(selected.id)}>Reanudar</button>
-              )}
-              {selected.status === 'active' && (
-                <button type="button" className="btn btn-sm btn-danger" onClick={() => handleCancel(selected.id)}>Cancelar</button>
-              )}
-            </div>
-            <h4>Historial</h4>
-            <div className="timeline">
-              {history.map((h) => (
-                <div key={h.id} className="timeline-item">
-                  <time>{new Date(h.occurredAt).toLocaleString()}</time>
-                  <strong>{h.eventType}</strong>
-                  {h.fromState && h.toState && (
-                    <span> {h.fromState} → {h.toState}</span>
-                  )}
-                  {h.comment && <p>{h.comment}</p>}
+          </div>
+
+          {selected && (
+            <PageSection title={selected.workflowDefinition?.name ?? 'Detalle'}>
+              <p>Estado actual: <strong>{labelWorkflowStep(selected.currentState)}</strong></p>
+              <p>Situación: {STATUS_LABELS[selected.status] ?? selected.status}</p>
+
+              <FlowNextActions
+                title="Continuar el proceso"
+                subtitle={
+                  selected.status === 'completed'
+                    ? 'Esta solicitud finalizó. Revise el historial o atienda la siguiente tarea.'
+                    : 'Gestione esta instancia o vuelva a la bandeja de tareas.'
+                }
+                actions={[
+                  ...(selected.status === 'active'
+                    ? [
+                        {
+                          label: 'Ir a bandeja',
+                          description: 'Atienda tareas pendientes de aprobación',
+                          to: '/procesos/bandeja',
+                          primary: true,
+                          icon: '📥',
+                        },
+                      ]
+                    : []),
+                  ...(selected.status === 'completed'
+                    ? [
+                        {
+                          label: 'Siguiente tarea',
+                          description: 'Vuelva a la bandeja de aprobaciones',
+                          to: '/procesos/bandeja',
+                          primary: true,
+                          icon: '→',
+                        },
+                      ]
+                    : []),
+                  {
+                    label: 'Ver catálogo de procesos',
+                    description: 'Consulte definiciones y versiones',
+                    to: '/procesos',
+                    icon: '📋',
+                  },
+                ]}
+                className="flow-next-actions-inline"
+              />
+
+              {selected.assignments && selected.assignments.length > 0 && (
+                <div>
+                  <h4>Asignaciones pendientes</h4>
+                  <ul>
+                    {selected.assignments.map((a) => (
+                      <li key={a.id}>{labelWorkflowStep(a.stateKey)} — {labelWorkflowStatus(a.status)}</li>
+                    ))}
+                  </ul>
                 </div>
-              ))}
-            </div>
-          </aside>
-        )}
-      </div>
-    </>
+              )}
+              <FormActions sticky={false}>
+                {selected.status === 'active' && (
+                  <button type="button" className="btn btn-sm" onClick={() => handleSuspend(selected.id)}>Pausar</button>
+                )}
+                {selected.status === 'suspended' && (
+                  <button type="button" className="btn btn-sm" onClick={() => handleResume(selected.id)}>Reanudar</button>
+                )}
+                {selected.status === 'active' && (
+                  <button type="button" className="btn btn-sm btn-danger" onClick={() => handleCancel(selected.id)}>Cancelar</button>
+                )}
+              </FormActions>
+              <h4>Historial</h4>
+              <div className="timeline">
+                {history.map((h) => (
+                  <div key={h.id} className="timeline-item">
+                    <time>{new Date(h.occurredAt).toLocaleString()}</time>
+                    <strong>{h.eventType}</strong>
+                    {h.fromState && h.toState && (
+                      <span> {h.fromState} → {h.toState}</span>
+                    )}
+                    {h.comment && <p>{h.comment}</p>}
+                  </div>
+                ))}
+              </div>
+            </PageSection>
+          )}
+        </div>
+      </PageSection>
+    </PageLayout>
   );
 }

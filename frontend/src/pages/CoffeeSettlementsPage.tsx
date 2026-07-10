@@ -1,6 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  PageSummary,
+  MetricCard,
+  PageToolbar,
+  FieldGroup,
+  FormActions,
+  EmptyPanel,
+} from '../components/page';
 import {
   confirmSettlementOperator,
   confirmSettlementProducer,
@@ -149,90 +161,97 @@ export function CoffeeSettlementsPage() {
   const ticket = session?.ticket as Record<string, unknown> | undefined;
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Centro de liquidaciones"
         subtitle="Simulación, pagos, documentos e inventario"
         actions={
-          <>
+          <PageActions>
             <Link to="/compras/liquidaciones/reportes" className="btn">Reportes</Link>
             <Link to="/compras" className="btn">Centro</Link>
-          </>
+          </PageActions>
         }
       />
 
       {kpis ? (
-        <section className="panel grid-4">
-          <div><strong>Liquidaciones</strong><div>{String(kpis.count)}</div></div>
-          <div><strong>Total</strong><div>{Number(kpis.totalAmount ?? 0).toLocaleString()}</div></div>
-          <div><strong>Pagado</strong><div>{Number(kpis.paidAmount ?? 0).toLocaleString()}</div></div>
-          <div><strong>Pendiente</strong><div>{Number(kpis.outstanding ?? 0).toLocaleString()}</div></div>
-        </section>
+        <PageSummary>
+          <MetricCard label="Liquidaciones" value={String(kpis.count)} tone="blue" />
+          <MetricCard label="Total" value={Number(kpis.totalAmount ?? 0).toLocaleString()} />
+          <MetricCard label="Pagado" value={Number(kpis.paidAmount ?? 0).toLocaleString()} tone="green" />
+          <MetricCard label="Pendiente" value={Number(kpis.outstanding ?? 0).toLocaleString()} tone="coffee" />
+        </PageSummary>
       ) : null}
 
-      {error ? <section className="panel error-panel">{error}</section> : null}
+      {error ? <PageState variant="error" message={error} /> : null}
 
-      <section className="panel">
-        <h3>Cola de liquidación</h3>
-        <table className="data-table">
-          <thead>
-            <tr><th>Ticket</th><th>Productor</th><th>Neto</th><th>Calidad</th><th></th></tr>
-          </thead>
-          <tbody>
-            {pending.map((t) => {
-              const quality = (t as CoffeeTicket & { quality?: Record<string, unknown> }).quality;
-              return (
-                <tr key={t.id}>
-                  <td>{t.ticketKey}</td>
-                  <td>{t.producerName ?? '—'}</td>
-                  <td>{t.netWeightKg != null ? `${t.netWeightKg} kg` : '—'}</td>
-                  <td>{String(quality?.decision ?? quality?.grade ?? '—')}</td>
-                  <td><button className="btn" disabled={busy} onClick={() => start(t.ticketKey)}>Liquidar</button></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
+      <PageSection title="Cola de liquidación">
+        {pending.length === 0 ? (
+          <EmptyPanel title="Sin tickets" description="No hay tickets pendientes de liquidación." />
+        ) : (
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr><th>Ticket</th><th>Productor</th><th>Neto</th><th>Calidad</th><th></th></tr>
+              </thead>
+              <tbody>
+                {pending.map((t) => {
+                  const quality = (t as CoffeeTicket & { quality?: Record<string, unknown> }).quality;
+                  return (
+                    <tr key={t.id}>
+                      <td>{t.ticketKey}</td>
+                      <td>{t.producerName ?? '—'}</td>
+                      <td>{t.netWeightKg != null ? `${t.netWeightKg} kg` : '—'}</td>
+                      <td>{String(quality?.decision ?? quality?.grade ?? '—')}</td>
+                      <td><button className="btn" disabled={busy} onClick={() => start(t.ticketKey)}>Liquidar</button></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PageSection>
 
       {session ? (
-        <section className="panel">
-          <h3>Wizard {String(session.sessionKey)}</h3>
+        <PageSection title={`Wizard ${String(session.sessionKey)}`}>
           <p>
             Ticket <strong>{String(ticket?.ticketKey ?? '')}</strong> · Productor{' '}
             <strong>{String(ticket?.producerName ?? '')}</strong> · Estado{' '}
             <strong>{String(session.status)}</strong>
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 12 }}>
+          <div className="kpi-grid">
             {flow.map((s) => (
               <div
                 key={String(s.key)}
-                style={{
-                  padding: 8,
-                  borderRadius: 8,
-                  background: s.current ? '#1f6feb33' : s.done ? '#2ea04333' : '#ffffff10',
-                  fontSize: 12,
-                }}
+                className={`kpi-card ${s.current ? 'kpi-blue' : s.done ? 'kpi-green' : ''}`}
               >
-                {String(s.step)}. {String(s.label)}
+                <span className="kpi-label">{String(s.step)}. {String(s.label)}</span>
               </div>
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-            <label>Flete <input value={transport} onChange={(e) => setTransport(e.target.value)} /></label>
-            <label>Anticipos <input value={advances} onChange={(e) => setAdvances(e.target.value)} /></label>
-            <label>Firmante <input value={signerName} onChange={(e) => setSignerName(e.target.value)} /></label>
+          <PageToolbar>
+            <FieldGroup label="Flete">
+              <input value={transport} onChange={(e) => setTransport(e.target.value)} />
+            </FieldGroup>
+            <FieldGroup label="Anticipos">
+              <input value={advances} onChange={(e) => setAdvances(e.target.value)} />
+            </FieldGroup>
+            <FieldGroup label="Firmante">
+              <input value={signerName} onChange={(e) => setSignerName(e.target.value)} />
+            </FieldGroup>
+          </PageToolbar>
+          <FormActions sticky={false}>
             <button className="btn" disabled={busy} onClick={resimulate}>Simular</button>
             <button className="btn" disabled={busy} onClick={confirmAndRegister}>Confirmar y registrar</button>
-          </div>
+          </FormActions>
 
-          <div className="grid-4">
-            <div><strong>Bruto</strong><div>{String(simulation.grossWeightKg ?? '—')} kg</div></div>
-            <div><strong>Neto</strong><div>{String(simulation.netWeightKg ?? '—')} kg</div></div>
-            <div><strong>Precio aplicado</strong><div>{Number(simulation.appliedPricePerKg ?? 0).toLocaleString()}</div></div>
-            <div><strong>Valor final</strong><div>{Number(simulation.totalAmount ?? 0).toLocaleString()}</div></div>
-          </div>
+          <PageSummary>
+            <MetricCard label="Bruto" value={`${String(simulation.grossWeightKg ?? '—')} kg`} />
+            <MetricCard label="Neto" value={`${String(simulation.netWeightKg ?? '—')} kg`} />
+            <MetricCard label="Precio aplicado" value={Number(simulation.appliedPricePerKg ?? 0).toLocaleString()} />
+            <MetricCard label="Valor final" value={Number(simulation.totalAmount ?? 0).toLocaleString()} tone="green" />
+          </PageSummary>
 
           <h4>Bonificaciones</h4>
           <ul>{bonusLines.map((l, i) => <li key={i}>{String(l.label)}: {Number(l.amount).toLocaleString()}</li>)}</ul>
@@ -240,105 +259,113 @@ export function CoffeeSettlementsPage() {
           <ul>{penaltyLines.map((l, i) => <li key={i}>{String(l.label)}: {Number(l.amount).toLocaleString()}</li>)}</ul>
           <h4>Descuentos</h4>
           <ul>{discountLines.map((l, i) => <li key={i}>{String(l.label)}: {Number(l.amount).toLocaleString()}</li>)}</ul>
-        </section>
+        </PageSection>
       ) : null}
 
-      <section className="panel">
-        <h3>Historial de liquidaciones</h3>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Clave</th><th>Ticket</th><th>Neto</th><th>Precio</th><th>Total</th><th>Pagado</th><th>Estado</th><th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const t = r.ticket as Record<string, unknown> | undefined;
-              return (
-                <tr key={String(r.id)}>
-                  <td>{String(r.settlementKey)}</td>
-                  <td>{String(t?.ticketKey ?? '')}</td>
-                  <td>{String(r.netWeightKg)}</td>
-                  <td>{Number(r.appliedPricePerKg ?? r.basePricePerKg).toLocaleString()}</td>
-                  <td>{Number(r.totalAmount).toLocaleString()}</td>
-                  <td>{Number(r.paidAmount).toLocaleString()}</td>
-                  <td>{String(r.paymentStatus)}</td>
-                  <td style={{ display: 'flex', gap: 4 }}>
-                    <button
-                      className="btn"
-                      disabled={busy}
-                      onClick={() => {
-                        const amount = Number(payAmount || r.netPayable || r.totalAmount);
-                        if (!amount || Number.isNaN(amount)) {
-                          setError('Indique un monto de pago válido');
-                          return;
-                        }
-                        paySettlement(String(t?.ticketKey), amount);
-                      }}
-                    >
-                      Pagar
-                    </button>
-                    <button
-                      className="btn"
-                      disabled={busy}
-                      onClick={() => voidRow(String(r.settlementKey))}
-                    >
-                      Anular
-                    </button>
+      <PageSection title="Historial de liquidaciones">
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Clave</th><th>Ticket</th><th>Neto</th><th>Precio</th><th>Total</th><th>Pagado</th><th>Estado</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const t = r.ticket as Record<string, unknown> | undefined;
+                return (
+                  <tr key={String(r.id)}>
+                    <td>{String(r.settlementKey)}</td>
+                    <td>{String(t?.ticketKey ?? '')}</td>
+                    <td>{String(r.netWeightKg)}</td>
+                    <td>{Number(r.appliedPricePerKg ?? r.basePricePerKg).toLocaleString()}</td>
+                    <td>{Number(r.totalAmount).toLocaleString()}</td>
+                    <td>{Number(r.paidAmount).toLocaleString()}</td>
+                    <td>{String(r.paymentStatus)}</td>
+                    <td>
+                      <div className="row-actions">
+                        <button
+                          className="btn"
+                          disabled={busy}
+                          onClick={() => {
+                            const amount = Number(payAmount || r.netPayable || r.totalAmount);
+                            if (!amount || Number.isNaN(amount)) {
+                              setError('Indique un monto de pago válido');
+                              return;
+                            }
+                            paySettlement(String(t?.ticketKey), amount);
+                          }}
+                        >
+                          Pagar
+                        </button>
+                        <button
+                          className="btn"
+                          disabled={busy}
+                          onClick={() => voidRow(String(r.settlementKey))}
+                        >
+                          Anular
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <PageToolbar>
+          <FieldGroup label="Monto pago">
+            <input placeholder="Monto pago" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
+          </FieldGroup>
+          <FieldGroup label="Método">
+            <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
+              <option value="cash">Efectivo</option>
+              <option value="bank_transfer">Transferencia</option>
+              <option value="deposit">Consignación</option>
+              <option value="check">Cheque</option>
+              <option value="digital_wallet">Billetera digital</option>
+              <option value="mixed">Mixto</option>
+              <option value="deferred">Diferido</option>
+              <option value="partial">Parcial</option>
+            </select>
+          </FieldGroup>
+        </PageToolbar>
+      </PageSection>
+
+      <PageSection title="Documentos">
+        <div className="table-wrap">
+          <table className="data-table data-table-compact">
+            <thead>
+              <tr><th>Tipo</th><th>Título</th><th>QR</th><th>PDF</th><th>Reimpresiones</th><th></th></tr>
+            </thead>
+            <tbody>
+              {docs.map((d) => {
+                const isCpep = d.source !== 'prm';
+                return (
+                <tr key={String(d.id)}>
+                  <td>{String(d.documentType)}</td>
+                  <td>{String(d.title)}</td>
+                  <td>{isCpep ? String(d.qrPayload ?? '—') : '—'}</td>
+                  <td>{isCpep ? String(d.pdfUrl ?? '—') : '—'}</td>
+                  <td>{isCpep ? String(d.reprintCount ?? 0) : '—'}</td>
+                  <td>
+                    {isCpep ? (
+                      <button className="btn" disabled={busy} onClick={() => reprintCoffeeDocument(String(d.documentKey)).then(() => {
+                        notifyEntityUpdated('document', String(d.documentKey));
+                        return reload();
+                      })}>
+                        Reimprimir
+                      </button>
+                    ) : (
+                      '—'
+                    )}
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <input placeholder="Monto pago" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
-          <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
-            <option value="cash">Efectivo</option>
-            <option value="bank_transfer">Transferencia</option>
-            <option value="deposit">Consignación</option>
-            <option value="check">Cheque</option>
-            <option value="digital_wallet">Billetera digital</option>
-            <option value="mixed">Mixto</option>
-            <option value="deferred">Diferido</option>
-            <option value="partial">Parcial</option>
-          </select>
+              );})}
+            </tbody>
+          </table>
         </div>
-      </section>
-
-      <section className="panel">
-        <h3>Documentos</h3>
-        <table className="data-table data-table-compact">
-          <thead>
-            <tr><th>Tipo</th><th>Título</th><th>QR</th><th>PDF</th><th>Reimpresiones</th><th></th></tr>
-          </thead>
-          <tbody>
-            {docs.map((d) => {
-              const isCpep = d.source !== 'prm';
-              return (
-              <tr key={String(d.id)}>
-                <td>{String(d.documentType)}</td>
-                <td>{String(d.title)}</td>
-                <td>{isCpep ? String(d.qrPayload ?? '—') : '—'}</td>
-                <td>{isCpep ? String(d.pdfUrl ?? '—') : '—'}</td>
-                <td>{isCpep ? String(d.reprintCount ?? 0) : '—'}</td>
-                <td>
-                  {isCpep ? (
-                    <button className="btn" disabled={busy} onClick={() => reprintCoffeeDocument(String(d.documentKey)).then(() => {
-                      notifyEntityUpdated('document', String(d.documentKey));
-                      return reload();
-                    })}>
-                      Reimprimir
-                    </button>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-              </tr>
-            );})}
-          </tbody>
-        </table>
-      </section>
-    </>
+      </PageSection>
+    </PageLayout>
   );
 }

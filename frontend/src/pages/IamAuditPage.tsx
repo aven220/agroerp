@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
-import { EmptyState } from '../components/ui/EmptyState';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  EmptyPanel,
+} from '../components/page';
 import { listIamAudit, listIamSessions, revokeIamSession } from '../api/iam';
 
 const EVENT_LABELS: Record<string, string> = {
@@ -40,15 +46,15 @@ export function IamAuditPage() {
   const activeSessions = sessions.filter((s) => s.status === 'active');
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Auditoría de seguridad"
         subtitle="Sesiones activas y registro de eventos de acceso"
         actions={
-          <div className="row-actions">
+          <PageActions>
             <button type="button" className="btn" onClick={reload}>Actualizar</button>
             <Link to="/iam" className="btn">Centro de seguridad</Link>
-          </div>
+          </PageActions>
         }
       />
 
@@ -73,91 +79,92 @@ export function IamAuditPage() {
         ]}
       />
 
-      <p className="muted page-help">
-        Cierre sesiones sospechosas de inmediato. Los eventos se conservan para trazabilidad y cumplimiento.
-      </p>
+      <PageSection title="Información">
+        <p className="page-help">
+          Cierre sesiones sospechosas de inmediato. Los eventos se conservan para trazabilidad y cumplimiento.
+        </p>
+      </PageSection>
 
-      {error ? <div className="alert alert-error">{error}</div> : null}
+      {error ? <PageState variant="error" message={error} onRetry={reload} /> : null}
 
-      <section className="panel">
-        <h3>Sesiones activas</h3>
-        <p className="muted">Dispositivos con sesión abierta en este momento.</p>
+      <PageSection title="Sesiones activas" description="Dispositivos con sesión abierta en este momento.">
         {activeSessions.length === 0 ? (
-          <EmptyState
-            illustration="inbox"
+          <EmptyPanel
             title="No hay sesiones activas"
             description="Ningún usuario tiene una sesión abierta en este momento, o no tiene permisos para verlas."
           />
         ) : (
-          <table className="data-table data-table-compact">
-            <thead>
-              <tr>
-                <th>Usuario</th>
-                <th>Dirección IP</th>
-                <th>Navegador</th>
-                <th>Sistema</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeSessions.map((s) => (
-                <tr key={s.id}>
-                  <td title={s.userId}>{s.userId.slice(0, 8)}…</td>
-                  <td>{s.ipAddress ?? '—'}</td>
-                  <td>{s.browser ?? '—'}</td>
-                  <td>{s.os ?? '—'}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-danger"
-                      title="Cierra la sesión en ese dispositivo"
-                      onClick={() => {
-                        if (confirm('¿Cerrar esta sesión? El usuario deberá volver a iniciar sesión en ese dispositivo.')) {
-                          revokeIamSession(s.id).then(reload);
-                        }
-                      }}
-                    >
-                      Cerrar sesión
-                    </button>
-                  </td>
+          <div className="table-wrap">
+            <table className="data-table data-table-compact">
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Dirección IP</th>
+                  <th>Navegador</th>
+                  <th>Sistema</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {activeSessions.map((s) => (
+                  <tr key={s.id}>
+                    <td title={s.userId}>{s.userId.slice(0, 8)}…</td>
+                    <td>{s.ipAddress ?? '—'}</td>
+                    <td>{s.browser ?? '—'}</td>
+                    <td>{s.os ?? '—'}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        title="Cierra la sesión en ese dispositivo"
+                        onClick={() => {
+                          if (confirm('¿Cerrar esta sesión? El usuario deberá volver a iniciar sesión en ese dispositivo.')) {
+                            revokeIamSession(s.id).then(reload);
+                          }
+                        }}
+                      >
+                        Cerrar sesión
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </section>
+      </PageSection>
 
-      <section className="panel">
-        <h3>Eventos recientes</h3>
+      <PageSection title="Eventos recientes">
         {events.length === 0 ? (
-          <EmptyState
-            illustration="data"
+          <EmptyPanel
             title="Sin eventos registrados"
             description="Los inicios de sesión, bloqueos y cambios de seguridad aparecerán aquí."
           />
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Evento</th>
-                <th>Usuario</th>
-                <th>IP</th>
-                <th>Fecha</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((e) => (
-                <tr key={String(e.id)}>
-                  <td>{EVENT_LABELS[String(e.eventType)] ?? String(e.eventType)}</td>
-                  <td>{e.userId ? `${String(e.userId).slice(0, 8)}…` : '—'}</td>
-                  <td>{String(e.ipAddress ?? '—')}</td>
-                  <td>{new Date(String(e.createdAt)).toLocaleString('es-CO')}</td>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Evento</th>
+                  <th>Usuario</th>
+                  <th>IP</th>
+                  <th>Fecha</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {events.map((e) => (
+                  <tr key={String(e.id)}>
+                    <td>{EVENT_LABELS[String(e.eventType)] ?? String(e.eventType)}</td>
+                    <td>{e.userId ? `${String(e.userId).slice(0, 8)}…` : '—'}</td>
+                    <td>{String(e.ipAddress ?? '—')}</td>
+                    <td>{new Date(String(e.createdAt)).toLocaleString('es-CO')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </section>
-    </>
+      </PageSection>
+    </PageLayout>
   );
 }

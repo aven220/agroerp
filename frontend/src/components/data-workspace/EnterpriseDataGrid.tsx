@@ -18,6 +18,7 @@ import { ColumnManager } from './ColumnManager';
 import { SavedViewsMenu } from './SavedViewsMenu';
 import { DetailPanel } from './DetailPanel';
 import { FilterChipsBar } from './FilterChipsBar';
+import { TableToolbar } from '../page/TableToolbar';
 import { RecentFiltersMenu } from './RecentFiltersMenu';
 import { ServerFilterPresetsMenu } from './ServerFilterPresetsMenu';
 import { BulkActionsToolbar } from './BulkActionsToolbar';
@@ -250,8 +251,9 @@ export function EnterpriseDataGrid<T extends { id: string }>({
 
   return (
     <div className={`edw-grid-wrap ${densityClass}`} role="region" aria-label="Tabla de datos">
-      <div className="edw-toolbar ds-table-toolbar">
-        <div className="edw-toolbar-left">
+      <TableToolbar
+        left={
+          <>
           <input
             id={`${gridId}-quick-search`}
             type="search"
@@ -306,8 +308,10 @@ export function EnterpriseDataGrid<T extends { id: string }>({
             onRename={grid.renameView}
             onPersistDefault={grid.persistCurrentAsDefault}
           />
-        </div>
-        <div className="edw-toolbar-right">
+          </>
+        }
+        right={
+          <>
           {grid.favoriteSearches.length > 0 ? (
             <select
               className="ds-input edw-density-select"
@@ -363,8 +367,9 @@ export function EnterpriseDataGrid<T extends { id: string }>({
             <option value="default">Normal</option>
             <option value="comfortable">Amplio</option>
           </select>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {!serverSide ? (
         <FilterChipsBar

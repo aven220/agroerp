@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
-import { LoadingState } from '../components/ux/LoadingState';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  EmptyPanel,
+} from '../components/page';
 import { useAuth } from '../context/AuthContext';
 import {
   cloneWorkflowDefinition,
@@ -94,12 +100,12 @@ export function WorkflowsPage() {
   }
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Procesos y aprobaciones"
         subtitle="Configure solicitudes, revise la bandeja y dé seguimiento a instancias activas"
         actions={
-          <div className="row-actions">
+          <PageActions>
             <Link to="/procesos/dashboard" className="btn">Dashboard</Link>
             <Link to="/procesos/bandeja" className="btn">Bandeja</Link>
             <Link to="/procesos/instancias" className="btn">Instancias</Link>
@@ -119,7 +125,7 @@ export function WorkflowsPage() {
                 + Nuevo proceso
               </button>
             ) : null}
-          </div>
+          </PageActions>
         }
       />
 
@@ -131,62 +137,66 @@ export function WorkflowsPage() {
         </div>
       )}
 
-      {loading ? (
-        <LoadingState variant="table" message="Cargando procesos..." />
-      ) : (
-        <div className="data-table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Proceso</th>
-                <th>Categoría</th>
-                <th>Versión</th>
-                <th>Estado</th>
-                <th>Activo</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((row) => {
-                const latest = row.versions[0];
-                const category = (latest?.definition as { settings?: { processCategory?: string } })?.settings?.processCategory ?? '—';
-                return (
-                  <tr key={row.id}>
-                    <td>
-                      <strong>{row.name}</strong>
-                    </td>
-                    <td>{category}</td>
-                    <td>v{latest?.version ?? '—'}</td>
-                    <td>
-                      <span className={`badge badge-${latest?.status ?? 'draft'}`}>
-                        {STATUS_LABELS[latest?.status ?? 'draft'] ?? latest?.status}
-                      </span>
-                    </td>
-                    <td>{row.active ? 'Sí' : 'No'}</td>
-                    <td>
-                      <div className="row-actions">
-                        {canUpdate ? (
-                          <Link to={`/procesos/${row.id}/disenar`} className="btn btn-sm">Diseñar</Link>
-                        ) : null}
-                        {latest?.status === 'draft' && canPublish ? (
-                          <button type="button" className="btn btn-sm" onClick={() => handlePublish(row)}>Publicar</button>
-                        ) : null}
-                        {canCreate ? (
-                          <button type="button" className="btn btn-sm" onClick={() => handleClone(row)}>Clonar</button>
-                        ) : null}
-                        <button type="button" className="btn btn-sm" onClick={() => handleExport(row)}>Exportar</button>
-                        {row.active && canAdmin ? (
-                          <button type="button" className="btn btn-sm btn-danger" onClick={() => handleDeactivate(row)}>Desactivar</button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </>
+      <PageSection title="Catálogo de procesos">
+        {loading ? (
+          <PageState variant="loading" message="Cargando procesos..." loadingVariant="table" />
+        ) : items.length === 0 ? (
+          <EmptyPanel title="Sin procesos" description="Cree o importe un proceso para comenzar." />
+        ) : (
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Proceso</th>
+                  <th>Categoría</th>
+                  <th>Versión</th>
+                  <th>Estado</th>
+                  <th>Activo</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((row) => {
+                  const latest = row.versions[0];
+                  const category = (latest?.definition as { settings?: { processCategory?: string } })?.settings?.processCategory ?? '—';
+                  return (
+                    <tr key={row.id}>
+                      <td>
+                        <strong>{row.name}</strong>
+                      </td>
+                      <td>{category}</td>
+                      <td>v{latest?.version ?? '—'}</td>
+                      <td>
+                        <span className={`badge badge-${latest?.status ?? 'draft'}`}>
+                          {STATUS_LABELS[latest?.status ?? 'draft'] ?? latest?.status}
+                        </span>
+                      </td>
+                      <td>{row.active ? 'Sí' : 'No'}</td>
+                      <td>
+                        <div className="row-actions">
+                          {canUpdate ? (
+                            <Link to={`/procesos/${row.id}/disenar`} className="btn btn-sm">Diseñar</Link>
+                          ) : null}
+                          {latest?.status === 'draft' && canPublish ? (
+                            <button type="button" className="btn btn-sm" onClick={() => handlePublish(row)}>Publicar</button>
+                          ) : null}
+                          {canCreate ? (
+                            <button type="button" className="btn btn-sm" onClick={() => handleClone(row)}>Clonar</button>
+                          ) : null}
+                          <button type="button" className="btn btn-sm" onClick={() => handleExport(row)}>Exportar</button>
+                          {row.active && canAdmin ? (
+                            <button type="button" className="btn btn-sm btn-danger" onClick={() => handleDeactivate(row)}>Desactivar</button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PageSection>
+    </PageLayout>
   );
 }

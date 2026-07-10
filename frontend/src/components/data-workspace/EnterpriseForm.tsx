@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Tabs, type TabItem } from '../ui/Tabs';
 import { Progress } from '../ui/Progress';
 import { LoadingState } from '../ux/LoadingState';
+import { FormActions } from '../page/forms/FormFields';
 import { useFormSaveShortcut } from '../../hooks/useFormSaveShortcut';
 
 export interface FormSection {
@@ -118,7 +119,7 @@ export function EnterpriseForm({
         </div>
       ) : null}
       {children}
-      <div className="form-actions edw-form-actions">
+      <FormActions sticky>
         {footerExtra}
         {onCancel ? (
           <button type="button" className="btn btn-ghost" onClick={onCancel}>{cancelLabel}</button>
@@ -128,7 +129,7 @@ export function EnterpriseForm({
             {submitLabel}
           </button>
         ) : null}
-      </div>
+      </FormActions>
     </div>
   );
 }

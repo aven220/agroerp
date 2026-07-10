@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+} from '../components/page';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
-import { EmptyState } from '../components/ui/EmptyState';
-import { LoadingState } from '../components/ux/LoadingState';
 import { useAuth } from '../context/AuthContext';
 import {
   labelWorkflowStatus,
@@ -121,16 +125,16 @@ export function WorkflowInboxPage() {
   }
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Bandeja de tareas"
         subtitle="Revise y responda las aprobaciones y tareas que requieren su intervención"
         actions={
-          <div className="row-actions">
+          <PageActions>
             <Link to="/procesos" className="btn">Procesos</Link>
             <Link to="/procesos/instancias" className="btn">Instancias</Link>
             <button type="button" className="btn" onClick={load}>Actualizar</button>
-          </div>
+          </PageActions>
         }
       />
 
@@ -144,7 +148,7 @@ export function WorkflowInboxPage() {
               ? ` Tiene ${lastCompleted.remaining} tarea${lastCompleted.remaining === 1 ? '' : 's'} pendiente${lastCompleted.remaining === 1 ? '' : 's'}.`
               : ' No quedan tareas pendientes en su bandeja.'}
           </p>
-          <div className="row-actions">
+          <PageActions>
             {lastCompleted.remaining > 0 ? (
               <button type="button" className="btn btn-sm btn-primary" onClick={() => setLastCompleted(null)}>
                 Siguiente tarea
@@ -157,7 +161,7 @@ export function WorkflowInboxPage() {
             <button type="button" className="btn btn-sm" onClick={() => setLastCompleted(null)}>
               Cerrar
             </button>
-          </div>
+          </PageActions>
         </div>
       ) : null}
 
@@ -189,19 +193,18 @@ export function WorkflowInboxPage() {
         Cada tarjeta representa una tarea pendiente. Agregue un comentario si el proceso lo requiere y confirme la acción sugerida.
       </p>
 
-      {error ? <div className="alert alert-error">{error}</div> : null}
-      {actionError ? <div className="alert alert-error">{actionError}</div> : null}
+      {error ? <PageState variant="error" message={error} onRetry={load} /> : null}
+      {actionError ? <PageState variant="error" message={actionError} loadingVariant="inline" /> : null}
 
       {loading ? (
-        <LoadingState variant="table" message="Cargando bandeja..." />
+        <PageState variant="loading" loadingVariant="table" message="Cargando bandeja..." />
       ) : items.length === 0 ? (
-        <EmptyState
-          illustration="inbox"
+        <PageState
+          variant="empty"
           title="No hay tareas pendientes"
-          description="Cuando un proceso requiera su aprobación, aparecerá aquí."
+          message="Cuando un proceso requiera su aprobación, aparecerá aquí."
           hint="Revise procesos activos o consulte instancias en curso."
           action={{ label: 'Ver procesos', to: '/procesos' }}
-          secondaryAction={{ label: 'Ver instancias', to: '/procesos/instancias' }}
         />
       ) : (
         <div className="inbox-list">
@@ -238,7 +241,7 @@ export function WorkflowInboxPage() {
                   }
                   rows={2}
                 />
-                <div className="row-actions">
+                <PageActions>
                   {canAct
                     ? transitions.map((transition) => (
                         <button
@@ -259,12 +262,12 @@ export function WorkflowInboxPage() {
                   ) : (
                     <Link to="/procesos/instancias" className="btn btn-sm">Ver instancias</Link>
                   )}
-                </div>
+                </PageActions>
               </article>
             );
           })}
         </div>
       )}
-    </>
+    </PageLayout>
   );
 }

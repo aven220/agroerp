@@ -4,7 +4,13 @@ import { PermissionMatrix } from '../components/admin/PermissionMatrix';
 import { PermissionSummary } from '../components/admin/PermissionSummary';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+} from '../components/page';
 import { getEffectivePermissions, listIamPermissions } from '../api/iam';
 import type { Permission } from '../types';
 
@@ -40,14 +46,16 @@ export function IamPermissionsPage() {
   const selected = useMemo(() => effective?.permissions ?? [], [effective]);
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Catálogo de permisos"
         subtitle="Todos los permisos del sistema, agrupados por área de negocio"
         actions={
-          <Link to="/iam" className="btn">
-            Centro de seguridad
-          </Link>
+          <PageActions>
+            <Link to="/iam" className="btn">
+              Centro de seguridad
+            </Link>
+          </PageActions>
         }
       />
 
@@ -73,40 +81,35 @@ export function IamPermissionsPage() {
         ]}
       />
 
-      <p className="muted page-help">
-        Esta vista es de consulta. Para asignar permisos a un rol, use{' '}
-        <Link to="/administracion">Administración → Crear rol</Link>.
-      </p>
+      <PageSection title="Información">
+        <p className="page-help">
+          Esta vista es de consulta. Para asignar permisos a un rol, use{' '}
+          <Link to="/administracion">Administración → Crear rol</Link>.
+        </p>
+      </PageSection>
 
       {effective ? (
-        <section className="panel card" style={{ marginBottom: 'var(--ds-space-4)' }}>
-          <div className="card-header">
-            <div>
-              <h3 className="page-section-title" style={{ margin: 0 }}>
-                Sus permisos en esta sesión
-              </h3>
-              <p className="text-muted" style={{ margin: '0.25rem 0 0' }}>
-                Resumen de lo que su cuenta puede hacer actualmente
-              </p>
-            </div>
-            <span className="ds-badge ds-badge-info">{selected.length}</span>
-          </div>
+        <PageSection
+          title="Sus permisos en esta sesión"
+          description="Resumen de lo que su cuenta puede hacer actualmente"
+        >
+          <span className="ds-badge ds-badge-info">{selected.length}</span>
           <PermissionSummary permissions={perms} selected={selected} compact />
-        </section>
+        </PageSection>
       ) : null}
 
-      {loading ? (
-        <p className="text-muted">Cargando permisos…</p>
-      ) : (
-        <section className="panel card">
+      <PageSection title="Matriz de permisos">
+        {loading ? (
+          <PageState variant="loading" message="Cargando permisos…" loadingVariant="inline" />
+        ) : (
           <PermissionMatrix
             permissions={perms}
             selected={selected}
             onChange={() => undefined}
             readOnly
           />
-        </section>
-      )}
-    </>
+        )}
+      </PageSection>
+    </PageLayout>
   );
 }

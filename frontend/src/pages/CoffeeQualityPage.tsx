@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  PageSummary,
+  MetricCard,
+  FieldGroup,
+  FormActions,
+  EmptyPanel,
+} from '../components/page';
 import {
   getQualityIndicators,
   getQualitySession,
@@ -135,103 +146,102 @@ export function CoffeeQualityPage() {
   const ticket = session?.ticket as Record<string, unknown> | undefined;
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Control de calidad operativo"
         subtitle="Evaluación rápida, reglas y decisión de compra"
         actions={
-          <>
+          <PageActions>
             <Link to="/compras/calidad/historial" className="btn">Historial</Link>
             <Link to="/compras/calidad/fotos" className="btn">Fotografías</Link>
             <Link to="/compras/calidad/muestras" className="btn">Muestras</Link>
             <Link to="/compras/calidad/indicadores" className="btn">Indicadores</Link>
             <Link to="/compras" className="btn">Centro</Link>
-          </>
+          </PageActions>
         }
       />
 
       {indicators ? (
-        <section className="panel grid-4">
-          <div><strong>Pendientes</strong><div>{String(indicators.pending ?? 0)}</div></div>
-          <div><strong>Aceptados</strong><div>{String(indicators.accepted ?? 0)}</div></div>
-          <div><strong>Rechazados</strong><div>{String(indicators.rejected ?? 0)}</div></div>
-          <div><strong>Alertas</strong><div>{String(indicators.openAlerts ?? 0)}</div></div>
-        </section>
+        <PageSummary>
+          <MetricCard label="Pendientes" value={String(indicators.pending ?? 0)} tone="coffee" />
+          <MetricCard label="Aceptados" value={String(indicators.accepted ?? 0)} tone="green" />
+          <MetricCard label="Rechazados" value={String(indicators.rejected ?? 0)} />
+          <MetricCard label="Alertas" value={String(indicators.openAlerts ?? 0)} />
+        </PageSummary>
       ) : null}
 
-      {error ? <section className="panel error-panel">{error}</section> : null}
+      {error ? <PageState variant="error" message={error} /> : null}
 
-      <section className="panel">
-        <h3>Cola de calidad (post-pesaje)</h3>
-        <table className="data-table">
-          <thead>
-            <tr><th>Ticket</th><th>Productor</th><th>Lote</th><th>Neto</th><th>Estado</th><th></th></tr>
-          </thead>
-          <tbody>
-            {pending.map((t) => (
-              <tr key={t.id}>
-                <td>{t.ticketKey}</td>
-                <td>{t.producerName ?? '—'}</td>
-                <td>{t.lotCode ?? '—'}</td>
-                <td>{t.netWeightKg != null ? `${t.netWeightKg} kg` : '—'}</td>
-                <td>{t.status}</td>
-                <td><button className="btn" disabled={busy} onClick={() => start(t.ticketKey)}>Evaluar</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <PageSection title="Cola de calidad (post-pesaje)">
+        {pending.length === 0 ? (
+          <EmptyPanel title="Sin tickets" description="No hay tickets pendientes de evaluación de calidad." />
+        ) : (
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr><th>Ticket</th><th>Productor</th><th>Lote</th><th>Neto</th><th>Estado</th><th></th></tr>
+              </thead>
+              <tbody>
+                {pending.map((t) => (
+                  <tr key={t.id}>
+                    <td>{t.ticketKey}</td>
+                    <td>{t.producerName ?? '—'}</td>
+                    <td>{t.lotCode ?? '—'}</td>
+                    <td>{t.netWeightKg != null ? `${t.netWeightKg} kg` : '—'}</td>
+                    <td>{t.status}</td>
+                    <td><button className="btn" disabled={busy} onClick={() => start(t.ticketKey)}>Evaluar</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PageSection>
 
       {session ? (
-        <section className="panel">
-          <h3>Sesión {String(session.sessionKey)}</h3>
+        <PageSection title={`Sesión ${String(session.sessionKey)}`}>
           <p>
             Ticket <strong>{String(ticket?.ticketKey ?? '')}</strong> · Productor{' '}
             <strong>{String(ticket?.producerName ?? session.producerName ?? '')}</strong> · Lote{' '}
             <strong>{String(session.lotCode ?? ticket?.lotCode ?? '—')}</strong> · Estado{' '}
             <strong>{String(session.status)}</strong>
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
+          <div className="kpi-grid">
             {flow.map((s) => (
               <div
                 key={String(s.key)}
-                style={{
-                  padding: 8,
-                  borderRadius: 8,
-                  background: s.current ? '#1f6feb33' : s.done ? '#2ea04333' : '#ffffff10',
-                  fontSize: 12,
-                }}
+                className={`kpi-card ${s.current ? 'kpi-blue' : s.done ? 'kpi-green' : ''}`}
               >
-                {String(s.step)}. {String(s.label)}
+                <span className="kpi-label">{String(s.step)}. {String(s.label)}</span>
               </div>
             ))}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          <div className="form-grid">
             {Object.entries(params).map(([key, value]) => (
-              <label key={key}>
-                {key}
+              <FieldGroup key={key} label={key}>
                 <input
                   value={value}
                   onChange={(e) => setParams({ ...params, [key]: e.target.value })}
-                  style={{ width: '100%' }}
                 />
-              </label>
+              </FieldGroup>
             ))}
           </div>
 
-          <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <FormActions sticky={false}>
             <button className="btn" disabled={busy} onClick={captureAndEvaluate}>
               Capturar, evaluar y decidir
             </button>
+          </FormActions>
+          <div className="kpi-grid">
             <div><strong>Score:</strong> {session.qualityScore != null ? String(session.qualityScore) : '—'}</div>
             <div><strong>Decisión:</strong> {String(session.decision ?? '—')}</div>
             <div><strong>Bonos:</strong> {String(session.bonusesTotal ?? 0)}</div>
             <div><strong>Castigos:</strong> {String(session.penaltiesTotal ?? 0)}</div>
           </div>
           {session.decisionReason ? <p>{String(session.decisionReason)}</p> : null}
-        </section>
+        </PageSection>
       ) : null}
-    </>
+    </PageLayout>
   );
 }

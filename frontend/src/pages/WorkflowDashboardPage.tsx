@@ -1,8 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  PageSummary,
+  MetricCard,
+} from '../components/page';
 import { getWorkflowDashboard, type WorkflowDashboard } from '../api/workflows';
-import { LoadingState } from '../components/ux/LoadingState';
 import { useOnEntityUpdated } from '../lib/entitySync';
 
 export function WorkflowDashboardPage() {
@@ -28,112 +35,95 @@ export function WorkflowDashboardPage() {
 
   useOnEntityUpdated(reload, 'workflow');
 
-  if (loading) return <LoadingState variant="dashboard" message="Cargando dashboard BPM..." />;
+  if (loading) return <PageState variant="loading" loadingVariant="dashboard" message="Cargando dashboard BPM..." />;
   if (error || !dashboard) {
     return (
-      <>
-        <Header title="Dashboard BPM" subtitle="KPIs · cuellos de botella · carga de trabajo" />
-        <div className="alert alert-error">{error ?? 'No hay datos disponibles'}</div>
-      </>
+      <PageLayout>
+        <PageHeader title="Dashboard BPM" subtitle="KPIs · cuellos de botella · carga de trabajo" />
+        <PageState variant="error" message={error ?? 'No hay datos disponibles'} onRetry={reload} />
+      </PageLayout>
     );
   }
 
   const { summary, bottlenecks, workloadByUser, sla } = dashboard;
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Dashboard BPM"
         subtitle="KPIs · cuellos de botella · carga de trabajo"
         actions={
-          <div className="row-actions">
+          <PageActions>
             <Link to="/procesos" className="btn">Catálogo</Link>
             <Link to="/procesos/bandeja" className="btn">Bandeja</Link>
             <Link to="/procesos/instancias" className="btn">Instancias</Link>
-          </div>
+          </PageActions>
         }
       />
 
-      <div className="kpi-grid kpi-grid-lg">
-        <div className="kpi-card kpi-card-primary">
-          <span className="kpi-label">Procesos activos</span>
-          <span className="kpi-value">{summary.activeProcesses}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Suspendidos</span>
-          <span className="kpi-value">{summary.suspendedProcesses}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Vencidos (SLA)</span>
-          <span className="kpi-value">{summary.overdueProcesses}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Completados (30d)</span>
-          <span className="kpi-value">{summary.completedLast30Days}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Tiempo prom. (h)</span>
-          <span className="kpi-value">{summary.averageCompletionHours.toFixed(1)}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">SLA en curso</span>
-          <span className="kpi-value">{sla.onTrack}</span>
-        </div>
-      </div>
+      <PageSummary>
+        <MetricCard label="Procesos activos" value={summary.activeProcesses} tone="blue" />
+        <MetricCard label="Suspendidos" value={summary.suspendedProcesses} />
+        <MetricCard label="Vencidos (SLA)" value={summary.overdueProcesses} tone="coffee" />
+        <MetricCard label="Completados (30d)" value={summary.completedLast30Days} tone="green" />
+        <MetricCard label="Tiempo prom. (h)" value={summary.averageCompletionHours.toFixed(1)} />
+        <MetricCard label="SLA en curso" value={sla.onTrack} tone="teal" />
+      </PageSummary>
 
       <div className="split-layout">
-        <section className="panel">
-          <h3>Cuellos de botella por estado</h3>
+        <PageSection title="Cuellos de botella por estado">
           {bottlenecks.length === 0 ? (
-            <p className="text-muted">Aún no hay información</p>
+            <PageState variant="empty" title="Aún no hay información" loadingVariant="inline" />
           ) : (
-            <table className="data-table">
-              <thead>
-                <tr><th>Estado</th><th>Instancias</th></tr>
-              </thead>
-              <tbody>
-                {bottlenecks.map((b) => (
-                  <tr key={b.state}>
-                    <td><code>{b.state}</code></td>
-                    <td>
-                      <div className="bar-meter">
-                        <div className="bar-fill" style={{ width: `${Math.min(100, b.count * 10)}%` }} />
-                        <span>{b.count}</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr><th>Estado</th><th>Instancias</th></tr>
+                </thead>
+                <tbody>
+                  {bottlenecks.map((b) => (
+                    <tr key={b.state}>
+                      <td><code>{b.state}</code></td>
+                      <td>
+                        <div className="bar-meter">
+                          <div className="bar-fill" style={{ width: `${Math.min(100, b.count * 10)}%` }} />
+                          <span>{b.count}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </section>
+        </PageSection>
 
-        <section className="panel">
-          <h3>Carga por usuario</h3>
+        <PageSection title="Carga por usuario">
           {workloadByUser.length === 0 ? (
-            <p className="text-muted">Sin asignaciones pendientes</p>
+            <PageState variant="empty" title="Sin asignaciones pendientes" loadingVariant="inline" />
           ) : (
-            <table className="data-table">
-              <thead>
-                <tr><th>Usuario</th><th>Tareas</th></tr>
-              </thead>
-              <tbody>
-                {workloadByUser.map((w) => (
-                  <tr key={w.userId}>
-                    <td><code>{w.userId.slice(0, 8)}…</code></td>
-                    <td>{w.pendingAssignments}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr><th>Usuario</th><th>Tareas</th></tr>
+                </thead>
+                <tbody>
+                  {workloadByUser.map((w) => (
+                    <tr key={w.userId}>
+                      <td><code>{w.userId.slice(0, 8)}…</code></td>
+                      <td>{w.pendingAssignments}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </section>
+        </PageSection>
       </div>
 
-      <div className="panel ai-readiness-banner">
-        <h3>Preparación IA</h3>
+      <PageSection title="Preparación IA">
         <p>El motor registra métricas de duración, transiciones y cuellos de botella para optimización automática, predicción de tiempos y recomendación de rutas.</p>
-      </div>
-    </>
+      </PageSection>
+    </PageLayout>
   );
 }

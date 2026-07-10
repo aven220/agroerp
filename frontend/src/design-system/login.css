@@ -1,0 +1,80 @@
+/* AGROERP Design System — Login (token-based) */
+
+.login-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ds-primary-active) 85%, var(--ds-bg)) 0%,
+    var(--ds-primary) 50%,
+    color-mix(in srgb, var(--ds-primary-hover) 80%, var(--ds-secondary)) 100%
+  );
+  padding: var(--ds-space-8);
+}
+
+.login-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 900px;
+  width: 100%;
+  background: var(--ds-surface);
+  border-radius: var(--ds-radius-2xl);
+  overflow: hidden;
+  box-shadow: var(--ds-shadow-xl);
+}
+
+.login-brand {
+  background: var(--ds-primary);
+  color: var(--ds-text-on-primary);
+  padding: var(--ds-space-12);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-brand h1 {
+  font-size: var(--ds-text-3xl);
+  margin: var(--ds-space-4) 0 var(--ds-space-2);
+}
+
+.login-form {
+  padding: var(--ds-space-12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.login-form h2 {
+  margin-bottom: var(--ds-space-2);
+  color: var(--ds-text);
+}
+
+.login-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-secondary);
+}
+
+.login-hint {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+@media (max-width: 768px) {
+  .login-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .login-brand {
+    padding: var(--ds-space-8);
+  }
+
+  .login-form {
+    padding: var(--ds-space-8);
+  }
+}

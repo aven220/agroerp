@@ -29,7 +29,7 @@ export class CoffeeWeighingService {
     return this.prisma.cpepReceptionTicket.findMany({
       where: {
         organizationId,
-        status: { in: ['queued', 'receiving', 'identity_validated'] },
+        status: { in: ['arrived', 'queued', 'receiving', 'identity_validated'] },
         ...(purchaseCenterId ? { purchaseCenterId } : {}),
       },
       include: { queueTurn: true, weighingSessions: { orderBy: { createdAt: 'desc' }, take: 1 } },

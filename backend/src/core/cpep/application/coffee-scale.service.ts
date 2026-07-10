@@ -98,7 +98,14 @@ export class CoffeeScaleService {
         ...data,
         status: input.certified === false ? 'uncertified' : 'available',
       },
-      update: data,
+      update: {
+        ...data,
+        ...(input.certified === false
+          ? { status: 'uncertified' }
+          : input.certified === true
+            ? { status: 'available' }
+            : {}),
+      },
     });
 
     await this.audit.log(organizationId, 'Scale', input.scaleKey, 'upsert', userId, {
