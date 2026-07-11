@@ -103,6 +103,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // JWT antiguos embutían cientos de permisos (~11KB) y nginx responde 400.
+    // Limpiar para no dejar la app colgada / en blanco tras /auth/me.
+    if (token.length > 4096) {
+      localStorage.removeItem('agroerp_token');
+      localStorage.removeItem('agroerp_refresh');
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     refreshProfile()
       .catch(() => {
         localStorage.removeItem('agroerp_token');
