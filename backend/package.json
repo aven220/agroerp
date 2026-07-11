@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "NODE_OPTIONS=--max-old-space-size=8192 nest build",
+    "build:docker": "NODE_OPTIONS=--max-old-space-size=3072 nest build",
     "port:free": "lsof -ti :3080 | xargs kill -9 2>/dev/null || true",
     "dev": "pnpm port:free && NODE_OPTIONS=--max-old-space-size=8192 nest start --watch",
     "start": "node dist/src/main",

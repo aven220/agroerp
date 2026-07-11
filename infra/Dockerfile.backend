@@ -45,7 +45,10 @@ WORKDIR /app/backend
 RUN test -f /prisma-stage/dot-prisma-client/index.js \
   || (echo "ERROR: falta infra/docker-prisma. Ejecute: pnpm docker:stage-prisma" && exit 1)
 RUN chmod +x /restore-prisma.sh && /restore-prisma.sh /app/backend /prisma-stage
-RUN NODE_OPTIONS=--max-old-space-size=4096 pnpm build
+# nest build OOM en Docker Desktop — usar dist del host (pnpm docker:prepare)
+RUN test -f dist/src/main.js -o -f dist/main.js \
+  || (echo "ERROR: falta backend/dist. Ejecute: pnpm docker:prepare" && exit 1)
+RUN echo "✓ usando backend/dist precompilado (sin nest build en Docker)"
 
 # ─── Production ──────────────────────────────────────────────────────────────
 FROM base AS production

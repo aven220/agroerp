@@ -1,0 +1,32 @@
+# Build context = repo root (infra/Dockerfile.*)
+.git
+.gitignore
+**/.DS_Store
+**/*.log
+**/coverage
+**/.turbo
+**/*.tsbuildinfo
+
+# Dependencias se instalan dentro de la imagen
+node_modules
+**/node_modules
+
+# Artefactos locales / no necesarios para backend image
+frontend/node_modules
+frontend/dist
+mobile-android
+android
+docs
+**/.env
+**/.env.*
+!.env.example
+
+# Engines Darwin en stage (solo debian para Linux)
+infra/docker-prisma/**/libquery_engine-darwin*
+infra/docker-prisma/**/*.dylib.node
+
+# Tests / e2e pesados
+**/__tests__
+**/*.spec.ts
+**/*.e2e-spec.ts
+backend/test

@@ -7,7 +7,7 @@
  *   pnpm --filter @agroerp/backend db:generate:local
  *   node infra/scripts/stage-prisma-for-docker.mjs
  */
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +16,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const backend = path.join(root, 'backend');
 const outDir = path.join(root, 'infra', 'docker-prisma');
 const require = createRequire(path.join(backend, 'package.json'));
+
+function stripHostEngines(dir) {
+  for (const name of readdirSync(dir)) {
+    if (name.includes('darwin') || name.endsWith('.dylib.node')) {
+      unlinkSync(path.join(dir, name));
+    }
+  }
+}
 
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
@@ -34,9 +42,9 @@ if (!existsSync(path.join(dotPrismaClient, 'libquery_engine-debian-openssl-3.0.x
   process.exit(1);
 }
 cpSync(dotPrismaClient, path.join(outDir, 'dot-prisma-client'), { recursive: true });
+stripHostEngines(path.join(outDir, 'dot-prisma-client'));
 console.log('✓ staged main .prisma/client');
 
-// Clientes satélite
 const agroerpDir = path.join(backend, 'node_modules', '@agroerp');
 const satellites = [
   'prisma-bpms-client',
@@ -62,6 +70,7 @@ for (const name of satellites) {
     process.exit(1);
   }
   cpSync(src, path.join(outDir, 'agroerp', name), { recursive: true });
+  stripHostEngines(path.join(outDir, 'agroerp', name));
   console.log(`✓ staged @agroerp/${name}`);
 }
 
