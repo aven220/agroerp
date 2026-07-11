@@ -13,7 +13,7 @@
     "docker:infra": "docker compose -f infra/docker-compose.yml up -d postgres redis minio",
     "docker:stage-prisma": "pnpm --filter @agroerp/backend db:generate:local && node infra/scripts/stage-prisma-for-docker.mjs",
     "docker:prepare": "pnpm --filter @agroerp/shared build && pnpm docker:stage-prisma && pnpm --filter @agroerp/backend build",
-    "docker:prod": "docker compose -f infra/docker-compose.prod.yml up -d --build",
+    "docker:prod": "node infra/scripts/ensure-docker-artifacts.mjs && docker compose -f infra/docker-compose.prod.yml up -d --build",
     "docker:prod:down": "docker compose -f infra/docker-compose.prod.yml down",
     "docker:down": "docker compose -f infra/docker-compose.yml down",
     "docker:logs": "docker compose -f infra/docker-compose.yml logs -f",
