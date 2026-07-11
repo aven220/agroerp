@@ -37,8 +37,9 @@ if (!existsSync(path.join(dotPrismaClient, 'index.js'))) {
   console.error('Ejecute antes: pnpm --filter @agroerp/backend db:generate:local');
   process.exit(1);
 }
-if (!existsSync(path.join(dotPrismaClient, 'libquery_engine-debian-openssl-3.0.x.so.node'))) {
-  console.error('Falta engine debian-openssl-3.0.x. Revise binaryTargets en schema.prisma y regenere.');
+if (!existsSync(path.join(dotPrismaClient, 'libquery_engine-linux-arm64-openssl-3.0.x.so.node')) &&
+    !existsSync(path.join(dotPrismaClient, 'libquery_engine-debian-openssl-3.0.x.so.node'))) {
+  console.error('Falta engine Linux (linux-arm64-openssl-3.0.x o debian-openssl-3.0.x). Regenere con binaryTargets.');
   process.exit(1);
 }
 cpSync(dotPrismaClient, path.join(outDir, 'dot-prisma-client'), { recursive: true });
