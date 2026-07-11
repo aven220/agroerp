@@ -1,101 +1,119 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  SimpleRecordsTable,
+  withRowId,
+  type SimpleColumn,
+} from '../components/page';
+import type { RowAction } from '../lib/data-grid/types';
 import { getEimsWarehouseMap, listEimsOpsAlerts, refreshEimsOpsAlerts, acknowledgeEimsOpsAlert } from '../api/eims';
 
+type MapRow = Record<string, unknown> & { id: string };
+type AlertRow = Record<string, unknown> & { id: string };
+
+const mapColumns: SimpleColumn<MapRow>[] = [
+  { key: 'name', label: 'Bodega', getValue: (r) => String(r.name ?? '') },
+  { key: 'latitude', label: 'Lat', getValue: (r) => String(r.latitude ?? '—') },
+  { key: 'longitude', label: 'Lng', getValue: (r) => String(r.longitude ?? '—') },
+  { key: 'usedCapacity', label: 'Usado', getValue: (r) => String(r.usedCapacity ?? '') },
+  { key: 'totalCapacity', label: 'Capacidad', getValue: (r) => String(r.totalCapacity ?? '') },
+  {
+    key: 'occupancyPct',
+    label: 'Ocupación',
+    render: (r) => (
+      <div className="bar-meter">
+        <div
+          className={`bar-fill${r.saturated ? ' bar-fill-danger' : ''}`}
+          style={{ width: `${Math.min(100, Number(r.occupancyPct) || 0)}%` }}
+        />
+        <span>{String(r.occupancyPct)}%</span>
+      </div>
+    ),
+    getValue: (r) => String(r.occupancyPct ?? ''),
+  },
+  { key: 'availableCapacity', label: 'Disponible', getValue: (r) => String(r.availableCapacity ?? '') },
+  {
+    key: 'status',
+    label: 'Estado',
+    getValue: (r) => (r.saturated ? 'Saturada' : 'OK'),
+  },
+];
+
+const alertColumns: SimpleColumn<AlertRow>[] = [
+  { key: 'alertType', label: 'Tipo', getValue: (r) => String(r.alertType ?? '') },
+  { key: 'severity', label: 'Severidad', getValue: (r) => String(r.severity ?? '') },
+  { key: 'message', label: 'Mensaje', getValue: (r) => String(r.message ?? '') },
+];
+
 export function EimsWarehouseMapPage() {
-  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
-  const [alerts, setAlerts] = useState<Array<Record<string, unknown>>>([]);
+  const [rows, setRows] = useState<MapRow[]>([]);
+  const [alerts, setAlerts] = useState<AlertRow[]>([]);
   const [error, setError] = useState('');
 
   const reload = async () => {
     const [m, a] = await Promise.all([getEimsWarehouseMap(), listEimsOpsAlerts(false)]);
-    setRows(m as Array<Record<string, unknown>>);
-    setAlerts(a as Array<Record<string, unknown>>);
+    setRows((m as Array<Record<string, unknown>>).map((row) => withRowId(row, 'warehouseKey', 'id')));
+    setAlerts((a as Array<Record<string, unknown>>).map((row) => withRowId(row, 'id', 'alertKey')));
   };
 
   useEffect(() => { reload().catch((e) => setError(e.message)); }, []);
 
+  const alertActions: RowAction<AlertRow>[] = [
+    {
+      id: 'ack',
+      label: 'Acusar',
+      onAction: (r) => {
+        acknowledgeEimsOpsAlert(String(r.alertKey))
+          .then(reload)
+          .catch((e) => setError(e.message));
+      },
+    },
+  ];
+
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Mapa de ocupación de bodegas"
         subtitle="Capacidad utilizada, saturación y alertas operativas"
         actions={
-          <>
-            <button className="btn" onClick={() => refreshEimsOpsAlerts().then(reload).catch((e) => setError(e.message))}>
+          <PageActions>
+            <button
+              className="btn"
+              onClick={() => refreshEimsOpsAlerts().then(reload).catch((e) => setError(e.message))}
+            >
               Refrescar alertas
             </button>
-            <Link to="/inventario/ops" className="btn">Ops Center</Link>
-          </>
+            <Link to="/inventario/ops" className="btn">Centro de operaciones</Link>
+          </PageActions>
         }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
-      <section className="panel">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Bodega</th>
-              <th>Lat</th>
-              <th>Lng</th>
-              <th>Usado</th>
-              <th>Capacidad</th>
-              <th>Ocupación</th>
-              <th>Disponible</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={String(r.warehouseKey)}>
-                <td>{String(r.name)}</td>
-                <td>{String(r.latitude ?? '—')}</td>
-                <td>{String(r.longitude ?? '—')}</td>
-                <td>{String(r.usedCapacity)}</td>
-                <td>{String(r.totalCapacity)}</td>
-                <td>
-                  <div style={{ background: '#eee', borderRadius: 4, overflow: 'hidden' }}>
-                    <div
-                      style={{
-                        width: `${Math.min(100, Number(r.occupancyPct) || 0)}%`,
-                        background: r.saturated ? '#c0392b' : '#2980b9',
-                        color: '#fff',
-                        padding: '2px 6px',
-                      }}
-                    >
-                      {String(r.occupancyPct)}%
-                    </div>
-                  </div>
-                </td>
-                <td>{String(r.availableCapacity)}</td>
-                <td>{r.saturated ? 'Saturada' : 'OK'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-      <section className="panel">
-        <h3>Panel de alertas operativas</h3>
-        <table className="data-table">
-          <thead>
-            <tr><th>Tipo</th><th>Severidad</th><th>Mensaje</th><th></th></tr>
-          </thead>
-          <tbody>
-            {alerts.map((a) => (
-              <tr key={String(a.id)}>
-                <td>{String(a.alertType)}</td>
-                <td>{String(a.severity)}</td>
-                <td>{String(a.message)}</td>
-                <td>
-                  <button className="btn" onClick={() => acknowledgeEimsOpsAlert(String(a.alertKey)).then(reload).catch((e) => setError(e.message))}>
-                    Acusar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </>
+      {error ? <PageState variant="error" message={error} /> : null}
+
+      <PageSection title="Ocupación">
+        <SimpleRecordsTable
+          gridId="eims-warehouse-map"
+          columns={mapColumns}
+          data={rows}
+          selectable={false}
+          emptyMessage="Sin bodegas"
+        />
+      </PageSection>
+
+      <PageSection title="Panel de alertas operativas">
+        <SimpleRecordsTable
+          gridId="eims-ops-alerts-map"
+          columns={alertColumns}
+          data={alerts}
+          selectable={false}
+          rowActions={alertActions}
+          emptyMessage="Sin alertas"
+        />
+      </PageSection>
+    </PageLayout>
   );
 }

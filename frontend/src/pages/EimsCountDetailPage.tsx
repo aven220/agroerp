@@ -1,6 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  PageSummary,
+  MetricCard,
+  FieldGroup,
+  FormActions,
+  SimpleRecordsTable,
+  withRowId,
+  type SimpleColumn,
+} from '../components/page';
 import { LoadingState } from '../components/ux/LoadingState';
 import {
   approveAllEimsAdjustments,
@@ -13,11 +26,44 @@ import {
   requestAllEimsAdjustments,
 } from '../api/eims';
 
+type DiffRow = Record<string, unknown> & { id: string };
+type RecRow = Record<string, unknown> & { id: string };
+
+const diffColumns: SimpleColumn<DiffRow>[] = [
+  {
+    key: 'lineKey',
+    label: 'Línea',
+    getValue: (r) => String(((r.line as Record<string, unknown>) ?? {}).lineKey ?? r.lineId ?? ''),
+  },
+  { key: 'systemQty', label: 'Sistema', getValue: (r) => String(r.systemQty ?? '') },
+  { key: 'physicalQty', label: 'Físico', getValue: (r) => String(r.physicalQty ?? '') },
+  { key: 'varianceQty', label: 'Dif.', getValue: (r) => String(r.varianceQty ?? '') },
+  { key: 'variancePct', label: '%', getValue: (r) => String(r.variancePct ?? '') },
+  { key: 'varianceCost', label: 'Costo', getValue: (r) => String(r.varianceCost ?? '') },
+  { key: 'withinTolerance', label: 'Tol.', getValue: (r) => String(r.withinTolerance ?? '') },
+  {
+    key: 'proposedAdjustmentType',
+    label: 'Ajuste',
+    getValue: (r) => String(r.proposedAdjustmentType ?? '—'),
+  },
+];
+
+const recColumns: SimpleColumn<RecRow>[] = [
+  { key: 'lineKey', label: 'Línea', getValue: (r) => String(r.lineKey ?? '') },
+  { key: 'itemKey', label: 'Artículo', getValue: (r) => String(r.itemKey ?? '') },
+  { key: 'warehouseKey', label: 'Bodega', getValue: (r) => String(r.warehouseKey ?? '') },
+  { key: 'lotKey', label: 'Lote', getValue: (r) => String(r.lotKey ?? '—') },
+  { key: 'systemQty', label: 'Sistema', getValue: (r) => String(r.systemQty ?? '') },
+  { key: 'physicalQty', label: 'Físico', getValue: (r) => String(r.physicalQty ?? '—') },
+  { key: 'varianceQty', label: 'Dif.', getValue: (r) => String(r.varianceQty ?? '—') },
+  { key: 'status', label: 'Estado', getValue: (r) => String(r.status ?? '') },
+];
+
 export function EimsCountDetailPage() {
   const { countKey = '' } = useParams();
   const [data, setData] = useState<Record<string, unknown> | null>(null);
-  const [differences, setDifferences] = useState<Array<Record<string, unknown>>>([]);
-  const [reconciliation, setReconciliation] = useState<Array<Record<string, unknown>>>([]);
+  const [differences, setDifferences] = useState<DiffRow[]>([]);
+  const [reconciliation, setReconciliation] = useState<RecRow[]>([]);
   const [error, setError] = useState('');
   const [capture, setCapture] = useState({
     lineKey: '',
@@ -34,8 +80,8 @@ export function EimsCountDetailPage() {
       getEimsCountReconciliation(countKey).catch(() => []),
     ]);
     setData(d);
-    setDifferences(diff as Array<Record<string, unknown>>);
-    setReconciliation(rec as Array<Record<string, unknown>>);
+    setDifferences((diff as Array<Record<string, unknown>>).map((row) => withRowId(row, 'id')));
+    setReconciliation((rec as Array<Record<string, unknown>>).map((row) => withRowId(row, 'id', 'lineKey')));
   };
 
   useEffect(() => { reload().catch((e) => setError(e.message)); }, [countKey]);
@@ -49,57 +95,78 @@ export function EimsCountDetailPage() {
   const acts = (data?.closureActs as Array<Record<string, unknown>>) ?? [];
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title={`Conteo ${countKey}`}
         subtitle={`${String(data?.name ?? '')} · ${String(data?.countType ?? '')} · ${String(data?.status ?? '')}`}
         actions={
-          <>
+          <PageActions>
             <Link to="/inventario/conteos" className="btn">Centro</Link>
             <Link to="/inventario/conteos/actas" className="btn">Actas</Link>
-          </>
+          </PageActions>
         }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
-      <div className="kpi-grid kpi-grid-lg">
-        <div className="kpi-card kpi-card-primary"><span className="kpi-label">Progreso</span><span className="kpi-value">{String(summary.progressPct ?? 0)}%</span></div>
-        <div className="kpi-card"><span className="kpi-label">Líneas</span><span className="kpi-value">{String(summary.totalLines ?? 0)}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Contadas</span><span className="kpi-value">{String(summary.countedLines ?? 0)}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Diferencias</span><span className="kpi-value">{String(summary.varianceLines ?? 0)}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Costo var.</span><span className="kpi-value">{String(summary.totalVarianceCost ?? 0)}</span></div>
-      </div>
-      <section className="panel">
-        <h3>Asignaciones</h3>
+      {error ? <PageState variant="error" message={error} /> : null}
+
+      <PageSummary className="kpi-grid-lg">
+        <MetricCard label="Progreso" value={`${String(summary.progressPct ?? 0)}%`} tone="green" />
+        <MetricCard label="Líneas" value={String(summary.totalLines ?? 0)} />
+        <MetricCard label="Contadas" value={String(summary.countedLines ?? 0)} />
+        <MetricCard label="Diferencias" value={String(summary.varianceLines ?? 0)} />
+        <MetricCard label="Costo var." value={String(summary.totalVarianceCost ?? 0)} />
+      </PageSummary>
+
+      <PageSection title="Asignaciones">
         <ul>
           {assignments.map((a) => (
             <li key={String(a.id)}>{String(a.userName ?? a.userId)} · {String(a.roleKey)} · {String(a.status)}</li>
           ))}
         </ul>
-      </section>
-      <section className="panel">
-        <h3>Captura de conteo</h3>
-        <div className="row-actions">
-          <select value={capture.lineKey} onChange={(e) => setCapture({ ...capture, lineKey: e.target.value })}>
-            <option value="">Línea</option>
-            {lines.map((l) => (
-              <option key={String(l.lineKey)} value={String(l.lineKey)}>
-                {String(l.lineKey)} · {String(l.itemKey)} · sys={String(l.systemQty)}
-              </option>
-            ))}
-          </select>
-          <input placeholder="Cantidad física" value={capture.quantity} onChange={(e) => setCapture({ ...capture, quantity: e.target.value })} />
-          <select value={capture.round} onChange={(e) => setCapture({ ...capture, round: e.target.value })}>
-            <option value="first">1er conteo</option>
-            <option value="second">2º conteo</option>
-            <option value="third">3er conteo</option>
-          </select>
-          <select value={capture.method} onChange={(e) => setCapture({ ...capture, method: e.target.value })}>
-            <option value="manual">manual</option>
-            <option value="qr">qr</option>
-            <option value="barcode">barcode</option>
-            <option value="offline">offline</option>
-          </select>
-          <input placeholder="Código QR/barras" value={capture.scannedCode} onChange={(e) => setCapture({ ...capture, scannedCode: e.target.value })} />
+      </PageSection>
+
+      <PageSection title="Captura de conteo">
+        <div className="form-grid">
+          <FieldGroup label="Línea">
+            <select value={capture.lineKey} onChange={(e) => setCapture({ ...capture, lineKey: e.target.value })}>
+              <option value="">Línea</option>
+              {lines.map((l) => (
+                <option key={String(l.lineKey)} value={String(l.lineKey)}>
+                  {String(l.lineKey)} · {String(l.itemKey)} · sys={String(l.systemQty)}
+                </option>
+              ))}
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Cantidad física">
+            <input
+              placeholder="Cantidad física"
+              value={capture.quantity}
+              onChange={(e) => setCapture({ ...capture, quantity: e.target.value })}
+            />
+          </FieldGroup>
+          <FieldGroup label="Ronda">
+            <select value={capture.round} onChange={(e) => setCapture({ ...capture, round: e.target.value })}>
+              <option value="first">1er conteo</option>
+              <option value="second">2º conteo</option>
+              <option value="third">3er conteo</option>
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Método">
+            <select value={capture.method} onChange={(e) => setCapture({ ...capture, method: e.target.value })}>
+              <option value="manual">manual</option>
+              <option value="qr">qr</option>
+              <option value="barcode">barcode</option>
+              <option value="offline">offline</option>
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Código QR/barras">
+            <input
+              placeholder="Código QR/barras"
+              value={capture.scannedCode}
+              onChange={(e) => setCapture({ ...capture, scannedCode: e.target.value })}
+            />
+          </FieldGroup>
+        </div>
+        <FormActions sticky={false}>
           <button
             className="btn btn-primary"
             onClick={() =>
@@ -116,11 +183,11 @@ export function EimsCountDetailPage() {
           >
             Capturar
           </button>
-        </div>
-      </section>
-      <section className="panel">
-        <h3>Acciones de conciliación</h3>
-        <div className="row-actions">
+        </FormActions>
+      </PageSection>
+
+      <PageSection title="Acciones de conciliación">
+        <FormActions sticky={false}>
           <button className="btn" onClick={() => reconcileEimsCount(countKey).then(reload).catch((e) => setError(e.message))}>
             Conciliar
           </button>
@@ -133,72 +200,30 @@ export function EimsCountDetailPage() {
           <button className="btn btn-primary" onClick={() => closeEimsCount(countKey, 'Cierre operativo').then(reload).catch((e) => setError(e.message))}>
             Cerrar y generar acta
           </button>
-        </div>
-      </section>
-      <section className="panel">
-        <h3>Comparador de diferencias</h3>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Línea</th>
-              <th>Sistema</th>
-              <th>Físico</th>
-              <th>Dif.</th>
-              <th>%</th>
-              <th>Costo</th>
-              <th>Tol.</th>
-              <th>Ajuste</th>
-            </tr>
-          </thead>
-          <tbody>
-            {differences.map((d) => (
-              <tr key={String(d.id)}>
-                <td>{String((d.line as Record<string, unknown>)?.lineKey ?? d.lineId)}</td>
-                <td>{String(d.systemQty)}</td>
-                <td>{String(d.physicalQty)}</td>
-                <td>{String(d.varianceQty)}</td>
-                <td>{String(d.variancePct)}</td>
-                <td>{String(d.varianceCost)}</td>
-                <td>{String(d.withinTolerance)}</td>
-                <td>{String(d.proposedAdjustmentType ?? '—')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-      <section className="panel">
-        <h3>Panel de conciliación</h3>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Línea</th>
-              <th>Artículo</th>
-              <th>Bodega</th>
-              <th>Lote</th>
-              <th>Sistema</th>
-              <th>Físico</th>
-              <th>Dif.</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reconciliation.map((l) => (
-              <tr key={String(l.id)}>
-                <td>{String(l.lineKey)}</td>
-                <td>{String(l.itemKey)}</td>
-                <td>{String(l.warehouseKey)}</td>
-                <td>{String(l.lotKey ?? '—')}</td>
-                <td>{String(l.systemQty)}</td>
-                <td>{String(l.physicalQty ?? '—')}</td>
-                <td>{String(l.varianceQty ?? '—')}</td>
-                <td>{String(l.status)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-      <section className="panel">
-        <h3>Ajustes</h3>
+        </FormActions>
+      </PageSection>
+
+      <PageSection title="Comparador de diferencias">
+        <SimpleRecordsTable
+          gridId="eims-count-differences"
+          columns={diffColumns}
+          data={differences}
+          selectable={false}
+          emptyMessage="Sin diferencias"
+        />
+      </PageSection>
+
+      <PageSection title="Panel de conciliación">
+        <SimpleRecordsTable
+          gridId="eims-count-reconciliation"
+          columns={recColumns}
+          data={reconciliation}
+          selectable={false}
+          emptyMessage="Sin líneas"
+        />
+      </PageSection>
+
+      <PageSection title="Ajustes">
         <ul>
           {adjustments.map((a) => (
             <li key={String(a.id)}>
@@ -207,15 +232,15 @@ export function EimsCountDetailPage() {
             </li>
           ))}
         </ul>
-      </section>
-      <section className="panel">
-        <h3>Actas</h3>
+      </PageSection>
+
+      <PageSection title="Actas">
         <ul>
           {acts.map((a) => (
             <li key={String(a.id)}>{String(a.actKey)} · {String(a.title)} · doc={String(a.documentKey ?? '—')}</li>
           ))}
         </ul>
-      </section>
-    </>
+      </PageSection>
+    </PageLayout>
   );
 }

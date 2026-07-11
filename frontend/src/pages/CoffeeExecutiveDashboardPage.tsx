@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import { HubToolbar } from '../components/layout/HubToolbar';
+import {
+  PageLayout,
+  PageHeader,
+  PageSection,
+  PageSummary,
+  MetricCard,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
 import { getExecutiveDashboard } from '../api/coffee';
 import { LoadingState } from '../components/ux/LoadingState';
 
 export function CoffeeExecutiveDashboardPage() {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   useEffect(() => { getExecutiveDashboard().then(setData); }, []);
-  if (!data) return <LoadingState variant="dashboard" message="Cargando dashboard ejecutivo..." />;
+  if (!data) return <LoadingState variant="dashboard" message="Cargando resumen ejecutivo…" />;
 
   const kpis = (data.kpis ?? {}) as Record<string, unknown>;
   const statistics = (data.statistics ?? {}) as Record<string, Record<string, unknown>>;
@@ -16,90 +24,90 @@ export function CoffeeExecutiveDashboardPage() {
   const trends = (analytics.trends ?? {}) as Record<string, Array<Record<string, unknown>>>;
   const comparatives = (analytics.comparatives ?? {}) as Record<string, Record<string, number>>;
 
+  const periodData = ['today', 'week', 'month', 'year'].map((p) =>
+    withRowId({ ...(statistics[p] ?? {}), period: p } as Record<string, unknown>, 'period'),
+  );
+
+  const comparativeData = Object.entries(comparatives).map(([key, val]) =>
+    withRowId({ ...val, metric: key } as Record<string, unknown>, 'metric'),
+  );
+
   return (
-    <>
-      <Header
+    <PageLayout
+      toolbar={
+        <HubToolbar
+          primaryAction={{ label: 'Centro de operaciones', to: '/compras/ops' }}
+          moreActions={[
+            { label: 'Analítica', to: '/compras/ops/analitica' },
+            { label: 'Centro', to: '/compras' },
+          ]}
+        />
+      }
+    >
+      <PageHeader
         title="Dashboard ejecutivo"
         subtitle="KPIs, tendencias e IA"
-        actions={
-          <>
-            <Link to="/compras/ops" className="btn">Operations Center</Link>
-            <Link to="/compras/ops/analitica" className="btn">Analítica</Link>
-            <Link to="/compras" className="btn">Centro</Link>
-          </>
-        }
       />
 
-      <div className="kpi-grid kpi-grid-lg">
-        <div className="kpi-card kpi-card-primary"><span className="kpi-label">Kg comprados</span><span className="kpi-value">{Number(kpis.kgTotal ?? 0).toLocaleString()}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Valor comprado</span><span className="kpi-value">{Number(kpis.amountTotal ?? 0).toLocaleString()}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Precio promedio</span><span className="kpi-value">{Number(kpis.avgPricePerKg ?? 0).toLocaleString()}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Humedad prom.</span><span className="kpi-value">{Number(kpis.avgHumidity ?? 0).toFixed(1)}%</span></div>
-        <div className="kpi-card"><span className="kpi-label">Factor prom.</span><span className="kpi-value">{Number(kpis.avgFactor ?? 0).toFixed(1)}</span></div>
-        <div className="kpi-card"><span className="kpi-label">% rechazo</span><span className="kpi-value">{Number(kpis.rejectRate ?? 0).toFixed(1)}%</span></div>
-        <div className="kpi-card"><span className="kpi-label">Bonificaciones</span><span className="kpi-value">{Number(kpis.bonusesTotal ?? 0).toLocaleString()}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Castigos</span><span className="kpi-value">{Number(kpis.penaltiesTotal ?? 0).toLocaleString()}</span></div>
-      </div>
+      <PageSummary>
+        <MetricCard label="Kg comprados" value={Number(kpis.kgTotal ?? 0).toLocaleString()} />
+        <MetricCard label="Valor comprado" value={Number(kpis.amountTotal ?? 0).toLocaleString()} />
+        <MetricCard label="Precio promedio" value={Number(kpis.avgPricePerKg ?? 0).toLocaleString()} />
+        <MetricCard label="Humedad prom." value={`${Number(kpis.avgHumidity ?? 0).toFixed(1)}%`} />
+        <MetricCard label="Factor prom." value={Number(kpis.avgFactor ?? 0).toFixed(1)} />
+        <MetricCard label="% rechazo" value={`${Number(kpis.rejectRate ?? 0).toFixed(1)}%`} />
+        <MetricCard label="Bonificaciones" value={Number(kpis.bonusesTotal ?? 0).toLocaleString()} />
+        <MetricCard label="Castigos" value={Number(kpis.penaltiesTotal ?? 0).toLocaleString()} />
+      </PageSummary>
 
-      <section className="panel">
-        <h3>Comparativos hoy / semana / mes / año</h3>
-        <table className="data-table">
-          <thead><tr><th>Periodo</th><th>Tickets</th><th>Kg</th><th>Valor</th><th>Precio prom.</th><th>Rechazo %</th></tr></thead>
-          <tbody>
-            {['today', 'week', 'month', 'year'].map((p) => {
-              const row = statistics[p] ?? {};
-              return (
-                <tr key={p}>
-                  <td>{p}</td>
-                  <td>{String(row.tickets ?? 0)}</td>
-                  <td>{Number(row.kgTotal ?? 0).toLocaleString()}</td>
-                  <td>{Number(row.amountTotal ?? 0).toLocaleString()}</td>
-                  <td>{Number(row.avgPricePerKg ?? 0).toLocaleString()}</td>
-                  <td>{Number(row.rejectRate ?? 0).toFixed(1)}%</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
+      <PageSection title="Comparativos hoy / semana / mes / año">
+        <SimpleRecordsTable
+          gridId="coffee-exec-periods"
+          selectable={false}
+          data={periodData}
+          columns={[
+            { key: 'period', label: 'Periodo', getValue: (r) => String(r.period) },
+            { key: 'tickets', label: 'Tickets', getValue: (r) => String(r.tickets ?? 0) },
+            { key: 'kgTotal', label: 'Kg', getValue: (r) => Number(r.kgTotal ?? 0).toLocaleString() },
+            { key: 'amountTotal', label: 'Valor', getValue: (r) => Number(r.amountTotal ?? 0).toLocaleString() },
+            { key: 'avgPricePerKg', label: 'Precio prom.', getValue: (r) => Number(r.avgPricePerKg ?? 0).toLocaleString() },
+            { key: 'rejectRate', label: 'Rechazo %', getValue: (r) => `${Number(r.rejectRate ?? 0).toFixed(1)}%` },
+          ]}
+        />
+      </PageSection>
 
-      <section className="panel">
-        <h3>Tendencia diaria (kg)</h3>
-        <div style={{ display: 'flex', gap: 2, alignItems: 'end', minHeight: 140, overflowX: 'auto' }}>
+      <PageSection title="Tendencia diaria (kg)">
+        <div className="spark-chart">
           {(trends.daily ?? []).slice(-30).map((d) => (
-            <div key={String(d.day)} style={{ minWidth: 18, textAlign: 'center' }} title={`${d.day}: ${d.kg}`}>
-              <div style={{ background: '#2ea04388', height: Math.max(4, Number(d.kg) / 50) }} />
+            <div key={String(d.day)} className="spark-chart-col-fixed" title={`${d.day}: ${d.kg}`}>
+              <div className="spark-bar spark-bar-green" style={{ height: Math.max(4, Number(d.kg) / 50) }} />
             </div>
           ))}
         </div>
-      </section>
+      </PageSection>
 
-      <section className="panel">
-        <h3>Delta vs periodo anterior</h3>
-        <table className="data-table">
-          <thead><tr><th>Métrica</th><th>Actual</th><th>Anterior</th><th>Delta</th><th>Delta %</th></tr></thead>
-          <tbody>
-            {Object.entries(comparatives).map(([key, val]) => (
-              <tr key={key}>
-                <td>{key}</td>
-                <td>{Number(val.current ?? 0).toLocaleString()}</td>
-                <td>{Number(val.previous ?? 0).toLocaleString()}</td>
-                <td>{Number(val.delta ?? 0).toLocaleString()}</td>
-                <td>{Number(val.deltaPct ?? 0).toFixed(1)}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <PageSection title="Delta vs periodo anterior">
+        <SimpleRecordsTable
+          gridId="coffee-exec-comparatives"
+          selectable={false}
+          data={comparativeData}
+          columns={[
+            { key: 'metric', label: 'Métrica', getValue: (r) => String(r.metric) },
+            { key: 'current', label: 'Actual', getValue: (r) => Number(r.current ?? 0).toLocaleString() },
+            { key: 'previous', label: 'Anterior', getValue: (r) => Number(r.previous ?? 0).toLocaleString() },
+            { key: 'delta', label: 'Delta', getValue: (r) => Number(r.delta ?? 0).toLocaleString() },
+            { key: 'deltaPct', label: 'Delta %', getValue: (r) => `${Number(r.deltaPct ?? 0).toFixed(1)}%` },
+          ]}
+        />
+      </PageSection>
 
-      <section className="panel">
-        <h3>IA — predicciones y recomendaciones</h3>
+      <PageSection title="Sugerencias y recomendaciones">
         <ul>
           {suggestions.map((s, i) => (
             <li key={i}><strong>{String(s.type)}</strong>: {String(s.recommendation)}</li>
           ))}
         </ul>
-      </section>
-    </>
+      </PageSection>
+    </PageLayout>
   );
 }

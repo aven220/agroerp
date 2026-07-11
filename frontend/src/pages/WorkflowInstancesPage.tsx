@@ -9,9 +9,11 @@ import {
   PageSection,
   PageState,
   TableToolbar,
-  EmptyPanel,
   FormActions,
+  SimpleRecordsTable,
+  type SimpleColumn,
 } from '../components/page';
+import type { RowAction } from '../lib/data-grid/types';
 import { useAuth } from '../context/AuthContext';
 import { useGuidedWorkspaceOptional } from '../context/GuidedWorkspaceContext';
 import { updateWorkEntityLabel } from '../lib/workEntityHistory';
@@ -127,6 +129,41 @@ export function WorkflowInstancesPage() {
     }
   }
 
+  const columns: SimpleColumn<WorkflowInstance>[] = [
+    {
+      key: 'name',
+      label: 'Proceso',
+      render: (r) => <strong>{r.workflowDefinition?.name ?? 'Solicitud'}</strong>,
+      getValue: (r) => r.workflowDefinition?.name ?? 'Solicitud',
+    },
+    {
+      key: 'currentState',
+      label: 'Paso actual',
+      getValue: (r) => labelWorkflowStep(r.currentState),
+    },
+    {
+      key: 'status',
+      label: 'Situación',
+      render: (r) => (
+        <span className={`badge badge-${r.status}`}>{STATUS_LABELS[r.status] ?? r.status}</span>
+      ),
+      getValue: (r) => STATUS_LABELS[r.status] ?? r.status,
+    },
+    {
+      key: 'startedAt',
+      label: 'Inicio',
+      getValue: (r) => new Date(r.startedAt).toLocaleString(),
+    },
+  ];
+
+  const rowActions: RowAction<WorkflowInstance>[] = [
+    {
+      id: 'view',
+      label: 'Ver',
+      onAction: (r) => { openDetail(r.id); },
+    },
+  ];
+
   return (
     <PageLayout>
       <PageHeader
@@ -157,42 +194,17 @@ export function WorkflowInstancesPage() {
         </TableToolbar>
 
         <div className="split-layout">
-          <div className="data-table-wrap">
-            {loading ? (
-              <PageState variant="loading" message="Cargando instancias…" loadingVariant="table" />
-            ) : items.length === 0 ? (
-              <EmptyPanel title="Sin instancias" description="No hay instancias de proceso con los filtros actuales." />
-            ) : (
-              <div className="table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Proceso</th>
-                      <th>Paso actual</th>
-                      <th>Situación</th>
-                      <th>Inicio</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((row) => (
-                      <tr key={row.id} className={selected?.id === row.id ? 'selected-row' : ''}>
-                        <td>
-                          <strong>{row.workflowDefinition?.name ?? 'Solicitud'}</strong>
-                        </td>
-                        <td>{labelWorkflowStep(row.currentState)}</td>
-                        <td><span className={`badge badge-${row.status}`}>{STATUS_LABELS[row.status] ?? row.status}</span></td>
-                        <td>{new Date(row.startedAt).toLocaleString()}</td>
-                        <td>
-                          <button type="button" className="btn btn-sm" onClick={() => openDetail(row.id)}>Ver</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <SimpleRecordsTable
+            gridId="workflow-instances"
+            columns={columns}
+            data={items}
+            loading={loading}
+            selectable={false}
+            rowActions={rowActions}
+            onRowClick={(r) => openDetail(r.id)}
+            emptyMessage="Sin instancias"
+            emptyDescription="No hay instancias de proceso con los filtros actuales."
+          />
 
           {selected && (
             <PageSection title={selected.workflowDefinition?.name ?? 'Detalle'}>

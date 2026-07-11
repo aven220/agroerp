@@ -1,6 +1,7 @@
 /**
- * PM-25 — Arquitectura de experiencia por centros (no por módulos).
- * Navegación dinámica según centro, paquete e industria.
+ * PM-25/28 — Arquitectura de experiencia por centros (no por módulos).
+ * Navegación por experiencia: Inicio · Operación · Reportes · Configuración · Ayuda.
+ * Módulos no licenciados no se listan (paquete coop oculta el resto).
  */
 
 import type { NavCategory, NavItem } from './navigation';
@@ -51,6 +52,16 @@ const item = (
   opts?: Partial<NavItem>,
 ): NavItem => ({ id, to, label, icon, ...opts });
 
+const HELP_ITEMS: NavItem[] = [
+  item('help-center', '/ayuda', 'Centro de ayuda', '?', {
+    keywords: ['ayuda', 'qué hago', 'guía', 'soporte'],
+    searchType: 'screen',
+  }),
+  item('help-notifications', '/notificaciones', 'Notificaciones', '🔔', {
+    keywords: ['alertas', 'avisos'],
+  }),
+];
+
 /** Navegación Cooperativa cafetera — Centro de Operación */
 const COOP_OPERATION: NavCategory[] = [
   {
@@ -61,7 +72,7 @@ const COOP_OPERATION: NavCategory[] = [
     items: [
       item('eoc-home', '/operacion', 'Mi día', '◫', {
         exact: true,
-        keywords: ['inicio', 'mi día', 'operación', 'cola'],
+        keywords: ['inicio', 'mi día', 'operación', 'cola', 'pendientes'],
       }),
     ],
   },
@@ -79,34 +90,31 @@ const COOP_OPERATION: NavCategory[] = [
     icon: '☕',
     defaultCollapsed: false,
     items: [
-      item('eoc-compras', '/compras', 'Compras', '🛒', {
-        permission: 'coffee:read',
-        keywords: ['compras', 'café'],
-      }),
       item('eoc-recepcion', '/compras/recepcion', 'Recepción', '📥', {
         permission: 'coffee:read',
-        keywords: ['recepción'],
+        keywords: ['recepción', 'compra'],
+        searchType: 'process',
       }),
       item('eoc-pesaje', '/compras/pesaje', 'Pesaje', '⚖', {
         permission: 'coffee:read',
         keywords: ['pesaje', 'balanza'],
+        searchType: 'process',
       }),
       item('eoc-calidad', '/compras/calidad', 'Calidad', '✓', {
         permission: 'coffee:read',
         keywords: ['calidad'],
+        searchType: 'process',
       }),
       item('eoc-liquidaciones', '/compras/liquidaciones', 'Liquidaciones', '💵', {
         permission: 'coffee:read',
         keywords: ['liquidaciones'],
+        searchType: 'process',
       }),
-    ],
-  },
-  {
-    id: 'agriculture',
-    label: 'Maestros',
-    icon: '🌱',
-    defaultCollapsed: false,
-    items: [
+      item('eoc-compras', '/compras', 'Compras del día', '🛒', {
+        permission: 'coffee:read',
+        keywords: ['compras', 'café'],
+        searchType: 'process',
+      }),
       item('eoc-productores', '/productores', 'Productores', '👤', {
         permission: 'producer:read',
         keywords: ['productores'],
@@ -119,14 +127,6 @@ const COOP_OPERATION: NavCategory[] = [
         permission: 'lot:read',
         keywords: ['lotes'],
       }),
-    ],
-  },
-  {
-    id: 'inventory',
-    label: 'Inventario',
-    icon: '📦',
-    defaultCollapsed: true,
-    items: [
       item('eoc-inventario', '/inventario', 'Inventario', '📦', {
         permission: 'inventory:read',
         keywords: ['inventario', 'bodega'],
@@ -134,32 +134,65 @@ const COOP_OPERATION: NavCategory[] = [
       item('eoc-movimientos', '/inventario/movimientos', 'Movimientos', '🔄', {
         permission: 'inventory:read',
         keywords: ['movimientos'],
+        searchType: 'process',
+      }),
+      item('eoc-reservas', '/inventario/reservas', 'Reservas', '🔖', {
+        permission: 'inventory:read',
+        keywords: ['reservas'],
+        searchType: 'process',
       }),
       item('eoc-docs', '/documentos', 'Documentos', '📄', {
         permission: 'document:read',
-        keywords: ['documentos'],
+        keywords: ['documentos', 'firma'],
+      }),
+      item('eoc-procesos', '/procesos/bandeja', 'Aprobaciones', '📥', {
+        permission: 'workflow:read',
+        keywords: ['procesos', 'aprobaciones', 'bandeja'],
+        searchType: 'process',
       }),
     ],
   },
   {
-    id: 'processes',
-    label: 'Procesos',
+    id: 'reports',
+    label: 'Reportes',
+    icon: '📊',
+    defaultCollapsed: true,
+    items: [
+      item('eoc-reportes', '/bi', 'Analítica y reportes', '📊', {
+        permission: 'analytics:read',
+        keywords: ['reportes', 'analítica'],
+        searchType: 'report',
+      }),
+      item('eoc-compras-ops', '/compras/ops', 'Operación de compras', '☕', {
+        permission: 'coffee:read',
+        keywords: ['ops compras'],
+        searchType: 'report',
+      }),
+    ],
+  },
+  {
+    id: 'admin',
+    label: 'Configuración',
     icon: '⚙',
     defaultCollapsed: true,
     items: [
-      item('eoc-procesos', '/procesos/bandeja', 'Aprobaciones', '📥', {
-        permission: 'workflow:read',
-        keywords: ['procesos', 'aprobaciones'],
-      }),
-      item('eoc-reportes', '/bi', 'Reportes', '📊', {
-        permission: 'analytics:read',
-        keywords: ['reportes', 'analítica'],
-      }),
-      item('eoc-config', '/compras/config', 'Configuración', '⚙', {
+      item('eoc-config', '/compras/config', 'Configuración de compras', '⚙', {
         permission: 'coffee:read',
         keywords: ['configuración', 'compras'],
+        searchType: 'config',
+      }),
+      item('eoc-impl', '/implementacion', 'Centro de implementación', '🧭', {
+        keywords: ['implementación', 'go live'],
+        searchType: 'config',
       }),
     ],
+  },
+  {
+    id: 'help',
+    label: 'Ayuda',
+    icon: '?',
+    defaultCollapsed: true,
+    items: HELP_ITEMS,
   },
 ];
 
@@ -187,27 +220,50 @@ const COOP_MANAGEMENT: NavCategory[] = [
   },
   {
     id: 'reports',
-    label: 'Analítica',
+    label: 'Reportes',
     icon: '📊',
     defaultCollapsed: false,
     items: [
       item('emc-compras', '/compras/ops/ejecutivo', 'Compras', '☕', {
         permission: 'coffee:read',
         keywords: ['compras', 'ejecutivo'],
+        searchType: 'report',
       }),
       item('emc-inventario', '/inventario/ops', 'Inventario', '📦', {
         permission: 'inventory:read',
         keywords: ['inventario'],
+        searchType: 'report',
       }),
-      item('emc-bi', '/bi', 'Reportes', '📈', {
+      item('emc-bi', '/bi', 'Analítica', '📈', {
         permission: 'analytics:read',
         keywords: ['reportes', 'bi'],
+        searchType: 'report',
       }),
       item('emc-calidad', '/compras/calidad/indicadores', 'Calidad', '✓', {
         permission: 'coffee:read',
         keywords: ['calidad', 'indicadores'],
+        searchType: 'report',
       }),
     ],
+  },
+  {
+    id: 'admin',
+    label: 'Configuración',
+    icon: '⚙',
+    defaultCollapsed: true,
+    items: [
+      item('emc-impl', '/implementacion', 'Implementación', '🧭', {
+        keywords: ['implementación'],
+        searchType: 'config',
+      }),
+    ],
+  },
+  {
+    id: 'help',
+    label: 'Ayuda',
+    icon: '?',
+    defaultCollapsed: true,
+    items: HELP_ITEMS,
   },
 ];
 
@@ -241,46 +297,57 @@ const COOP_IMPLEMENTATION: NavCategory[] = [
     items: [
       item('eic-empresa', '/implementacion/empresa', 'Empresa', '🏢', {
         keywords: ['empresa', 'fiscal'],
-      }),
-      item('eic-config', '/implementacion/configuracion', 'Configuración', '⚙', {
-        keywords: ['configuración'],
+        searchType: 'config',
       }),
       item('eic-usuarios', '/implementacion/usuarios', 'Usuarios', '👥', {
         keywords: ['usuarios', 'accesos'],
+        searchType: 'config',
       }),
-      item('eic-modulos', '/implementacion/modulos', 'Módulos', '▦', {
-        keywords: ['módulos', 'paquete'],
+      item('eic-config', '/implementacion/configuracion', 'Configuración', '⚙', {
+        keywords: ['configuración', 'empresa', 'compras', 'inventario'],
+        searchType: 'config',
       }),
       item('eic-procesos', '/implementacion/procesos', 'Procesos', '⚡', {
-        keywords: ['procesos', 'workflow'],
+        keywords: ['procesos', 'aprobaciones'],
+        searchType: 'config',
       }),
       item('eic-docs', '/implementacion/documentos', 'Documentos', '📄', {
         keywords: ['documentos', 'numeración'],
+        searchType: 'config',
       }),
       item('eic-integ', '/implementacion/integraciones', 'Integraciones', '🔗', {
         keywords: ['integraciones', 'balanzas'],
+        searchType: 'config',
+      }),
+      item('eic-modulos', '/implementacion/modulos', 'Paquete', '▦', {
+        keywords: ['paquete', 'alcance', 'cooperativa'],
+        searchType: 'config',
       }),
       item('eic-estado', '/implementacion/estado', 'Estado', '📊', {
-        keywords: ['estado', 'preparación'],
+        keywords: ['estado', 'semáforo', 'preparación'],
+        searchType: 'config',
       }),
       item('eic-golive', '/implementacion/go-live', 'Go Live', '✓', {
-        keywords: ['go live', 'empresa lista'],
+        keywords: ['go live', 'empresa lista', 'certificación'],
+        searchType: 'config',
       }),
     ],
   },
+  {
+    id: 'help',
+    label: 'Ayuda',
+    icon: '?',
+    defaultCollapsed: true,
+    items: HELP_ITEMS,
+  },
 ];
 
-/** Plataforma completa — conserva navegación legacy por centro (fallback) */
+/** Plataforma completa — conserva navegación por experiencia (mismos centros) */
 export function getExperienceNav(
   center: ExperienceCenterId,
   packageId: IndustryPackageId,
 ): NavCategory[] {
-  if (packageId === 'coop-cafe-co') {
-    if (center === 'operation') return COOP_OPERATION;
-    if (center === 'management') return COOP_MANAGEMENT;
-    return COOP_IMPLEMENTATION;
-  }
-  /* full-platform: operación usa menú reducido + acceso a legacy vía búsqueda */
+  void packageId;
   if (center === 'operation') return COOP_OPERATION;
   if (center === 'management') return COOP_MANAGEMENT;
   return COOP_IMPLEMENTATION;

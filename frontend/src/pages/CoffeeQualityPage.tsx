@@ -176,7 +176,7 @@ export function CoffeeQualityPage() {
   return (
     <PageLayout>
       <PageHeader
-        title="Control de calidad operativo"
+        title="Calidad"
         subtitle="Evaluación rápida, reglas y decisión de compra"
         actions={
           <PageActions>
@@ -202,7 +202,11 @@ export function CoffeeQualityPage() {
 
       <PageSection title="Cola de calidad (post-pesaje)">
         {pending.length === 0 ? (
-          <EmptyPanel title="Sin tickets" description="No hay tickets pendientes de evaluación de calidad." />
+          <EmptyPanel
+            title="Sin evaluaciones pendientes"
+            description="No hay tickets listos para calidad. Complete el pesaje para que aparezcan aquí."
+            action={{ label: 'Ir a pesaje', to: '/compras/pesaje' }}
+          />
         ) : (
           <EnterpriseDataGrid
             gridId="coffee-quality-queue"

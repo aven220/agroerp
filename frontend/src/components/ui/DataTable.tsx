@@ -52,7 +52,7 @@ export function DataTable<T extends { id: string }>({
   loading,
   onRowClick,
   onRowDoubleClick,
-  emptyMessage = 'Sin registros',
+  emptyMessage = 'Aún no hay información',
   pageSize = 25,
   density = 'default',
   selectable = true,

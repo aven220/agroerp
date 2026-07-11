@@ -16,7 +16,7 @@ export function EfmFaCenterPage() {
         subtitle="PPE, intangibles, depreciaciones y ciclo de vida"
         actions={
           <div className="row-actions">
-            <button className="btn" onClick={() => import('../api/efm-fa').then(({ seedEfmFa }) => seedEfmFa().then(reload))}>Sembrar activos</button>
+            <button className="btn" onClick={() => import('../api/efm-fa').then(({ seedEfmFa }) => seedEfmFa().then(reload))}>Cargar configuración inicial</button>
             <Link to="/finanzas/activos-fijos/registro" className="btn">Activos</Link>
             <Link to="/finanzas/activos-fijos/depreciaciones" className="btn">Depreciaciones</Link>
             <Link to="/finanzas/activos-fijos/amortizaciones" className="btn">Amortizaciones</Link>

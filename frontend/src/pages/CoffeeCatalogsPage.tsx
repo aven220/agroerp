@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageToolbar,
+  FieldGroup,
+  FormActions,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
 import { listCoffeeCatalogKeys, listCoffeeCatalogs, upsertCoffeeCatalog } from '../api/coffee';
 
 export function CoffeeCatalogsPage() {
@@ -16,39 +26,55 @@ export function CoffeeCatalogsPage() {
   }, []);
   useEffect(() => { reload(); }, [catalogKey]);
 
+  const data = rows.map((r) => withRowId(r, 'id', 'entryKey'));
+
   return (
-    <>
-      <Header title="Administrador de catálogos" subtitle="Tipos, variedades, defectos, pagos..." actions={<Link to="/compras/config" className="btn">Config</Link>} />
-      <section className="panel">
-        <div className="row-actions">
-          <select value={catalogKey} onChange={(e) => setCatalogKey(e.target.value)}>
-            {keys.map((k) => <option key={k} value={k}>{k}</option>)}
-          </select>
-          <input placeholder="entryKey" value={entryKey} onChange={(e) => setEntryKey(e.target.value)} />
-          <input placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} />
+    <PageLayout>
+      <PageHeader
+        title="Administrador de catálogos"
+        subtitle="Tipos, variedades, defectos, pagos..."
+        actions={
+          <PageActions>
+            <Link to="/compras/config" className="btn">Config</Link>
+          </PageActions>
+        }
+      />
+      <PageSection title="Catálogo">
+        <PageToolbar>
+          <FieldGroup label="Catálogo">
+            <select value={catalogKey} onChange={(e) => setCatalogKey(e.target.value)}>
+              {keys.map((k) => <option key={k} value={k}>{k}</option>)}
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Clave de entrada">
+            <input placeholder="entryKey" value={entryKey} onChange={(e) => setEntryKey(e.target.value)} />
+          </FieldGroup>
+          <FieldGroup label="Nombre">
+            <input placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} />
+          </FieldGroup>
+        </PageToolbar>
+        <FormActions>
           <button
             type="button"
-            className="btn"
+            className="btn btn-primary"
             onClick={() => upsertCoffeeCatalog({ catalogKey, entryKey, name, reason: 'UI update' }).then(() => { setEntryKey(''); setName(''); reload(); })}
           >
             Guardar
           </button>
-        </div>
-        <table className="data-table" style={{ marginTop: 12 }}>
-          <thead><tr><th>Key</th><th>Nombre</th><th>Código</th><th>Activo</th><th>Versión</th></tr></thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={String(r.id)}>
-                <td>{String(r.entryKey)}</td>
-                <td>{String(r.name)}</td>
-                <td>{String(r.code ?? '—')}</td>
-                <td>{String(r.isActive)}</td>
-                <td>{String(r.version)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </>
+        </FormActions>
+        <SimpleRecordsTable
+          gridId="coffee-catalogs"
+          selectable={false}
+          data={data}
+          columns={[
+            { key: 'entryKey', label: 'Key', getValue: (r) => String(r.entryKey) },
+            { key: 'name', label: 'Nombre', getValue: (r) => String(r.name) },
+            { key: 'code', label: 'Código', getValue: (r) => String(r.code ?? '—') },
+            { key: 'isActive', label: 'Activo', getValue: (r) => String(r.isActive) },
+            { key: 'version', label: 'Versión', getValue: (r) => String(r.version) },
+          ]}
+        />
+      </PageSection>
+    </PageLayout>
   );
 }

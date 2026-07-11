@@ -67,7 +67,7 @@ export function InventoryPage() {
       })
       .catch((e: unknown) => {
         setItems([]);
-        setError(e instanceof Error ? e.message : 'Error al cargar inventario EIMS');
+        setError(e instanceof Error ? e.message : 'Error al cargar inventario');
       })
       .finally(() => setLoading(false));
   }, []);
@@ -136,7 +136,7 @@ export function InventoryPage() {
     <PageLayout>
       <PageHeader
         title="Inventario"
-        subtitle={`Existencias EIMS · ${totalStock.toLocaleString('es-CO')} unidades en vista`}
+        subtitle={`Existencias · ${totalStock.toLocaleString('es-CO')} unidades en vista`}
         actions={
           canCreateMovement ? (
             <button type="button" className="btn btn-primary" onClick={openCreate}>

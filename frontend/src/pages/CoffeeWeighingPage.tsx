@@ -216,7 +216,12 @@ export function CoffeeWeighingPage() {
 
       <PageSection title="Cola de pesaje">
         {pending.length === 0 ? (
-          <EmptyPanel title="Sin tickets pendientes" description="No hay tickets en cola de pesaje." />
+          <EmptyPanel
+            title="Cola de pesaje vacía"
+            description="No hay tickets esperando pesaje. Cuando haya recepciones pendientes, aparecerán aquí."
+            hint="Si acaba de registrar una llegada, vuelva a esta pantalla o revise Mi día."
+            action={{ label: 'Ir a recepción', to: '/compras/recepcion' }}
+          />
         ) : (
           <EnterpriseDataGrid
             gridId="coffee-weighing-queue"

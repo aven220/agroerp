@@ -1,7 +1,21 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageToolbar,
+  FieldGroup,
+  FormActions,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
+import type { RowAction } from '../lib/data-grid/types';
 import { getCoffeeProducer, listCoffeeFarms, listCoffeeLots, searchCoffeeProducers } from '../api/coffee';
+
+type ProducerRow = Record<string, unknown> & { id: string };
+type FarmRow = Record<string, unknown> & { id: string };
 
 export function CoffeeLookupsPage() {
   const [q, setQ] = useState('');
@@ -28,64 +42,91 @@ export function CoffeeLookupsPage() {
     setLots(l as Array<Record<string, unknown>>);
   };
 
+  const producerData = producers.map((p) => withRowId(p, 'id', 'producerCode'));
+  const farmData = farms.map((f) => withRowId(f, 'id', 'farmCode'));
+  const lotData = lots.map((l) => withRowId(l, 'id', 'lotCode'));
+
+  const producerActions: RowAction<ProducerRow>[] = [
+    {
+      id: 'view',
+      label: 'Ver',
+      onAction: (r) => {
+        openProducer(String(r.id));
+      },
+    },
+  ];
+
+  const farmActions: RowAction<FarmRow>[] = [
+    {
+      id: 'lots',
+      label: 'Lotes',
+      onAction: (r) => {
+        openFarm(String(r.id));
+      },
+    },
+  ];
+
   return (
-    <>
-      <Header title="Consultas" subtitle="Productor, finca, lotes e historial" actions={<Link to="/compras" className="btn">Centro</Link>} />
-      <section className="panel">
-        <div className="row-actions">
-          <input placeholder="Buscar productor" value={q} onChange={(e) => setQ(e.target.value)} />
+    <PageLayout>
+      <PageHeader
+        title="Consultas"
+        subtitle="Productor, finca, lotes e historial"
+        actions={
+          <PageActions>
+            <Link to="/compras" className="btn">Centro</Link>
+          </PageActions>
+        }
+      />
+      <PageSection title="Productores">
+        <PageToolbar>
+          <FieldGroup label="Buscar">
+            <input placeholder="Buscar productor" value={q} onChange={(e) => setQ(e.target.value)} />
+          </FieldGroup>
+        </PageToolbar>
+        <FormActions>
           <button type="button" className="btn" onClick={search}>Buscar</button>
-        </div>
-        <table className="data-table" style={{ marginTop: 12 }}>
-          <thead><tr><th>Código</th><th>Nombre</th><th>Documento</th><th></th></tr></thead>
-          <tbody>
-            {producers.map((p) => (
-              <tr key={String(p.id)}>
-                <td>{String(p.producerCode)}</td>
-                <td>{String(p.producerName)}</td>
-                <td>{String(p.identityDoc ?? '')}</td>
-                <td><button type="button" className="btn btn-sm" onClick={() => openProducer(String(p.id))}>Ver</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+        </FormActions>
+        <SimpleRecordsTable
+          gridId="coffee-lookups-producers"
+          selectable={false}
+          data={producerData}
+          columns={[
+            { key: 'producerCode', label: 'Código', getValue: (r) => String(r.producerCode) },
+            { key: 'producerName', label: 'Nombre', getValue: (r) => String(r.producerName) },
+            { key: 'identityDoc', label: 'Documento', getValue: (r) => String(r.identityDoc ?? '') },
+          ]}
+          rowActions={producerActions}
+        />
+      </PageSection>
       {detail && (
-        <section className="panel">
-          <h3>Historial productor</h3>
+        <PageSection title="Historial productor">
           <pre className="code-block">{JSON.stringify(detail.purchaseHistory, null, 2)}</pre>
-        </section>
+        </PageSection>
       )}
-      <section className="panel">
-        <h3>Fincas</h3>
-        <table className="data-table">
-          <thead><tr><th>Código</th><th>Nombre</th><th></th></tr></thead>
-          <tbody>
-            {farms.map((f) => (
-              <tr key={String(f.id)}>
-                <td>{String(f.farmCode)}</td>
-                <td>{String(f.farmName)}</td>
-                <td><button type="button" className="btn btn-sm" onClick={() => openFarm(String(f.id))}>Lotes</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-      <section className="panel">
-        <h3>Lotes</h3>
-        <table className="data-table">
-          <thead><tr><th>Código</th><th>Nombre</th><th>Estado</th></tr></thead>
-          <tbody>
-            {lots.map((l) => (
-              <tr key={String(l.id)}>
-                <td>{String(l.lotCode)}</td>
-                <td>{String(l.lotName)}</td>
-                <td>{String(l.status)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </>
+      <PageSection title="Fincas">
+        <SimpleRecordsTable
+          gridId="coffee-lookups-farms"
+          selectable={false}
+          data={farmData}
+          columns={[
+            { key: 'farmCode', label: 'Código', getValue: (r) => String(r.farmCode) },
+            { key: 'farmName', label: 'Nombre', getValue: (r) => String(r.farmName) },
+          ]}
+          rowActions={farmActions}
+        />
+      </PageSection>
+      <PageSection title="Lotes">
+        <SimpleRecordsTable
+          gridId="coffee-lookups-lots"
+          selectable={false}
+          data={lotData}
+          columns={[
+            { key: 'lotCode', label: 'Código', getValue: (r) => String(r.lotCode) },
+            { key: 'lotName', label: 'Nombre', getValue: (r) => String(r.lotName) },
+            { key: 'status', label: 'Estado', getValue: (r) => String(r.status) },
+          ]}
+        />
+      </PageSection>
+    </PageLayout>
   );
 }

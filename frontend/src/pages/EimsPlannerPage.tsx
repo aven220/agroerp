@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  SimpleRecordsTable,
+  withRowId,
+  type SimpleColumn,
+} from '../components/page';
 import {
   generateEimsForecasts,
   getEimsPlanner,
@@ -8,15 +17,34 @@ import {
   refreshEimsAiInsights,
 } from '../api/eims';
 
+type ForecastRow = Record<string, unknown> & { id: string };
+
+const columns: SimpleColumn<ForecastRow>[] = [
+  { key: 'itemKey', label: 'Artículo', getValue: (r) => String(r.itemKey ?? '') },
+  { key: 'warehouseKey', label: 'Bodega', getValue: (r) => String(r.warehouseKey ?? '—') },
+  {
+    key: 'period',
+    label: 'Período',
+    getValue: (r) => `${String(r.periodStart ?? '').slice(0, 10)} — ${String(r.periodEnd ?? '').slice(0, 10)}`,
+  },
+  { key: 'forecastQty', label: 'Cantidad', getValue: (r) => String(r.forecastQty ?? '') },
+  { key: 'rotationRate', label: 'Rotación', getValue: (r) => String(r.rotationRate ?? '—') },
+  { key: 'aiScore', label: 'IA score', getValue: (r) => String(r.aiScore ?? '—') },
+];
+
 export function EimsPlannerPage() {
   const [planner, setPlanner] = useState<Record<string, unknown> | null>(null);
-  const [forecasts, setForecasts] = useState<Array<Record<string, unknown>>>([]);
+  const [forecasts, setForecasts] = useState<ForecastRow[]>([]);
   const [error, setError] = useState('');
 
   const reload = async () => {
     const [p, f] = await Promise.all([getEimsPlanner(), listEimsForecasts()]);
     setPlanner(p);
-    setForecasts(f as Array<Record<string, unknown>>);
+    setForecasts(
+      (f as Array<Record<string, unknown>>)
+        .slice(0, 50)
+        .map((row) => withRowId(row, 'id', 'itemKey')),
+    );
   };
 
   useEffect(() => { reload().catch((e) => setError(e.message)); }, []);
@@ -25,12 +53,12 @@ export function EimsPlannerPage() {
   const scenarios = (planner?.scenarios as Array<Record<string, unknown>>) ?? [];
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Planificador de inventario"
         subtitle="Pronósticos de consumo, compras y rotación"
         actions={
-          <>
+          <PageActions>
             <button className="btn" onClick={() => generateEimsForecasts().then(reload).catch((e) => setError(e.message))}>
               Generar pronósticos
             </button>
@@ -39,36 +67,28 @@ export function EimsPlannerPage() {
             </button>
             <Link to="/inventario/simulador" className="btn">Simulador</Link>
             <Link to="/inventario/abastecimiento" className="btn">Abastecimiento</Link>
-          </>
+          </PageActions>
         }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
-      <section className="panel">
-        <h3>Pronósticos de demanda</h3>
-        <table className="data-table">
-          <thead><tr><th>Artículo</th><th>Bodega</th><th>Período</th><th>Cantidad</th><th>Rotación</th><th>IA score</th></tr></thead>
-          <tbody>
-            {forecasts.slice(0, 50).map((r) => (
-              <tr key={String(r.id)}>
-                <td>{String(r.itemKey)}</td>
-                <td>{String(r.warehouseKey ?? '—')}</td>
-                <td>{String(r.periodStart).slice(0, 10)} — {String(r.periodEnd).slice(0, 10)}</td>
-                <td>{String(r.forecastQty)}</td>
-                <td>{String(r.rotationRate ?? '—')}</td>
-                <td>{String(r.aiScore ?? '—')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-      <section className="panel">
-        <h3>Escenarios recientes</h3>
+      {error ? <PageState variant="error" message={error} /> : null}
+
+      <PageSection title="Pronósticos de demanda">
+        <SimpleRecordsTable
+          gridId="eims-forecasts"
+          columns={columns}
+          data={forecasts}
+          selectable={false}
+          emptyMessage="Sin pronósticos"
+        />
+      </PageSection>
+
+      <PageSection title="Escenarios recientes">
         <ul>{scenarios.map((s) => <li key={String(s.id)}>{String(s.name)} — {String(s.status)}</li>)}</ul>
-      </section>
-      <section className="panel">
-        <h3>Insights IA</h3>
+      </PageSection>
+
+      <PageSection title="Insights IA">
         <ul>{insights.map((i) => <li key={String(i.id)}><strong>{String(i.insightType)}</strong> {String(i.title)}</li>)}</ul>
-      </section>
-    </>
+      </PageSection>
+    </PageLayout>
   );
 }

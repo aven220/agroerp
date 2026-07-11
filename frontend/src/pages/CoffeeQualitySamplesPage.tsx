@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
+import type { RowAction } from '../lib/data-grid/types';
 import { getQualitySample, listQualitySamples, updateSampleCustody } from '../api/coffee';
+
+type SampleRow = Record<string, unknown> & { id: string };
 
 export function CoffeeQualitySamplesPage() {
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
@@ -10,65 +20,64 @@ export function CoffeeQualitySamplesPage() {
   const reload = () => listQualitySamples().then((r) => setRows(r as Array<Record<string, unknown>>));
   useEffect(() => { reload(); }, []);
 
+  const data = rows.map((r) => withRowId(r, 'id', 'sampleKey'));
+
+  const rowActions: RowAction<SampleRow>[] = [
+    {
+      id: 'history',
+      label: 'Historial',
+      onAction: (r) => {
+        getQualitySample(String(r.sampleKey)).then(setDetail);
+      },
+    },
+    {
+      id: 'reanalysis',
+      label: 'Reanálisis',
+      onAction: (r) => {
+        updateSampleCustody(String(r.sampleKey), {
+          status: 'reanalysis',
+          notes: 'Reanálisis solicitado',
+        }).then(reload);
+      },
+    },
+  ];
+
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Muestras y custodia"
         subtitle="Código único, ubicación, estado e historial"
-        actions={<Link to="/compras/calidad" className="btn">Panel calidad</Link>}
+        actions={
+          <PageActions>
+            <Link to="/compras/calidad" className="btn">Panel calidad</Link>
+          </PageActions>
+        }
       />
-      <section className="panel">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Muestra</th>
-              <th>Custodia</th>
-              <th>Ticket</th>
-              <th>Estado</th>
-              <th>Ubicación</th>
-              <th>Reanálisis</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const ticket = r.ticket as Record<string, unknown> | undefined;
-              return (
-                <tr key={String(r.id ?? r.sampleKey)}>
-                  <td>{String(r.sampleKey)}</td>
-                  <td>{String(r.custodyCode ?? '—')}</td>
-                  <td>{String(ticket?.ticketKey ?? '')}</td>
-                  <td>{String(r.status)}</td>
-                  <td>{String(r.physicalLocation ?? '—')}</td>
-                  <td>{String(r.reanalysisCount ?? 0)}</td>
-                  <td style={{ display: 'flex', gap: 4 }}>
-                    <button className="btn" onClick={() => getQualitySample(String(r.sampleKey)).then(setDetail)}>
-                      Historial
-                    </button>
-                    <button
-                      className="btn"
-                      onClick={() =>
-                        updateSampleCustody(String(r.sampleKey), {
-                          status: 'reanalysis',
-                          notes: 'Reanálisis solicitado',
-                        }).then(reload)
-                      }
-                    >
-                      Reanálisis
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
+      <PageSection>
+        <SimpleRecordsTable
+          gridId="coffee-quality-samples"
+          selectable={false}
+          data={data}
+          columns={[
+            { key: 'sampleKey', label: 'Muestra', getValue: (r) => String(r.sampleKey) },
+            { key: 'custodyCode', label: 'Custodia', getValue: (r) => String(r.custodyCode ?? '—') },
+            {
+              key: 'ticketKey',
+              label: 'Ticket',
+              getValue: (r) => String((r.ticket as Record<string, unknown> | undefined)?.ticketKey ?? ''),
+            },
+            { key: 'status', label: 'Estado', getValue: (r) => String(r.status) },
+            { key: 'physicalLocation', label: 'Ubicación', getValue: (r) => String(r.physicalLocation ?? '—') },
+            { key: 'reanalysisCount', label: 'Reanálisis', getValue: (r) => String(r.reanalysisCount ?? 0) },
+          ]}
+          rowActions={rowActions}
+        />
+      </PageSection>
       {detail ? (
-        <section className="panel">
-          <h3>Custodia {String(detail.sampleKey)}</h3>
-          <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(detail, null, 2)}</pre>
-        </section>
+        <PageSection title={`Custodia ${String(detail.sampleKey)}`}>
+          <pre className="code-block">{JSON.stringify(detail, null, 2)}</pre>
+        </PageSection>
       ) : null}
-    </>
+    </PageLayout>
   );
 }

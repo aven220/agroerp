@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  FieldGroup,
+  FormActions,
+  SimpleRecordsTable,
+  withRowId,
+  type SimpleColumn,
+} from '../components/page';
 import {
   listEimsReportDefinitions,
   listEimsReportRuns,
@@ -8,6 +19,16 @@ import {
   runEimsReport,
   saveEimsReportDefinition,
 } from '../api/eims';
+
+type RunRow = Record<string, unknown> & { id: string };
+
+const runColumns: SimpleColumn<RunRow>[] = [
+  { key: 'runKey', label: 'Run', getValue: (r) => String(r.runKey ?? '') },
+  { key: 'reportKey', label: 'Reporte', getValue: (r) => String(r.reportKey ?? '') },
+  { key: 'format', label: 'Formato', getValue: (r) => String(r.format ?? '') },
+  { key: 'rowCount', label: 'Filas', getValue: (r) => String(r.rowCount ?? '') },
+  { key: 'generatedAt', label: 'Fecha', getValue: (r) => String(r.generatedAt ?? '').slice(0, 19) },
+];
 
 function downloadContent(filename: string, content: string, contentType: string) {
   const blob = new Blob([content], { type: contentType });
@@ -21,7 +42,7 @@ function downloadContent(filename: string, content: string, contentType: string)
 
 export function EimsReportsPage() {
   const [reports, setReports] = useState<Array<Record<string, unknown>>>([]);
-  const [runs, setRuns] = useState<Array<Record<string, unknown>>>([]);
+  const [runs, setRuns] = useState<RunRow[]>([]);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     reportType: 'valued_inventory',
@@ -37,7 +58,7 @@ export function EimsReportsPage() {
       listEimsReportRuns(),
     ]);
     setReports([...(r as Array<Record<string, unknown>>), ...(d as Array<Record<string, unknown>>)]);
-    setRuns(runsList as Array<Record<string, unknown>>);
+    setRuns((runsList as Array<Record<string, unknown>>).map((row) => withRowId(row, 'runKey', 'id')));
   };
 
   useEffect(() => { reload().catch((e) => setError(e.message)); }, []);
@@ -58,39 +79,53 @@ export function EimsReportsPage() {
   };
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Centro de reportes"
         subtitle="Inventario valorizado, kardex, rotación, cobertura, conteos y más"
-        actions={<Link to="/inventario/ops" className="btn">Ops Center</Link>}
+        actions={
+          <PageActions>
+            <Link to="/inventario/ops" className="btn">Centro de operaciones</Link>
+          </PageActions>
+        }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
-      <section className="panel">
-        <h3>Generar reporte</h3>
-        <div className="row-actions">
-          <select value={form.reportType} onChange={(e) => setForm({ ...form, reportType: e.target.value })}>
-            <option value="valued_inventory">Inventario valorizado</option>
-            <option value="kardex">Kardex</option>
-            <option value="turnover">Rotación</option>
-            <option value="coverage">Cobertura</option>
-            <option value="stock">Existencias</option>
-            <option value="counts">Conteos</option>
-            <option value="differences">Diferencias</option>
-            <option value="expiry">Vencimientos</option>
-            <option value="reservations">Reservas</option>
-            <option value="replenishment">Abastecimiento</option>
-            <option value="movements">Movimientos</option>
-          </select>
-          <input placeholder="Filtro bodega" value={form.warehouseKey} onChange={(e) => setForm({ ...form, warehouseKey: e.target.value })} />
+      {error ? <PageState variant="error" message={error} /> : null}
+
+      <PageSection title="Generar reporte">
+        <div className="form-grid">
+          <FieldGroup label="Tipo de reporte">
+            <select value={form.reportType} onChange={(e) => setForm({ ...form, reportType: e.target.value })}>
+              <option value="valued_inventory">Inventario valorizado</option>
+              <option value="kardex">Kardex</option>
+              <option value="turnover">Rotación</option>
+              <option value="coverage">Cobertura</option>
+              <option value="stock">Existencias</option>
+              <option value="counts">Conteos</option>
+              <option value="differences">Diferencias</option>
+              <option value="expiry">Vencimientos</option>
+              <option value="reservations">Reservas</option>
+              <option value="replenishment">Abastecimiento</option>
+              <option value="movements">Movimientos</option>
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Filtro bodega">
+            <input placeholder="Filtro bodega" value={form.warehouseKey} onChange={(e) => setForm({ ...form, warehouseKey: e.target.value })} />
+          </FieldGroup>
+        </div>
+        <FormActions sticky={false}>
           <button className="btn" onClick={() => run('csv').catch((e) => setError(e.message))}>CSV</button>
           <button className="btn" onClick={() => run('excel').catch((e) => setError(e.message))}>Excel</button>
           <button className="btn" onClick={() => run('pdf').catch((e) => setError(e.message))}>PDF</button>
+        </FormActions>
+      </PageSection>
+
+      <PageSection title="Constructor de reportes personalizados">
+        <div className="form-grid">
+          <FieldGroup label="Nombre">
+            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </FieldGroup>
         </div>
-      </section>
-      <section className="panel">
-        <h3>Constructor de reportes personalizados</h3>
-        <div className="row-actions">
-          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <FormActions sticky={false}>
           <button
             className="btn btn-primary"
             onClick={() =>
@@ -106,10 +141,10 @@ export function EimsReportsPage() {
           >
             Guardar definición
           </button>
-        </div>
-      </section>
-      <section className="panel">
-        <h3>Definiciones</h3>
+        </FormActions>
+      </PageSection>
+
+      <PageSection title="Definiciones">
         <ul>
           {reports.map((r) => (
             <li key={String(r.id ?? r.reportKey)}>
@@ -117,26 +152,17 @@ export function EimsReportsPage() {
             </li>
           ))}
         </ul>
-      </section>
-      <section className="panel">
-        <h3>Historial de exportaciones</h3>
-        <table className="data-table">
-          <thead>
-            <tr><th>Run</th><th>Reporte</th><th>Formato</th><th>Filas</th><th>Fecha</th></tr>
-          </thead>
-          <tbody>
-            {runs.map((r) => (
-              <tr key={String(r.runKey)}>
-                <td>{String(r.runKey)}</td>
-                <td>{String(r.reportKey)}</td>
-                <td>{String(r.format)}</td>
-                <td>{String(r.rowCount)}</td>
-                <td>{String(r.generatedAt).slice(0, 19)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </>
+      </PageSection>
+
+      <PageSection title="Historial de exportaciones">
+        <SimpleRecordsTable
+          gridId="eims-report-runs"
+          columns={runColumns}
+          data={runs}
+          selectable={false}
+          emptyMessage="Sin exportaciones"
+        />
+      </PageSection>
+    </PageLayout>
   );
 }

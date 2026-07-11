@@ -138,7 +138,7 @@ export function PurchasesPage() {
     <PageLayout>
       <PageHeader
         title="Compras de café"
-        subtitle="Tickets de recepción CPEP vinculados a productores PRM"
+        subtitle="Tickets de recepción de café vinculados a productores"
         actions={
           canCreate ? (
             <button

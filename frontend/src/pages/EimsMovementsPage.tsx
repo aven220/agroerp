@@ -347,8 +347,8 @@ export function EimsMovementsPage() {
           data={movements}
           selectable={false}
           rowActions={movementActions}
-          emptyMessage="Sin movimientos"
-          emptyDescription="Ajuste los filtros o registre un movimiento."
+          emptyMessage="Aún no hay movimientos"
+          emptyDescription="Los movimientos aparecerán al registrar entradas, salidas o ajustes de inventario."
         />
       </PageSection>
 
@@ -358,8 +358,8 @@ export function EimsMovementsPage() {
           columns={stockColumns}
           data={stock}
           selectable={false}
-          emptyMessage="Sin existencias"
-          emptyDescription="Las existencias aparecerán tras registrar movimientos."
+          emptyMessage="Aún no hay existencias"
+          emptyDescription="Registre bodegas, artículos y movimientos para ver el stock aquí."
         />
       </PageSection>
     </PageLayout>

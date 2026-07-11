@@ -1,0 +1,286 @@
+/**
+ * PM-28 — Micro-experiencia y superficies de trabajo (Mi Día, notificaciones, ayuda).
+ */
+
+/* —— Mi Día —— */
+.mi-dia-hero-kicker {
+  font-size: var(--ds-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ds-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.mi-dia-work-list .mi-dia-work-item a {
+  display: flex;
+  gap: var(--ds-space-3);
+  align-items: flex-start;
+  color: inherit;
+  text-decoration: none;
+  transition: background 160ms ease, transform 160ms ease;
+  border-radius: var(--ds-radius-md);
+  padding: 0.35rem 0.4rem;
+  margin: 0 -0.4rem;
+}
+
+.mi-dia-work-list .mi-dia-work-item a:hover {
+  background: color-mix(in srgb, var(--ds-primary) 8%, transparent);
+}
+
+.mi-dia-work-list .mi-dia-work-item a:focus-visible {
+  outline: 2px solid var(--ds-primary);
+  outline-offset: 2px;
+}
+
+.mi-dia-work-count {
+  min-width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ds-radius-md);
+  background: color-mix(in srgb, var(--ds-primary) 14%, var(--ds-surface));
+  font-weight: 700;
+  font-size: var(--ds-text-sm);
+}
+
+.mi-dia-work-item.urgency-overdue .mi-dia-work-count {
+  background: color-mix(in srgb, #c0392b 18%, var(--ds-surface));
+  color: #9b1c1c;
+}
+
+.mi-dia-work-item small {
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.mi-dia-grid .page-section {
+  animation: pm28-fade-up 220ms ease both;
+}
+
+.mi-dia-grid .page-section:nth-child(2) { animation-delay: 40ms; }
+.mi-dia-grid .page-section:nth-child(3) { animation-delay: 80ms; }
+.mi-dia-grid .page-section:nth-child(4) { animation-delay: 120ms; }
+
+@keyframes pm28-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* —— Notificaciones —— */
+.notif-category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: var(--ds-space-4);
+}
+
+.notif-category-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  cursor: pointer;
+  font-size: var(--ds-text-sm);
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.notif-category-tab:hover {
+  border-color: color-mix(in srgb, var(--ds-primary) 40%, var(--ds-border));
+}
+
+.notif-category-tab.active {
+  border-color: var(--ds-primary);
+  background: color-mix(in srgb, var(--ds-primary) 10%, var(--ds-surface));
+  color: var(--ds-primary);
+}
+
+.notif-category-count {
+  min-width: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ds-text) 8%, transparent);
+  font-size: var(--ds-text-xs);
+  text-align: center;
+}
+
+.notif-card {
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+  margin-bottom: 0.75rem;
+}
+
+.notif-card:hover {
+  border-color: color-mix(in srgb, var(--ds-primary) 30%, var(--ds-border));
+}
+
+.notif-filter-bar {
+  width: 100%;
+}
+
+/* —— Ayuda —— */
+.help-intro {
+  color: var(--ds-text-muted);
+  max-width: 62ch;
+  line-height: 1.55;
+}
+
+.help-journey {
+  max-width: 40rem;
+}
+
+.help-entity-list a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--ds-space-4);
+  margin-top: var(--ds-space-4);
+}
+
+.help-card {
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  padding: var(--ds-space-4);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.help-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ds-text) 8%, transparent);
+}
+
+.help-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  margin-bottom: var(--ds-space-3);
+}
+
+.help-card h3 {
+  font-size: var(--ds-text-lg);
+  margin: 0;
+}
+
+.help-dl {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.help-dl dt {
+  font-size: var(--ds-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ds-text-muted);
+  margin-bottom: 0.15rem;
+}
+
+.help-dl dd {
+  margin: 0;
+  font-size: var(--ds-text-sm);
+  line-height: 1.45;
+}
+
+/* —— Page experience —— */
+.page-experience-q {
+  font-weight: 600;
+  color: var(--ds-text-muted);
+  margin-right: 0.25rem;
+}
+
+.page-experience-more {
+  margin-top: 0.5rem;
+  font-size: var(--ds-text-sm);
+}
+
+/* —— EIC checklist —— */
+.eic-checklist a {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: inherit;
+}
+
+.eic-check {
+  width: 1.25rem;
+  height: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--ds-border);
+  font-size: 0.75rem;
+}
+
+.eic-check.done {
+  background: color-mix(in srgb, var(--ds-success, #1a7f4b) 18%, var(--ds-surface));
+  border-color: color-mix(in srgb, var(--ds-success, #1a7f4b) 40%, var(--ds-border));
+  color: var(--ds-success, #1a7f4b);
+}
+
+.emc-strategic-note {
+  margin-top: var(--ds-space-3);
+  font-size: var(--ds-text-sm);
+}
+
+.emc-risks .risk-alto {
+  color: #9b1c1c;
+}
+
+.emc-risks .risk-medio {
+  color: #9a6700;
+}
+
+.emc-risks .risk-bajo {
+  color: var(--ds-text-muted);
+}
+
+/* —— Micro UX global (focus / hover / dialogs) —— */
+.btn,
+.nav-item,
+.eic-section-link,
+.hub-toolbar-menu-item,
+.global-search-result,
+.inbox-card button {
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.btn:focus-visible,
+.nav-item:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.global-search-input:focus-visible {
+  outline: 2px solid var(--ds-primary);
+  outline-offset: 2px;
+}
+
+.ds-empty-state {
+  animation: pm28-fade-up 200ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mi-dia-grid .page-section,
+  .help-card,
+  .ds-empty-state,
+  .btn,
+  .nav-item {
+    animation: none !important;
+    transition: none !important;
+  }
+}

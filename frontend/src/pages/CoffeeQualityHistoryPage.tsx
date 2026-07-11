@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageToolbar,
+  FieldGroup,
+  FormActions,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
 import { listCoffeeQuality, listQualityAlerts } from '../api/coffee';
 
 export function CoffeeQualityHistoryPage() {
@@ -21,71 +31,87 @@ export function CoffeeQualityHistoryPage() {
 
   useEffect(() => { reload(); }, []);
 
+  const data = rows.map((r, i) =>
+    withRowId({ ...r, id: String(r.id ?? `qh-${i}`) } as Record<string, unknown>, 'id'),
+  );
+
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Historial de calidad"
         subtitle="Por productor, finca y lote"
-        actions={<Link to="/compras/calidad" className="btn">Panel calidad</Link>}
+        actions={
+          <PageActions>
+            <Link to="/compras/calidad" className="btn">Panel calidad</Link>
+          </PageActions>
+        }
       />
 
-      <section className="panel">
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input placeholder="producerId" value={producerId} onChange={(e) => setProducerId(e.target.value)} />
-          <input placeholder="farmId" value={farmId} onChange={(e) => setFarmId(e.target.value)} />
-          <input placeholder="lotCode" value={lotCode} onChange={(e) => setLotCode(e.target.value)} />
-          <button className="btn" onClick={reload}>Filtrar</button>
-        </div>
-      </section>
+      <PageSection title="Filtros">
+        <PageToolbar>
+          <FieldGroup label="Productor">
+            <input placeholder="producerId" value={producerId} onChange={(e) => setProducerId(e.target.value)} />
+          </FieldGroup>
+          <FieldGroup label="Finca">
+            <input placeholder="farmId" value={farmId} onChange={(e) => setFarmId(e.target.value)} />
+          </FieldGroup>
+          <FieldGroup label="Lote">
+            <input placeholder="lotCode" value={lotCode} onChange={(e) => setLotCode(e.target.value)} />
+          </FieldGroup>
+        </PageToolbar>
+        <FormActions>
+          <button type="button" className="btn" onClick={reload}>Filtrar</button>
+        </FormActions>
+      </PageSection>
 
-      <section className="panel">
-        <h3>Alertas</h3>
+      <PageSection title="Alertas">
         <ul>
           {alerts.map((a, i) => (
             <li key={i}>[{String(a.severity)}] {String(a.code)} — {String(a.message)}</li>
           ))}
         </ul>
-      </section>
+      </PageSection>
 
-      <section className="panel">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Ticket</th>
-              <th>Productor</th>
-              <th>Finca</th>
-              <th>Lote</th>
-              <th>Humedad</th>
-              <th>Factor</th>
-              <th>Score</th>
-              <th>Grado</th>
-              <th>Decisión</th>
-              <th>Bonos</th>
-              <th>Castigos</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => {
-              const ticket = r.ticket as Record<string, unknown> | undefined;
-              return (
-                <tr key={i}>
-                  <td>{String(ticket?.ticketKey ?? '')}</td>
-                  <td>{String(ticket?.producerName ?? '')}</td>
-                  <td>{String(ticket?.farmName ?? '')}</td>
-                  <td>{String(ticket?.lotCode ?? '')}</td>
-                  <td>{r.humidityPct != null ? `${r.humidityPct}%` : '—'}</td>
-                  <td>{String(r.factor ?? '—')}</td>
-                  <td>{String(r.qualityScore ?? '—')}</td>
-                  <td>{String(r.grade ?? '')}</td>
-                  <td>{String(r.decision ?? '')}</td>
-                  <td>{String(r.bonusesTotal ?? 0)}</td>
-                  <td>{String(r.penaltiesTotal ?? 0)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
-    </>
+      <PageSection title="Evaluaciones">
+        <SimpleRecordsTable
+          gridId="coffee-quality-history"
+          selectable={false}
+          data={data}
+          columns={[
+            {
+              key: 'ticketKey',
+              label: 'Ticket',
+              getValue: (r) => String((r.ticket as Record<string, unknown> | undefined)?.ticketKey ?? ''),
+            },
+            {
+              key: 'producerName',
+              label: 'Productor',
+              getValue: (r) => String((r.ticket as Record<string, unknown> | undefined)?.producerName ?? ''),
+            },
+            {
+              key: 'farmName',
+              label: 'Finca',
+              getValue: (r) => String((r.ticket as Record<string, unknown> | undefined)?.farmName ?? ''),
+            },
+            {
+              key: 'lotCode',
+              label: 'Lote',
+              getValue: (r) => String((r.ticket as Record<string, unknown> | undefined)?.lotCode ?? ''),
+            },
+            {
+              key: 'humidityPct',
+              label: 'Humedad',
+              getValue: (r) => (r.humidityPct != null ? `${r.humidityPct}%` : '—'),
+            },
+            { key: 'factor', label: 'Factor', getValue: (r) => String(r.factor ?? '—') },
+            { key: 'qualityScore', label: 'Score', getValue: (r) => String(r.qualityScore ?? '—') },
+            { key: 'grade', label: 'Grado', getValue: (r) => String(r.grade ?? '') },
+            { key: 'decision', label: 'Decisión', getValue: (r) => String(r.decision ?? '') },
+            { key: 'bonusesTotal', label: 'Bonos', getValue: (r) => String(r.bonusesTotal ?? 0) },
+            { key: 'penaltiesTotal', label: 'Castigos', getValue: (r) => String(r.penaltiesTotal ?? 0) },
+          ]}
+        />
+      </PageSection>
+    </PageLayout>
   );
 }

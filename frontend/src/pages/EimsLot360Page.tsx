@@ -1,6 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  PageSummary,
+  MetricCard,
+  FieldGroup,
+  FormActions,
+  DescriptionList,
+  SimpleRecordsTable,
+  withRowId,
+  type SimpleColumn,
+} from '../components/page';
 import { LoadingState } from '../components/ux/LoadingState';
 import {
   getEimsLot360,
@@ -22,6 +36,21 @@ function renderTree(node: Record<string, unknown>, depth = 0): string {
   return `${pad}${role}: ${lotKey}${transform}\n${parents}${children}`;
 }
 
+type MovementRow = Record<string, unknown> & { id: string };
+
+const movementColumns: SimpleColumn<MovementRow>[] = [
+  { key: 'movementKey', label: 'Movimiento', getValue: (r) => String(r.movementKey ?? '') },
+  { key: 'movementType', label: 'Tipo', getValue: (r) => String(r.movementType ?? '') },
+  { key: 'quantity', label: 'Cant.', getValue: (r) => String(r.quantity ?? '') },
+  { key: 'from', label: 'Desde', getValue: (r) => String(r.from ?? '—') },
+  { key: 'to', label: 'Hacia', getValue: (r) => String(r.to ?? '—') },
+  {
+    key: 'postedAt',
+    label: 'Fecha',
+    getValue: (r) => String(r.postedAt ?? '').slice(0, 19),
+  },
+];
+
 export function EimsLot360Page() {
   const { lotKey = '' } = useParams();
   const [data, setData] = useState<Record<string, unknown> | null>(null);
@@ -39,69 +68,72 @@ export function EimsLot360Page() {
   const timeline = (data?.timeline as Array<Record<string, unknown>>) ?? [];
   const genealogy = (data?.genealogy as Record<string, unknown>) ?? {};
   const movementMap = (data?.movementMap as Record<string, unknown>) ?? {};
-  const nodes = (movementMap.nodes as Array<Record<string, unknown>>) ?? [];
+  const nodes = ((movementMap.nodes as Array<Record<string, unknown>>) ?? []).map((row) =>
+    withRowId(row, 'movementKey', 'id'),
+  );
   const chain = (data?.chain as Array<Record<string, unknown>>) ?? [];
   const transformations = (data?.transformations as Array<Record<string, unknown>>) ?? [];
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title={`Lote 360° — ${lotKey}`}
         subtitle="Genealogía, movimientos, historial y cadena de suministro"
         actions={
-          <>
+          <PageActions>
             <Link to="/inventario/lotes" className="btn">Lotes</Link>
             <Link to="/inventario/lotes/transformaciones" className="btn">Transformaciones</Link>
-          </>
+          </PageActions>
         }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
-      <div className="kpi-grid kpi-grid-lg">
-        <div className="kpi-card kpi-card-primary"><span className="kpi-label">Disponible</span><span className="kpi-value">{String(lot.onHandQty ?? 0)}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Costo acum.</span><span className="kpi-value">{String(lot.accumulatedCost ?? 0)}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Estado</span><span className="kpi-value">{String(lot.status ?? '—')}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Vence</span><span className="kpi-value">{lot.expiryDate ? String(lot.expiryDate).slice(0, 10) : '—'}</span></div>
-      </div>
-      <section className="panel">
-        <h3>Identificación</h3>
-        <p>QR: {String(lot.qrCode ?? '—')} · Barras: {String(lot.barcode ?? '—')} · Serie: {String(lot.serialNumber ?? '—')}</p>
-        <p>Productor: {String(lot.producerName ?? '—')} · Finca: {String(lot.farmName ?? '—')} · Lote agrícola: {String(lot.agriculturalLotCode ?? '—')}</p>
-        <p>Centro compra: {String(lot.purchaseCenterKey ?? '—')} · Propietario: {String(lot.ownerOrgKey ?? '—')} · Cliente: {String(lot.customerName ?? '—')}</p>
-      </section>
-      <section className="panel">
-        <h3>Cadena de suministro</h3>
+      {error ? <PageState variant="error" message={error} /> : null}
+
+      <PageSummary className="kpi-grid-lg">
+        <MetricCard label="Disponible" value={String(lot.onHandQty ?? 0)} tone="green" />
+        <MetricCard label="Costo acum." value={String(lot.accumulatedCost ?? 0)} />
+        <MetricCard label="Estado" value={String(lot.status ?? '—')} />
+        <MetricCard label="Vence" value={lot.expiryDate ? String(lot.expiryDate).slice(0, 10) : '—'} />
+      </PageSummary>
+
+      <PageSection title="Identificación">
+        <DescriptionList
+          items={[
+            { term: 'QR', detail: String(lot.qrCode ?? '—') },
+            { term: 'Barras', detail: String(lot.barcode ?? '—') },
+            { term: 'Serie', detail: String(lot.serialNumber ?? '—') },
+            { term: 'Productor', detail: String(lot.producerName ?? '—') },
+            { term: 'Finca', detail: String(lot.farmName ?? '—') },
+            { term: 'Lote agrícola', detail: String(lot.agriculturalLotCode ?? '—') },
+            { term: 'Centro compra', detail: String(lot.purchaseCenterKey ?? '—') },
+            { term: 'Propietario', detail: String(lot.ownerOrgKey ?? '—') },
+            { term: 'Cliente', detail: String(lot.customerName ?? '—') },
+          ]}
+        />
+      </PageSection>
+
+      <PageSection title="Cadena de suministro">
         <ul>
           {chain.map((c) => (
             <li key={String(c.stage)}>{String(c.stage)}: {String(c.value ?? '—')}</li>
           ))}
         </ul>
-      </section>
-      <section className="panel">
-        <h3>Árbol genealógico</h3>
+      </PageSection>
+
+      <PageSection title="Árbol genealógico">
         <pre>{renderTree(genealogy)}</pre>
-      </section>
-      <section className="panel">
-        <h3>Mapa de movimientos</h3>
-        <table className="data-table">
-          <thead>
-            <tr><th>Movimiento</th><th>Tipo</th><th>Cant.</th><th>Desde</th><th>Hacia</th><th>Fecha</th></tr>
-          </thead>
-          <tbody>
-            {nodes.map((n) => (
-              <tr key={String(n.movementKey)}>
-                <td>{String(n.movementKey)}</td>
-                <td>{String(n.movementType)}</td>
-                <td>{String(n.quantity)}</td>
-                <td>{String(n.from ?? '—')}</td>
-                <td>{String(n.to ?? '—')}</td>
-                <td>{String(n.postedAt).slice(0, 19)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-      <section className="panel">
-        <h3>Historial cronológico</h3>
+      </PageSection>
+
+      <PageSection title="Mapa de movimientos">
+        <SimpleRecordsTable
+          gridId="eims-lot360-movements"
+          columns={movementColumns}
+          data={nodes}
+          selectable={false}
+          emptyMessage="Sin movimientos"
+        />
+      </PageSection>
+
+      <PageSection title="Historial cronológico">
         <ul>
           {timeline.map((t) => (
             <li key={String(t.eventKey)}>
@@ -110,9 +142,9 @@ export function EimsLot360Page() {
             </li>
           ))}
         </ul>
-      </section>
-      <section className="panel">
-        <h3>Transformaciones</h3>
+      </PageSection>
+
+      <PageSection title="Transformaciones">
         <ul>
           {transformations.map((t) => (
             <li key={String(t.id)}>
@@ -120,17 +152,27 @@ export function EimsLot360Page() {
             </li>
           ))}
         </ul>
-      </section>
-      <section className="panel">
-        <h3>Reclasificar</h3>
-        <div className="row-actions">
-          <select value={reclass.status} onChange={(e) => setReclass({ ...reclass, status: e.target.value })}>
-            <option value="quarantined">quarantined</option>
-            <option value="blocked">blocked</option>
-            <option value="available">available</option>
-            <option value="expired">expired</option>
-          </select>
-          <input placeholder="Justificación" value={reclass.reason} onChange={(e) => setReclass({ ...reclass, reason: e.target.value })} />
+      </PageSection>
+
+      <PageSection title="Reclasificar">
+        <div className="form-grid">
+          <FieldGroup label="Estado">
+            <select value={reclass.status} onChange={(e) => setReclass({ ...reclass, status: e.target.value })}>
+              <option value="quarantined">quarantined</option>
+              <option value="blocked">blocked</option>
+              <option value="available">available</option>
+              <option value="expired">expired</option>
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Justificación">
+            <input
+              placeholder="Justificación"
+              value={reclass.reason}
+              onChange={(e) => setReclass({ ...reclass, reason: e.target.value })}
+            />
+          </FieldGroup>
+        </div>
+        <FormActions sticky={false}>
           <button
             className="btn"
             onClick={() =>
@@ -141,13 +183,27 @@ export function EimsLot360Page() {
           >
             Reclasificar
           </button>
+        </FormActions>
+      </PageSection>
+
+      <PageSection title="Incidencia">
+        <div className="form-grid">
+          <FieldGroup label="Título">
+            <input
+              placeholder="Título"
+              value={incident.title}
+              onChange={(e) => setIncident({ ...incident, title: e.target.value })}
+            />
+          </FieldGroup>
+          <FieldGroup label="Descripción">
+            <input
+              placeholder="Descripción"
+              value={incident.description}
+              onChange={(e) => setIncident({ ...incident, description: e.target.value })}
+            />
+          </FieldGroup>
         </div>
-      </section>
-      <section className="panel">
-        <h3>Incidencia</h3>
-        <div className="row-actions">
-          <input placeholder="Título" value={incident.title} onChange={(e) => setIncident({ ...incident, title: e.target.value })} />
-          <input placeholder="Descripción" value={incident.description} onChange={(e) => setIncident({ ...incident, description: e.target.value })} />
+        <FormActions sticky={false}>
           <button
             className="btn"
             onClick={() =>
@@ -158,8 +214,8 @@ export function EimsLot360Page() {
           >
             Registrar
           </button>
-        </div>
-      </section>
-    </>
+        </FormActions>
+      </PageSection>
+    </PageLayout>
   );
 }

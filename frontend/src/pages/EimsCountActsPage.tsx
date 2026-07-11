@@ -1,63 +1,79 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  SimpleRecordsTable,
+  withRowId,
+  type SimpleColumn,
+} from '../components/page';
 import { listEimsCountActs } from '../api/eims';
 
+type ActRow = Record<string, unknown> & { id: string };
+
+const columns: SimpleColumn<ActRow>[] = [
+  { key: 'actKey', label: 'Acta', getValue: (r) => String(r.actKey ?? '') },
+  {
+    key: 'countKey',
+    label: 'Conteo',
+    render: (r) => {
+      const session = (r.session as Record<string, unknown>) ?? {};
+      const key = String(session.countKey ?? '');
+      return key ? (
+        <Link to={`/inventario/conteos/${encodeURIComponent(key)}`}>{key}</Link>
+      ) : (
+        '—'
+      );
+    },
+    getValue: (r) => String(((r.session as Record<string, unknown>) ?? {}).countKey ?? ''),
+  },
+  { key: 'linesCounted', label: 'Líneas', getValue: (r) => String(r.linesCounted ?? '') },
+  { key: 'variancesFound', label: 'Variaciones', getValue: (r) => String(r.variancesFound ?? '') },
+  { key: 'adjustmentsPosted', label: 'Ajustes', getValue: (r) => String(r.adjustmentsPosted ?? '') },
+  { key: 'totalVarianceCost', label: 'Costo var.', getValue: (r) => String(r.totalVarianceCost ?? '') },
+  { key: 'documentKey', label: 'Documento', getValue: (r) => String(r.documentKey ?? '—') },
+  {
+    key: 'closedAt',
+    label: 'Cierre',
+    getValue: (r) => String(r.closedAt ?? '').slice(0, 19),
+  },
+];
+
 export function EimsCountActsPage() {
-  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  const [rows, setRows] = useState<ActRow[]>([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
     listEimsCountActs()
-      .then((r) => setRows(r as Array<Record<string, unknown>>))
+      .then((r) => setRows((r as Array<Record<string, unknown>>).map((row) => withRowId(row, 'id', 'actKey'))))
       .catch((e) => setError(e.message));
   }, []);
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Actas de cierre de conteo"
         subtitle="Documentos de cierre y resumen de conciliaciones"
-        actions={<Link to="/inventario/conteos" className="btn">Centro</Link>}
+        actions={
+          <PageActions>
+            <Link to="/inventario/conteos" className="btn">Centro</Link>
+          </PageActions>
+        }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
-      <section className="panel">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Acta</th>
-              <th>Conteo</th>
-              <th>Líneas</th>
-              <th>Variaciones</th>
-              <th>Ajustes</th>
-              <th>Costo var.</th>
-              <th>Documento</th>
-              <th>Cierre</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const session = (r.session as Record<string, unknown>) ?? {};
-              return (
-                <tr key={String(r.id)}>
-                  <td>{String(r.actKey)}</td>
-                  <td>
-                    <Link to={`/inventario/conteos/${encodeURIComponent(String(session.countKey ?? ''))}`}>
-                      {String(session.countKey ?? '—')}
-                    </Link>
-                  </td>
-                  <td>{String(r.linesCounted)}</td>
-                  <td>{String(r.variancesFound)}</td>
-                  <td>{String(r.adjustmentsPosted)}</td>
-                  <td>{String(r.totalVarianceCost)}</td>
-                  <td>{String(r.documentKey ?? '—')}</td>
-                  <td>{String(r.closedAt).slice(0, 19)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
-    </>
+      {error ? <PageState variant="error" message={error} /> : null}
+
+      <PageSection title="Actas">
+        <SimpleRecordsTable
+          gridId="eims-count-acts"
+          columns={columns}
+          data={rows}
+          selectable={false}
+          emptyMessage="Sin actas"
+        />
+      </PageSection>
+    </PageLayout>
   );
 }

@@ -26,7 +26,15 @@ export function SyncQueueSheet() {
                   <strong>{item.label}</strong>
                   <span className="ds-caption">{new Date(item.updatedAt).toLocaleString('es-CO')}</span>
                 </div>
-                <span className={`mobile-badge mobile-badge-${item.status}`}>{item.status}</span>
+                <span className={`mobile-badge mobile-badge-${item.status}`}>
+                  {item.status === 'synced'
+                    ? 'Enviado'
+                    : item.status === 'failed'
+                      ? 'Fallido'
+                      : item.status === 'pending'
+                        ? 'Pendiente'
+                        : item.status}
+                </span>
                 {item.status === 'synced' || item.status === 'failed' ? (
                   <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeQueueItem(item.id)}>
                     Quitar

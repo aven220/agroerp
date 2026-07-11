@@ -35,7 +35,7 @@ export function IamPoliciesPage() {
       <>
         <Header
           title="Políticas de seguridad"
-          actions={<Link to="/iam" className="btn">Centro de seguridad</Link>}
+          actions={<Link to="/iam" className="btn">Usuarios y accesos</Link>}
         />
         <div className="alert alert-error">No tiene permisos para administrar políticas de seguridad.</div>
       </>
@@ -47,7 +47,7 @@ export function IamPoliciesPage() {
       <Header
         title="Políticas de seguridad"
         subtitle="Reglas de contraseñas, bloqueo de cuentas y autenticación en dos pasos"
-        actions={<Link to="/iam" className="btn">Centro de seguridad</Link>}
+        actions={<Link to="/iam" className="btn">Usuarios y accesos</Link>}
       />
 
       <p className="muted page-help">

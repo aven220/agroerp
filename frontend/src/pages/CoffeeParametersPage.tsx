@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageToolbar,
+  FieldGroup,
+  FormActions,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
 import { listCoffeeParameters, upsertCoffeeParameter } from '../api/coffee';
 
 export function CoffeeParametersPage() {
@@ -12,40 +22,63 @@ export function CoffeeParametersPage() {
   const reload = () => listCoffeeParameters().then((r) => setRows(r as Array<Record<string, unknown>>));
   useEffect(() => { reload(); }, []);
 
+  const data = rows.map((r) => withRowId(r, 'id', 'parameterKey'));
+
   return (
-    <>
-      <Header title="Administrador de parámetros" subtitle="Bonos, castigos, rangos, límites" actions={<Link to="/compras/config" className="btn">Config</Link>} />
-      <section className="panel">
-        <div className="row-actions">
-          <input value={parameterKey} onChange={(e) => setParameterKey(e.target.value)} placeholder="Nombre del parámetro" />
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" />
-        </div>
-        <textarea style={{ width: '100%', minHeight: 80, marginTop: 8 }} value={valueJson} onChange={(e) => setValueJson(e.target.value)} />
-        <button
-          type="button"
-          className="btn"
-          style={{ marginTop: 8 }}
-          onClick={() => upsertCoffeeParameter({ parameterKey, name, value: JSON.parse(valueJson), reason: 'UI update' }).then(reload)}
-        >
-          Guardar parámetro
-        </button>
-      </section>
-      <section className="panel">
-        <table className="data-table">
-          <thead><tr><th>Key</th><th>Nombre</th><th>Scope</th><th>Versión</th><th>Valor</th></tr></thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={String(r.id)}>
-                <td>{String(r.parameterKey)}</td>
-                <td>{String(r.name)}</td>
-                <td>{String(r.scopeType)}:{String(r.scopeRef || 'org')}</td>
-                <td>{String(r.version)}</td>
-                <td><code>{JSON.stringify(r.value)}</code></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </>
+    <PageLayout>
+      <PageHeader
+        title="Administrador de parámetros"
+        subtitle="Bonos, castigos, rangos, límites"
+        actions={
+          <PageActions>
+            <Link to="/compras/config" className="btn">Config</Link>
+          </PageActions>
+        }
+      />
+      <PageSection title="Nuevo parámetro">
+        <PageToolbar>
+          <FieldGroup label="Clave">
+            <input value={parameterKey} onChange={(e) => setParameterKey(e.target.value)} placeholder="Nombre del parámetro" />
+          </FieldGroup>
+          <FieldGroup label="Nombre">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" />
+          </FieldGroup>
+        </PageToolbar>
+        <FieldGroup label="Valor (JSON)">
+          <textarea className="form-control" value={valueJson} onChange={(e) => setValueJson(e.target.value)} rows={4} />
+        </FieldGroup>
+        <FormActions>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => upsertCoffeeParameter({ parameterKey, name, value: JSON.parse(valueJson), reason: 'UI update' }).then(reload)}
+          >
+            Guardar parámetro
+          </button>
+        </FormActions>
+      </PageSection>
+      <PageSection title="Parámetros">
+        <SimpleRecordsTable
+          gridId="coffee-parameters"
+          selectable={false}
+          data={data}
+          columns={[
+            { key: 'parameterKey', label: 'Key', getValue: (r) => String(r.parameterKey) },
+            { key: 'name', label: 'Nombre', getValue: (r) => String(r.name) },
+            {
+              key: 'scope',
+              label: 'Scope',
+              getValue: (r) => `${String(r.scopeType)}:${String(r.scopeRef || 'org')}`,
+            },
+            { key: 'version', label: 'Versión', getValue: (r) => String(r.version) },
+            {
+              key: 'value',
+              label: 'Valor',
+              render: (r) => <code>{JSON.stringify(r.value)}</code>,
+            },
+          ]}
+        />
+      </PageSection>
+    </PageLayout>
   );
 }

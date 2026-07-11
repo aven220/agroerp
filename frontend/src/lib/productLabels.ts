@@ -3,6 +3,7 @@
  */
 
 const TICKET_STATUS_LABELS: Record<string, string> = {
+  pending_review: 'En revisión',
   arrived: 'Recibido',
   queued: 'En espera',
   receiving: 'En recepción',

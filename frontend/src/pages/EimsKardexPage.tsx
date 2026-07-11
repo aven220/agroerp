@@ -9,9 +9,10 @@ import {
   PageSummary,
   MetricCard,
   TableToolbar,
-  FieldGroup,
   FormActions,
-  EmptyPanel,
+  SimpleRecordsTable,
+  withRowId,
+  type SimpleColumn,
 } from '../components/page';
 import {
   compareEimsValuationMethods,
@@ -23,9 +24,57 @@ import {
   listEimsWarehouses,
 } from '../api/eims';
 
+type KardexRow = Record<string, unknown> & { id: string };
+type CostRow = Record<string, unknown> & { id: string };
+
+const kardexColumns: SimpleColumn<KardexRow>[] = [
+  {
+    key: 'postedAt',
+    label: 'Fecha',
+    getValue: (r) => (r.postedAt ? new Date(String(r.postedAt)).toLocaleString() : '—'),
+  },
+  {
+    key: 'itemKey',
+    label: 'Artículo',
+    getValue: (r) => String((r.item as Record<string, unknown>)?.itemKey ?? ''),
+  },
+  {
+    key: 'warehouseKey',
+    label: 'Bodega',
+    getValue: (r) => String((r.warehouse as Record<string, unknown>)?.warehouseKey ?? ''),
+  },
+  { key: 'movementType', label: 'Movimiento', getValue: (r) => String(r.movementType ?? '') },
+  { key: 'previousBalanceQty', label: 'Saldo ant.', getValue: (r) => String(r.previousBalanceQty ?? '') },
+  { key: 'entryQty', label: 'Entrada', getValue: (r) => String(r.entryQty ?? '') },
+  { key: 'exitQty', label: 'Salida', getValue: (r) => String(r.exitQty ?? '') },
+  { key: 'balanceQty', label: 'Saldo', getValue: (r) => String(r.balanceQty ?? '') },
+  { key: 'unitCost', label: 'Costo unit.', getValue: (r) => Number(r.unitCost ?? 0).toLocaleString() },
+  { key: 'totalCost', label: 'Costo total', getValue: (r) => Number(r.totalCost ?? 0).toLocaleString() },
+  { key: 'balanceCost', label: 'Saldo $', getValue: (r) => Number(r.balanceCost ?? 0).toLocaleString() },
+  { key: 'valuationMethod', label: 'Método', getValue: (r) => String(r.valuationMethod ?? '') },
+  { key: 'documentKey', label: 'Documento', getValue: (r) => String(r.documentKey ?? '—') },
+  { key: 'postedBy', label: 'Usuario', getValue: (r) => String(r.postedBy ?? '—') },
+];
+
+const costColumns: SimpleColumn<CostRow>[] = [
+  {
+    key: 'itemKey',
+    label: 'Artículo',
+    getValue: (r) => String((r.item as Record<string, unknown>)?.itemKey ?? ''),
+  },
+  { key: 'eventType', label: 'Evento', getValue: (r) => String(r.eventType ?? '') },
+  { key: 'valuationMethod', label: 'Método', getValue: (r) => String(r.valuationMethod ?? '') },
+  { key: 'previousUnitCost', label: 'Unit. ant.', getValue: (r) => Number(r.previousUnitCost ?? 0).toLocaleString() },
+  { key: 'newUnitCost', label: 'Unit. nuevo', getValue: (r) => Number(r.newUnitCost ?? 0).toLocaleString() },
+  { key: 'newAverageCost', label: 'Prom. nuevo', getValue: (r) => Number(r.newAverageCost ?? 0).toLocaleString() },
+  { key: 'transportCost', label: 'Transporte', getValue: (r) => Number(r.transportCost ?? 0).toLocaleString() },
+  { key: 'storageCost', label: 'Almacenamiento', getValue: (r) => Number(r.storageCost ?? 0).toLocaleString() },
+  { key: 'transformCost', label: 'Transformación', getValue: (r) => Number(r.transformCost ?? 0).toLocaleString() },
+];
+
 export function EimsKardexPage() {
-  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
-  const [costs, setCosts] = useState<Array<Record<string, unknown>>>([]);
+  const [rows, setRows] = useState<KardexRow[]>([]);
+  const [costs, setCosts] = useState<CostRow[]>([]);
   const [value, setValue] = useState<Record<string, unknown> | null>(null);
   const [report, setReport] = useState<Record<string, unknown> | null>(null);
   const [compare, setCompare] = useState<Record<string, unknown> | null>(null);
@@ -49,8 +98,16 @@ export function EimsKardexPage() {
       listEimsItems(),
       listEimsWarehouses(),
     ]);
-    setRows(k as Array<Record<string, unknown>>);
-    setCosts(c as Array<Record<string, unknown>>);
+    setRows(
+      (k as Array<Record<string, unknown>>).map((row, idx) =>
+        withRowId({ ...row, _idx: idx }, 'id', 'movementKey', '_idx'),
+      ),
+    );
+    setCosts(
+      (c as Array<Record<string, unknown>>).map((row, idx) =>
+        withRowId({ ...row, _idx: idx }, 'id', '_idx'),
+      ),
+    );
     setValue(v);
     setReport(r);
     setItems(i as Array<Record<string, unknown>>);
@@ -114,45 +171,14 @@ export function EimsKardexPage() {
       </PageSection>
 
       <PageSection title="Kardex permanente">
-        {rows.length === 0 ? (
-          <EmptyPanel title="Sin movimientos" description="Ajuste los filtros y consulte el kardex." />
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Fecha</th><th>Artículo</th><th>Bodega</th><th>Movimiento</th><th>Saldo ant.</th>
-                  <th>Entrada</th><th>Salida</th><th>Saldo</th><th>Costo unit.</th><th>Costo total</th>
-                  <th>Saldo $</th><th>Método</th><th>Documento</th><th>Usuario</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, i) => {
-                  const item = r.item as Record<string, unknown> | undefined;
-                  const warehouse = r.warehouse as Record<string, unknown> | undefined;
-                  return (
-                    <tr key={i}>
-                      <td>{r.postedAt ? new Date(String(r.postedAt)).toLocaleString() : '—'}</td>
-                      <td>{String(item?.itemKey ?? '')}</td>
-                      <td>{String(warehouse?.warehouseKey ?? '')}</td>
-                      <td>{String(r.movementType)}</td>
-                      <td>{String(r.previousBalanceQty)}</td>
-                      <td>{String(r.entryQty)}</td>
-                      <td>{String(r.exitQty)}</td>
-                      <td>{String(r.balanceQty)}</td>
-                      <td>{Number(r.unitCost ?? 0).toLocaleString()}</td>
-                      <td>{Number(r.totalCost ?? 0).toLocaleString()}</td>
-                      <td>{Number(r.balanceCost ?? 0).toLocaleString()}</td>
-                      <td>{String(r.valuationMethod)}</td>
-                      <td>{String(r.documentKey ?? '—')}</td>
-                      <td>{String(r.postedBy ?? '—')}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <SimpleRecordsTable
+          gridId="eims-kardex"
+          columns={kardexColumns}
+          data={rows}
+          selectable={false}
+          emptyMessage="Sin movimientos"
+          emptyDescription="Ajuste los filtros y consulte el kardex."
+        />
       </PageSection>
 
       {compare ? (
@@ -162,35 +188,14 @@ export function EimsKardexPage() {
       ) : null}
 
       <PageSection title="Historial de costos">
-        {costs.length === 0 ? (
-          <EmptyPanel title="Sin eventos de costo" description="Los eventos de costo aparecerán tras movimientos valorados." />
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr><th>Artículo</th><th>Evento</th><th>Método</th><th>Unit. ant.</th><th>Unit. nuevo</th><th>Prom. nuevo</th><th>Transporte</th><th>Almacenamiento</th><th>Transformación</th></tr>
-              </thead>
-              <tbody>
-                {costs.map((c, i) => {
-                  const item = c.item as Record<string, unknown> | undefined;
-                  return (
-                    <tr key={i}>
-                      <td>{String(item?.itemKey ?? '')}</td>
-                      <td>{String(c.eventType)}</td>
-                      <td>{String(c.valuationMethod)}</td>
-                      <td>{Number(c.previousUnitCost ?? 0).toLocaleString()}</td>
-                      <td>{Number(c.newUnitCost ?? 0).toLocaleString()}</td>
-                      <td>{Number(c.newAverageCost ?? 0).toLocaleString()}</td>
-                      <td>{Number(c.transportCost ?? 0).toLocaleString()}</td>
-                      <td>{Number(c.storageCost ?? 0).toLocaleString()}</td>
-                      <td>{Number(c.transformCost ?? 0).toLocaleString()}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <SimpleRecordsTable
+          gridId="eims-cost-history"
+          columns={costColumns}
+          data={costs}
+          selectable={false}
+          emptyMessage="Sin eventos de costo"
+          emptyDescription="Los eventos de costo aparecerán tras movimientos valorados."
+        />
       </PageSection>
 
       {report ? (

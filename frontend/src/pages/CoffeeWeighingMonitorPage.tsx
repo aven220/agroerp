@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageSummary,
+  MetricCard,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
 import { getWeighingMonitor, syncWeighingContingency } from '../api/coffee';
 import { LoadingState } from '../components/ux/LoadingState';
 import { useIsMounted } from '../hooks/useIsMounted';
 import { useOnEntityUpdated } from '../lib/entitySync';
+import { labelTicketStatus } from '../lib/productLabels';
 
 export function CoffeeWeighingMonitorPage() {
   const mounted = useIsMounted();
@@ -25,7 +35,7 @@ export function CoffeeWeighingMonitorPage() {
     reload().catch(() => undefined);
   }, ['purchase', 'inventory']);
 
-  if (!monitor) return <LoadingState variant="page" message="Cargando monitor de pesaje..." />;
+  if (!monitor) return <LoadingState variant="page" message="Cargando monitor de pesaje…" />;
 
   const summary = (monitor.summary ?? {}) as Record<string, number>;
   const scales = (monitor.scales ?? []) as Array<Record<string, unknown>>;
@@ -33,100 +43,119 @@ export function CoffeeWeighingMonitorPage() {
   const alerts = (monitor.alerts ?? []) as Array<Record<string, unknown>>;
   const readings = (monitor.recentReadings ?? []) as Array<Record<string, unknown>>;
 
+  const scaleData = scales.map((s) => withRowId(s, 'id', 'scaleKey'));
+  const sessionData = sessions.map((s) => withRowId(s, 'id', 'sessionKey', 'weighingNumber'));
+  const readingData = readings.map((r, i) =>
+    withRowId({ ...r, id: String(r.id ?? `reading-${i}`) } as Record<string, unknown>, 'id'),
+  );
+
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Monitor de pesaje en tiempo real"
         subtitle="Estado de balanzas, sesiones y lecturas"
         actions={
-          <>
+          <PageActions>
             <button type="button" className="btn" onClick={() => syncWeighingContingency().then(reload)}>
               Sincronizar contingencias
             </button>
             <Link to="/compras/pesaje" className="btn">Panel pesaje</Link>
             <Link to="/compras" className="btn">Centro</Link>
-          </>
+          </PageActions>
         }
       />
 
-      <section className="panel grid-4">
-        <div><strong>Balanzas disponibles</strong><div>{summary.availableScales ?? 0}</div></div>
-        <div><strong>Ocupadas</strong><div>{summary.busyScales ?? 0}</div></div>
-        <div><strong>Sesiones abiertas</strong><div>{summary.openSessions ?? 0}</div></div>
-        <div><strong>Alertas</strong><div>{summary.openAlerts ?? 0}</div></div>
-      </section>
+      <PageSummary>
+        <MetricCard label="Balanzas disponibles" value={summary.availableScales ?? 0} />
+        <MetricCard label="Ocupadas" value={summary.busyScales ?? 0} />
+        <MetricCard label="Sesiones abiertas" value={summary.openSessions ?? 0} />
+        <MetricCard label="Alertas" value={summary.openAlerts ?? 0} />
+      </PageSummary>
 
-      <section className="panel">
-        <h3>Balanzas</h3>
-        <table className="data-table">
-          <thead>
-            <tr><th>Balanza</th><th>Conexión</th><th>Estado</th><th>Último peso</th><th>Última señal</th></tr>
-          </thead>
-          <tbody>
-            {scales.map((s) => (
-              <tr key={String(s.scaleKey)}>
-                <td>{String(s.name)}</td>
-                <td>{String(s.connectionType)}</td>
-                <td>{String(s.status)}</td>
-                <td>{s.lastWeightKg != null ? `${s.lastWeightKg} kg` : '—'}</td>
-                <td>{s.lastSeenAt ? new Date(String(s.lastSeenAt)).toLocaleTimeString() : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <PageSection title="Balanzas">
+        <SimpleRecordsTable
+          gridId="coffee-weighing-monitor-scales"
+          selectable={false}
+          data={scaleData}
+          columns={[
+            { key: 'name', label: 'Balanza', getValue: (r) => String(r.name) },
+            { key: 'connectionType', label: 'Conexión', getValue: (r) => String(r.connectionType) },
+            { key: 'status', label: 'Estado', getValue: (r) => String(r.status) },
+            {
+              key: 'lastWeightKg',
+              label: 'Último peso',
+              getValue: (r) => (r.lastWeightKg != null ? `${r.lastWeightKg} kg` : '—'),
+            },
+            {
+              key: 'lastSeenAt',
+              label: 'Última señal',
+              getValue: (r) => (r.lastSeenAt ? new Date(String(r.lastSeenAt)).toLocaleTimeString() : '—'),
+            },
+          ]}
+        />
+      </PageSection>
 
-      <section className="panel">
-        <h3>Sesiones activas</h3>
-        <table className="data-table">
-          <thead>
-            <tr><th>Número</th><th>Ticket</th><th>Productor</th><th>Estado</th><th>Neto</th></tr>
-          </thead>
-          <tbody>
-            {sessions.map((s) => {
-              const ticket = s.ticket as Record<string, unknown> | undefined;
-              return (
-                <tr key={String(s.sessionKey)}>
-                  <td>{String(s.weighingNumber)}</td>
-                  <td>{String(ticket?.ticketKey ?? '')}</td>
-                  <td>{String(ticket?.producerName ?? '')}</td>
-                  <td>{String(s.status)}</td>
-                  <td>{s.netWeightKg != null ? `${s.netWeightKg} kg` : '—'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
+      <PageSection title="Sesiones activas">
+        <SimpleRecordsTable
+          gridId="coffee-weighing-monitor-sessions"
+          selectable={false}
+          data={sessionData}
+          columns={[
+            { key: 'weighingNumber', label: 'Número', getValue: (r) => String(r.weighingNumber) },
+            {
+              key: 'ticketKey',
+              label: 'Ticket',
+              getValue: (r) => String((r.ticket as Record<string, unknown> | undefined)?.ticketKey ?? ''),
+            },
+            {
+              key: 'producerName',
+              label: 'Productor',
+              getValue: (r) => String((r.ticket as Record<string, unknown> | undefined)?.producerName ?? ''),
+            },
+            {
+              key: 'status',
+              label: 'Estado',
+              getValue: (r) => labelTicketStatus(String(r.status ?? '')),
+            },
+            {
+              key: 'netWeightKg',
+              label: 'Neto',
+              getValue: (r) => (r.netWeightKg != null ? `${r.netWeightKg} kg` : '—'),
+            },
+          ]}
+        />
+      </PageSection>
 
-      <section className="panel">
-        <h3>Lecturas recientes</h3>
-        <table className="data-table">
-          <thead>
-            <tr><th>Tipo</th><th>Peso</th><th>Fuente</th><th>Estable</th><th>Hora</th></tr>
-          </thead>
-          <tbody>
-            {readings.map((r, i) => (
-              <tr key={i}>
-                <td>{String(r.weighingType)}</td>
-                <td>{r.weightKg != null ? `${r.weightKg} kg` : '—'}</td>
-                <td>{String(r.source)}</td>
-                <td>{r.isStable ? 'Sí' : 'No'}</td>
-                <td>{r.recordedAt ? new Date(String(r.recordedAt)).toLocaleTimeString() : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <PageSection title="Lecturas recientes">
+        <SimpleRecordsTable
+          gridId="coffee-weighing-monitor-readings"
+          selectable={false}
+          data={readingData}
+          columns={[
+            { key: 'weighingType', label: 'Tipo', getValue: (r) => String(r.weighingType) },
+            {
+              key: 'weightKg',
+              label: 'Peso',
+              getValue: (r) => (r.weightKg != null ? `${r.weightKg} kg` : '—'),
+            },
+            { key: 'source', label: 'Fuente', getValue: (r) => String(r.source) },
+            { key: 'isStable', label: 'Estable', getValue: (r) => (r.isStable ? 'Sí' : 'No') },
+            {
+              key: 'recordedAt',
+              label: 'Hora',
+              getValue: (r) => (r.recordedAt ? new Date(String(r.recordedAt)).toLocaleTimeString() : '—'),
+            },
+          ]}
+        />
+      </PageSection>
 
-      <section className="panel">
-        <h3>Alertas abiertas</h3>
+      <PageSection title="Alertas abiertas">
         <ul>
           {alerts.map((a, i) => (
             <li key={i}>[{String(a.severity)}] {String(a.code)} — {String(a.message)}</li>
           ))}
         </ul>
-      </section>
-    </>
+      </PageSection>
+    </PageLayout>
   );
 }

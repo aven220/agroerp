@@ -16,7 +16,7 @@ export function EscmCrmDashboardPage() {
         subtitle="Pipeline, oportunidades y actividades comerciales"
         actions={
           <div className="row-actions">
-            <button className="btn" onClick={() => seedEscmPipeline().then(reload)}>Sembrar pipeline</button>
+            <button className="btn" onClick={() => seedEscmPipeline().then(reload)}>Cargar configuración inicial</button>
             <Link to="/comercial/pipeline" className="btn">Pipeline</Link>
             <Link to="/comercial/oportunidades" className="btn">Oportunidades</Link>
             <Link to="/comercial/cotizaciones" className="btn">Cotizaciones</Link>

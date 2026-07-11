@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
 import { FlowProgress } from '../components/flow/FlowProgress';
-import { EmptyState } from '../components/ui/EmptyState';
+import {
+  PageLayout,
+  PageHeader,
+  PageSection,
+  PageState,
+  PageSummary,
+  MetricCard,
+  SimpleRecordsTable,
+  type SimpleColumn,
+} from '../components/page';
 import { getIamCenter, type IamCenter } from '../api/iam';
 import { LoadingState } from '../components/ux/LoadingState';
 
@@ -47,6 +55,23 @@ const IAM_SECTIONS = [
   },
 ] as const;
 
+type AlertRow = {
+  id: string;
+  severity: string;
+  alertType: string;
+  description: string;
+};
+
+const alertColumns: SimpleColumn<AlertRow>[] = [
+  {
+    key: 'severity',
+    label: 'Prioridad',
+    getValue: (r) => SEVERITY_LABELS[r.severity] ?? r.severity,
+  },
+  { key: 'alertType', label: 'Tipo', getValue: (r) => r.alertType },
+  { key: 'description', label: 'Descripción', getValue: (r) => r.description },
+];
+
 export function IamCenterPage() {
   const [center, setCenter] = useState<IamCenter | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,13 +88,15 @@ export function IamCenterPage() {
   if (!center && !error) {
     return <LoadingState variant="dashboard" message="Cargando centro de seguridad…" />;
   }
-  if (error && !center) return <div className="alert alert-error">{error}</div>;
+  if (error && !center) return <PageState variant="error" message={error} />;
   if (!center) return null;
 
+  const alerts = center.alerts as AlertRow[];
+
   return (
-    <>
-      <Header
-        title="Centro de seguridad"
+    <PageLayout>
+      <PageHeader
+        title="Usuarios y accesos"
         subtitle="Supervise accesos, políticas y actividad de su organización"
       />
 
@@ -92,69 +119,26 @@ export function IamCenterPage() {
         ))}
       </div>
 
-      <div className="kpi-grid kpi-grid-lg">
-        <div className="kpi-card kpi-card-primary">
-          <span className="kpi-label">Usuarios</span>
-          <span className="kpi-value">{center.userCount}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Roles</span>
-          <span className="kpi-value">{center.roleCount}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Sesiones activas</span>
-          <span className="kpi-value">{center.activeSessions}</span>
-        </div>
-        <div className="kpi-card kpi-green">
-          <span className="kpi-label">Inicios exitosos (24 h)</span>
-          <span className="kpi-value">{center.dashboard.loginSuccess24h}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Intentos fallidos (24 h)</span>
-          <span className="kpi-value">{center.dashboard.loginFailure24h}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Accesos denegados (24 h)</span>
-          <span className="kpi-value">{center.dashboard.accessDenied24h}</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Anomalías abiertas</span>
-          <span className="kpi-value">{center.dashboard.openAnomalies}</span>
-        </div>
-      </div>
+      <PageSummary className="kpi-grid-lg">
+        <MetricCard label="Usuarios" value={center.userCount} tone="green" />
+        <MetricCard label="Roles" value={center.roleCount} />
+        <MetricCard label="Sesiones activas" value={center.activeSessions} />
+        <MetricCard label="Inicios exitosos (24 h)" value={center.dashboard.loginSuccess24h} tone="green" />
+        <MetricCard label="Intentos fallidos (24 h)" value={center.dashboard.loginFailure24h} />
+        <MetricCard label="Accesos denegados (24 h)" value={center.dashboard.accessDenied24h} />
+        <MetricCard label="Anomalías abiertas" value={center.dashboard.openAnomalies} />
+      </PageSummary>
 
-      {center.alerts.length > 0 ? (
-        <section className="panel">
-          <h3>Alertas de seguridad</h3>
-          <p className="muted">Eventos que requieren revisión por el administrador.</p>
-          <table className="data-table data-table-compact">
-            <thead>
-              <tr>
-                <th>Prioridad</th>
-                <th>Tipo</th>
-                <th>Descripción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {center.alerts.map((a) => (
-                <tr key={a.id}>
-                  <td>{SEVERITY_LABELS[a.severity] ?? a.severity}</td>
-                  <td>{a.alertType}</td>
-                  <td>{a.description}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ) : (
-        <EmptyState
-          illustration="inbox"
-          title="Sin alertas de seguridad"
-          description="No hay eventos de riesgo pendientes en las últimas 24 horas."
-          hint="Revise la auditoría periódicamente para detectar accesos inusuales."
-          action={{ label: 'Ver auditoría', to: '/iam/auditoria' }}
+      <PageSection title="Alertas de seguridad" description="Eventos que requieren revisión por el administrador.">
+        <SimpleRecordsTable
+          gridId="iam-center-alerts"
+          columns={alertColumns}
+          data={alerts}
+          selectable={false}
+          emptyMessage="Sin alertas de seguridad"
+          emptyDescription="No hay eventos de riesgo pendientes en las últimas 24 horas."
         />
-      )}
-    </>
+      </PageSection>
+    </PageLayout>
   );
 }

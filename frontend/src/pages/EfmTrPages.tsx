@@ -14,7 +14,7 @@ export function EfmTrCenterPage() {
         subtitle="Bancos, cajas, flujo de caja y conciliación"
         actions={
           <div className="row-actions">
-            <button className="btn" onClick={() => import('../api/efm-tr').then(({ seedEfmTr }) => seedEfmTr().then(reload))}>Sembrar tesorería</button>
+            <button className="btn" onClick={() => import('../api/efm-tr').then(({ seedEfmTr }) => seedEfmTr().then(reload))}>Cargar configuración inicial</button>
             <Link to="/finanzas/tesoreria/bancos" className="btn">Bancos</Link>
             <Link to="/finanzas/tesoreria/cajas" className="btn">Cajas</Link>
             <Link to="/finanzas/tesoreria/movimientos" className="btn">Movimientos</Link>

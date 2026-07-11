@@ -2,7 +2,7 @@
  * PM-05 — Registro de comandos enterprise (datos frontend + navegación existente).
  */
 
-import { ALL_NAV_ITEMS } from '../config/navigation';
+import { ALL_NAV_ITEMS, type NavItem } from '../config/navigation';
 import { canAccessPath } from '../config/routePermissions';
 import { loadGridProductivity } from './gridProductivity';
 import { loadWorkEntityHistory, kindIcon, type WorkEntityVisit } from './workEntityHistory';
@@ -33,7 +33,7 @@ export interface CommandItem {
 const CATEGORY_LABELS: Record<CommandCategory, string> = {
   navigation: 'Navegación',
   action: 'Acciones',
-  entity: 'Entidades',
+  entity: 'Registros',
   workspace: 'Mi jornada',
   productivity: 'Productividad',
   favorite: 'Favoritos',
@@ -55,15 +55,23 @@ const ACTION_COMMANDS: Array<{
   permission?: string;
   keywords?: string[];
 }> = [
-  { id: 'action-create-producer', label: 'Crear productor', icon: '➕', to: '/productores/nuevo', permission: 'producer:create', keywords: ['nuevo', 'registrar'] },
+  { id: 'action-mi-dia', label: 'Abrir Mi día', icon: '◫', to: '/operacion', keywords: ['inicio', 'pendientes', 'cola'] },
+  { id: 'action-gerencia', label: 'Abrir Gerencia', icon: '📈', to: '/gerencia', keywords: ['ejecutivo', 'kpis'] },
+  { id: 'action-implementacion', label: 'Abrir Implementación', icon: '🧭', to: '/implementacion', keywords: ['go live', 'checklist'] },
+  { id: 'action-create-producer', label: 'Crear productor', icon: '➕', to: '/productores/nuevo', permission: 'producer:create', keywords: ['nuevo', 'registrar', 'persona'] },
   { id: 'action-create-farm', label: 'Crear finca', icon: '➕', to: '/fincas/nueva', permission: 'farm:create', keywords: ['nuevo', 'registrar'] },
   { id: 'action-create-lot', label: 'Crear lote', icon: '➕', to: '/lotes/nuevo', permission: 'lot:create', keywords: ['nuevo', 'parcela'] },
-  { id: 'action-create-form', label: 'Diseñar formulario', icon: '📝', to: '/formularios/disenar', permission: 'form:create', keywords: ['nuevo', 'form studio'] },
-  { id: 'action-new-purchase', label: 'Registrar compra', icon: '☕', to: '/compras', permission: 'coffee:receive', keywords: ['café', 'compras'] },
-  { id: 'action-workflow-inbox', label: 'Bandeja de tareas', icon: '📥', to: '/procesos/bandeja', permission: 'workflow:read', keywords: ['workflow', 'aprobaciones'] },
-  { id: 'action-home', label: 'Ir al inicio', icon: '🏠', to: '/', keywords: ['dashboard', 'inicio'] },
-  { id: 'action-notifications', label: 'Notificaciones', icon: '🔔', to: '/notificaciones' },
-  { id: 'action-admin', label: 'Administración', icon: '⚙', to: '/administracion', permission: 'organization:read' },
+  { id: 'action-new-reception', label: 'Registrar recepción', icon: '📥', to: '/compras/recepcion', permission: 'coffee:receive', keywords: ['café', 'compra', 'llegada'] },
+  { id: 'action-weighing', label: 'Ir a pesaje', icon: '⚖', to: '/compras/pesaje', permission: 'coffee:read', keywords: ['balanza', 'cola'] },
+  { id: 'action-quality', label: 'Ir a calidad', icon: '✓', to: '/compras/calidad', permission: 'coffee:read', keywords: ['evaluación'] },
+  { id: 'action-settlements', label: 'Ir a liquidaciones', icon: '💵', to: '/compras/liquidaciones', permission: 'coffee:read', keywords: ['pago', 'liquidar'] },
+  { id: 'action-create-form', label: 'Diseñar formulario', icon: '📝', to: '/formularios/disenar', permission: 'form:create', keywords: ['nuevo', 'formulario'] },
+  { id: 'action-workflow-inbox', label: 'Bandeja de aprobaciones', icon: '📥', to: '/procesos/bandeja', permission: 'workflow:read', keywords: ['aprobaciones', 'trámites', 'procesos'] },
+  { id: 'action-documents', label: 'Documentos', icon: '📄', to: '/documentos', permission: 'document:read', keywords: ['firma', 'archivos'] },
+  { id: 'action-reports', label: 'Reportes', icon: '📊', to: '/bi', permission: 'analytics:read', keywords: ['analítica', 'indicadores'] },
+  { id: 'action-help', label: 'Centro de ayuda', icon: '?', to: '/ayuda', keywords: ['ayuda', 'guía', 'qué hago'] },
+  { id: 'action-notifications', label: 'Notificaciones', icon: '🔔', to: '/notificaciones', keywords: ['alertas', 'avisos'] },
+  { id: 'action-admin', label: 'Usuarios y accesos', icon: '⚙', to: '/administracion', permission: 'organization:read', keywords: ['configuración', 'roles'] },
 ];
 
 function scoreCommand(cmd: CommandItem, q: string): number {
@@ -88,6 +96,8 @@ export interface BuildCommandsOptions {
   toggleWorkspace: () => void;
   userId?: string;
   favoriteCommandIds: string[];
+  /** Si se provee, limita navegación al paquete/experiencia (p. ej. cooperativa). */
+  navItems?: NavItem[];
 }
 
 export function buildCommandRegistry(opts: BuildCommandsOptions): CommandItem[] {
@@ -102,9 +112,11 @@ export function buildCommandRegistry(opts: BuildCommandsOptions): CommandItem[] 
     toggleWorkspace,
     userId,
     favoriteCommandIds,
+    navItems,
   } = opts;
 
   const commands: CommandItem[] = [];
+  const navigationPool = navItems && navItems.length > 0 ? navItems : ALL_NAV_ITEMS;
 
   const add = (cmd: Omit<CommandItem, 'categoryLabel' | 'keywords'> & { keywords?: string[] }) => {
     if (cmd.permission && !hasPermission(cmd.permission)) return;
@@ -116,7 +128,7 @@ export function buildCommandRegistry(opts: BuildCommandsOptions): CommandItem[] 
     });
   };
 
-  for (const item of ALL_NAV_ITEMS) {
+  for (const item of navigationPool) {
     if (item.permission && !hasPermission(item.permission)) continue;
     add({
       id: `nav-${item.id}`,
@@ -286,6 +298,8 @@ function entityKindLabel(visit: WorkEntityVisit): string {
     purchase: 'Compra',
     inventory: 'Inventario',
     report: 'Reporte',
+    document: 'Documento',
+    user: 'Usuario',
   };
   return labels[visit.kind] ?? visit.kind;
 }

@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageSummary,
+  MetricCard,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
 import { getTraceabilityAudit } from '../api/coffee';
 import { LoadingState } from '../components/ux/LoadingState';
 
@@ -10,35 +19,41 @@ export function CoffeeInventoryAuditPage() {
     getTraceabilityAudit().then(setData);
   }, []);
 
-  if (!data) return <LoadingState variant="page" message="Cargando auditoría..." />;
+  if (!data) return <LoadingState variant="page" message="Cargando auditoría…" />;
   const summary = (data.summary ?? {}) as Record<string, number>;
   const recentLots = (data.recentLots ?? []) as Array<Record<string, unknown>>;
   const recentMovements = (data.recentMovements ?? []) as Array<Record<string, unknown>>;
   const audits = (data.audits ?? []) as Array<Record<string, unknown>>;
 
+  const auditRows = audits.map((a, i) =>
+    withRowId({ ...a, id: String(a.id ?? `audit-${i}`) } as Record<string, unknown>, 'id'),
+  );
+
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Centro de auditoría inventario/trazabilidad"
         subtitle="Eventos, usuarios, bodegas y correcciones"
-        actions={<Link to="/compras/trazabilidad" className="btn">Trazabilidad</Link>}
+        actions={
+          <PageActions>
+            <Link to="/compras/trazabilidad" className="btn">Trazabilidad</Link>
+          </PageActions>
+        }
       />
-      <section className="panel grid-4">
-        <div><strong>Lotes</strong><div>{summary.lots ?? 0}</div></div>
-        <div><strong>Movimientos</strong><div>{summary.movements ?? 0}</div></div>
-        <div><strong>Kardex</strong><div>{summary.kardex ?? 0}</div></div>
-        <div><strong>Trazas</strong><div>{summary.traces ?? 0}</div></div>
-      </section>
-      <section className="panel">
-        <h3>Lotes recientes</h3>
+      <PageSummary>
+        <MetricCard label="Lotes" value={summary.lots ?? 0} />
+        <MetricCard label="Movimientos" value={summary.movements ?? 0} />
+        <MetricCard label="Kardex" value={summary.kardex ?? 0} />
+        <MetricCard label="Trazas" value={summary.traces ?? 0} />
+      </PageSummary>
+      <PageSection title="Lotes recientes">
         <ul>
           {recentLots.map((l) => (
             <li key={String(l.id)}>{String(l.lotKey)} — {String(l.warehouse)} — {String(l.status)}</li>
           ))}
         </ul>
-      </section>
-      <section className="panel">
-        <h3>Movimientos recientes</h3>
+      </PageSection>
+      <PageSection title="Movimientos recientes">
         <ul>
           {recentMovements.map((m) => {
             const lot = m.lot as Record<string, unknown> | undefined;
@@ -50,26 +65,25 @@ export function CoffeeInventoryAuditPage() {
             );
           })}
         </ul>
-      </section>
-      <section className="panel">
-        <h3>Auditoría</h3>
-        <table className="data-table">
-          <thead>
-            <tr><th>Entidad</th><th>Clave</th><th>Acción</th><th>Usuario</th><th>Fecha</th></tr>
-          </thead>
-          <tbody>
-            {audits.map((a, i) => (
-              <tr key={i}>
-                <td>{String(a.entityType)}</td>
-                <td>{String(a.entityKey)}</td>
-                <td>{String(a.action)}</td>
-                <td>{String(a.userId ?? '—')}</td>
-                <td>{a.createdAt ? new Date(String(a.createdAt)).toLocaleString() : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </>
+      </PageSection>
+      <PageSection title="Auditoría">
+        <SimpleRecordsTable
+          gridId="coffee-inventory-audit"
+          selectable={false}
+          data={auditRows}
+          columns={[
+            { key: 'entityType', label: 'Entidad', getValue: (r) => String(r.entityType) },
+            { key: 'entityKey', label: 'Clave', getValue: (r) => String(r.entityKey) },
+            { key: 'action', label: 'Acción', getValue: (r) => String(r.action) },
+            { key: 'userId', label: 'Usuario', getValue: (r) => String(r.userId ?? '—') },
+            {
+              key: 'createdAt',
+              label: 'Fecha',
+              getValue: (r) => (r.createdAt ? new Date(String(r.createdAt)).toLocaleString() : '—'),
+            },
+          ]}
+        />
+      </PageSection>
+    </PageLayout>
   );
 }

@@ -14,7 +14,7 @@ export function HcmRcCenterPage() {
         subtitle="Vacantes, candidatos, pipeline y contratación"
         actions={
           <div className="row-actions">
-            <button className="btn" onClick={() => import('../api/hcm-rc').then(({ seedHcmRc }) => seedHcmRc().then(reload))}>Sembrar RC</button>
+            <button className="btn" onClick={() => import('../api/hcm-rc').then(({ seedHcmRc }) => seedHcmRc().then(reload))}>Cargar configuración inicial</button>
             <Link to="/rrhh/reclutamiento/vacantes" className="btn">Vacantes</Link>
             <Link to="/rrhh/reclutamiento/candidatos" className="btn">Candidatos</Link>
             <Link to="/rrhh/reclutamiento/portal" className="btn">Portal vacantes</Link>

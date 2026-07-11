@@ -20,10 +20,13 @@ import {
   filterCommands,
   type CommandItem,
 } from '../lib/commandRegistry';
+import { searchEnterpriseEntities } from '../lib/enterpriseSearch';
 import { useAuth } from './AuthContext';
 import { useNavigation } from './NavigationContext';
 import { useGuidedWorkspaceOptional } from './GuidedWorkspaceContext';
+import { useExperienceCenterOptional } from './ExperienceCenterContext';
 import { useOnEntityUpdated } from '../lib/entitySync';
+import { ALL_NAV_ITEMS } from '../config/navigation';
 
 interface CommandContextValue {
   mode: CommandPaletteMode;
@@ -47,13 +50,31 @@ export function CommandProvider({ children }: { children: ReactNode }) {
   const { user, hasPermission } = useAuth();
   const { favorites, navHistory, setSearchOpen } = useNavigation();
   const gw = useGuidedWorkspaceOptional();
+  const experience = useExperienceCenterOptional();
   const userId = user?.id;
+
+  const packageNavItems = useMemo(() => {
+    if (experience?.packageId === 'coop-cafe-co' && experience.experienceNav?.length) {
+      const seen = new Set<string>();
+      const items = [];
+      for (const cat of experience.experienceNav) {
+        for (const navItem of cat.items) {
+          if (seen.has(navItem.id)) continue;
+          seen.add(navItem.id);
+          items.push(navItem);
+        }
+      }
+      return items;
+    }
+    return ALL_NAV_ITEMS;
+  }, [experience?.packageId, experience?.experienceNav]);
 
   const [mode, setMode] = useState<CommandPaletteMode>('launcher');
   const [query, setQuery] = useState('');
   const [recentCommandIds, setRecentCommandIds] = useState(() => loadRecentCommandIds(userId));
   const [favoriteCommandIds, setFavoriteCommandIds] = useState(() => loadFavoriteCommandIds(userId));
   const [entityTick, setEntityTick] = useState(0);
+  const [liveEntityCommands, setLiveEntityCommands] = useState<CommandItem[]>([]);
 
   useOnEntityUpdated(() => setEntityTick((t) => t + 1));
 
@@ -61,6 +82,7 @@ export function CommandProvider({ children }: { children: ReactNode }) {
     (paletteMode: CommandPaletteMode = 'launcher') => {
       setMode(paletteMode);
       setQuery('');
+      setLiveEntityCommands([]);
       setSearchOpen(true);
     },
     [setSearchOpen],
@@ -80,6 +102,37 @@ export function CommandProvider({ children }: { children: ReactNode }) {
     setFavoriteCommandIds(loadFavoriteCommandIds(userId));
   }, [userId]);
 
+  useEffect(() => {
+    const q = query.trim();
+    if (mode !== 'launcher' || q.length < 2) {
+      setLiveEntityCommands([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      searchEnterpriseEntities(q, { hasPermission }).then((hits) => {
+        if (cancelled) return;
+        setLiveEntityCommands(
+          hits.map((hit) => ({
+            id: `live-${hit.id}`,
+            label: hit.label,
+            subtitle: hit.subtitle ? `${hit.kindLabel} · ${hit.subtitle}` : hit.kindLabel,
+            icon: hit.icon,
+            category: 'entity' as const,
+            categoryLabel: hit.kindLabel,
+            keywords: [hit.kind, hit.label, hit.subtitle ?? ''],
+            to: hit.to,
+            run: () => navigate(hit.to),
+          })),
+        );
+      });
+    }, 280);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query, mode, hasPermission, navigate]);
+
   const commands = useMemo(
     () =>
       buildCommandRegistry({
@@ -93,6 +146,7 @@ export function CommandProvider({ children }: { children: ReactNode }) {
         toggleWorkspace: () => gw?.setPanelOpen(true),
         userId,
         favoriteCommandIds,
+        navItems: packageNavItems,
       }),
     [
       hasPermission,
@@ -106,13 +160,17 @@ export function CommandProvider({ children }: { children: ReactNode }) {
       userId,
       favoriteCommandIds,
       entityTick,
+      packageNavItems,
     ],
   );
 
-  const filteredCommands = useMemo(
-    () => filterCommands(commands, query, mode, recentCommandIds),
-    [commands, query, mode, recentCommandIds],
-  );
+  const filteredCommands = useMemo(() => {
+    const base = filterCommands(commands, query, mode, recentCommandIds);
+    if (liveEntityCommands.length === 0) return base;
+    const seen = new Set(base.map((c) => c.id));
+    const merged = [...liveEntityCommands.filter((c) => !seen.has(c.id)), ...base];
+    return merged.slice(0, 40);
+  }, [commands, query, mode, recentCommandIds, liveEntityCommands]);
 
   const execute = useCallback(
     (cmd: CommandItem) => {

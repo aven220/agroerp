@@ -10,7 +10,10 @@ import {
   FieldGroup,
   FormActions,
   EmptyPanel,
+  SimpleRecordsTable,
+  withRowId,
 } from '../components/page';
+import type { RowAction } from '../lib/data-grid/types';
 import {
   getInventoryLot,
   listInventoryLots,
@@ -18,6 +21,8 @@ import {
   revalueInventoryLot,
 } from '../api/coffee';
 import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
+
+type LotRow = Record<string, unknown> & { id: string };
 
 export function CoffeeInventoryPage() {
   const [lots, setLots] = useState<Array<Record<string, unknown>>>([]);
@@ -38,6 +43,18 @@ export function CoffeeInventoryPage() {
     setSelected(await getInventoryLot(lotKey));
   };
 
+  const data = lots.map((l) => withRowId(l, 'id', 'lotKey'));
+
+  const rowActions: RowAction<LotRow>[] = [
+    {
+      id: 'detail',
+      label: 'Detalle',
+      onAction: (r) => {
+        openLot(String(r.lotKey));
+      },
+    },
+  ];
+
   return (
     <PageLayout>
       <PageHeader
@@ -56,34 +73,34 @@ export function CoffeeInventoryPage() {
 
       <PageSection title="Lotes en inventario">
         {lots.length === 0 ? (
-          <EmptyPanel title="Sin lotes" description="Los lotes aparecerán tras liquidar compras CPEP." />
+          <EmptyPanel
+            title="Sin lotes en inventario de compras"
+            description="Los lotes aparecen cuando una liquidación cierra el ciclo e ingresa café a inventario."
+            hint="Complete recepción → pesaje → calidad → liquidación."
+            action={{ label: 'Ir a liquidaciones', to: '/compras/liquidaciones' }}
+          />
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Lote</th><th>QR</th><th>Productor</th><th>Calidad</th><th>Disponible</th>
-                  <th>Reservado</th><th>Costo prom.</th><th>Bodega</th><th>Estado</th><th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {lots.map((l) => (
-                  <tr key={String(l.id)}>
-                    <td>{String(l.lotKey)}</td>
-                    <td>{String(l.qrCode ?? '—')}</td>
-                    <td>{String(l.producerName ?? '—')}</td>
-                    <td>{String(l.qualityGrade ?? '—')}</td>
-                    <td>{String(l.availableKg)} kg</td>
-                    <td>{String(l.reservedKg ?? 0)} kg</td>
-                    <td>{Number(l.averageCost ?? 0).toLocaleString()}</td>
-                    <td>{String(l.warehouse)}</td>
-                    <td>{String(l.status)}</td>
-                    <td><button type="button" className="btn btn-sm" onClick={() => openLot(String(l.lotKey))}>Detalle</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <SimpleRecordsTable
+            gridId="coffee-inventory-lots"
+            selectable={false}
+            data={data}
+            columns={[
+              { key: 'lotKey', label: 'Lote', getValue: (r) => String(r.lotKey) },
+              { key: 'qrCode', label: 'QR', getValue: (r) => String(r.qrCode ?? '—') },
+              { key: 'producerName', label: 'Productor', getValue: (r) => String(r.producerName ?? '—') },
+              { key: 'qualityGrade', label: 'Calidad', getValue: (r) => String(r.qualityGrade ?? '—') },
+              { key: 'availableKg', label: 'Disponible', getValue: (r) => `${String(r.availableKg)} kg` },
+              { key: 'reservedKg', label: 'Reservado', getValue: (r) => `${String(r.reservedKg ?? 0)} kg` },
+              {
+                key: 'averageCost',
+                label: 'Costo prom.',
+                getValue: (r) => Number(r.averageCost ?? 0).toLocaleString(),
+              },
+              { key: 'warehouse', label: 'Bodega', getValue: (r) => String(r.warehouse) },
+              { key: 'status', label: 'Estado', getValue: (r) => String(r.status) },
+            ]}
+            rowActions={rowActions}
+          />
         )}
       </PageSection>
 

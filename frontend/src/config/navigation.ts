@@ -14,7 +14,8 @@ export type NavCategoryId =
   | 'logistics'
   | 'reports'
   | 'admin'
-  | 'advanced';
+  | 'advanced'
+  | 'help';
 
 export type SearchResultType = 'screen' | 'module' | 'process' | 'report' | 'config';
 
@@ -646,20 +647,49 @@ const PATH_SEGMENT_LABELS: Record<string, string> = {
   implementacion: 'Centro de Implementación',
   empresa: 'Empresa',
   configuracion: 'Configuración',
-  modulos: 'Módulos',
+  modulos: 'Paquete',
+  ayuda: 'Ayuda',
+  recepcion: 'Recepción',
+  pesaje: 'Pesaje',
+  calidad: 'Calidad',
+  liquidaciones: 'Liquidaciones',
+  balanzas: 'Balanzas',
+  cola: 'Cola',
+  historial: 'Historial',
+  indicadores: 'Indicadores',
+  reportes: 'Reportes',
+  ops: 'Operación',
+  ejecutivo: 'Ejecutivo',
+  analitica: 'Analítica',
+  kpis: 'Indicadores',
+  config: 'Configuración',
+  catalogos: 'Catálogos',
+  parametros: 'Parámetros',
+  precios: 'Precios',
+  centros: 'Centros',
+  validaciones: 'Validaciones',
+  cambios: 'Cambios',
+  kardex: 'Kardex',
+  trazabilidad: 'Trazabilidad',
+  consultas: 'Consultas',
+  eventos: 'Eventos',
+  dashboards: 'Tableros',
+  disenar: 'Diseñar',
+  usuarios: 'Usuarios',
   estado: 'Estado',
   'go-live': 'Go Live',
-  rendimiento: 'Rendimiento',
-  apis: 'Gestión de APIs',
-  iot: 'Dispositivos e IoT',
+  dia: 'Día',
+  simple: 'Simplificado',
+  monitor: 'Monitor',
+  fotos: 'Fotos',
+  muestras: 'Muestras',
+  movimientos: 'Movimientos',
   nuevo: 'Nuevo',
   nueva: 'Nueva',
   editar: 'Editar',
-  disenar: 'Diseñar',
   ejecutar: 'Ejecutar',
   bandeja: 'Bandeja',
   instancias: 'Solicitudes en curso',
-  usuarios: 'Usuarios',
   politicas: 'Políticas de seguridad',
   auditoria: 'Auditoría',
   permisos: 'Permisos',
@@ -674,6 +704,9 @@ const PATH_SEGMENT_LABELS: Record<string, string> = {
   'gestion-activos': 'Gestión de activos',
   'plataforma-agritech': 'Plataforma agrícola',
   'plataforma-empresarial': 'Plataforma empresarial',
+  rendimiento: 'Rendimiento',
+  apis: 'Gestión de APIs',
+  iot: 'Dispositivos e IoT',
 };
 
 const DETAIL_ROUTE_PATTERNS: Array<{ pattern: RegExp; label: string }> = [

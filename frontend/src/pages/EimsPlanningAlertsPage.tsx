@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  SimpleRecordsTable,
+  withRowId,
+  type SimpleColumn,
+} from '../components/page';
+import type { RowAction } from '../lib/data-grid/types';
 import {
   acknowledgeEimsPlanningAlert,
   listEimsAiInsights,
@@ -8,8 +18,18 @@ import {
   refreshEimsPlanningAlerts,
 } from '../api/eims';
 
+type AlertRow = Record<string, unknown> & { id: string };
+
+const columns: SimpleColumn<AlertRow>[] = [
+  { key: 'alertType', label: 'Tipo', getValue: (r) => String(r.alertType ?? '') },
+  { key: 'severity', label: 'Severidad', getValue: (r) => String(r.severity ?? '') },
+  { key: 'itemKey', label: 'Artículo', getValue: (r) => String(r.itemKey ?? '—') },
+  { key: 'warehouseKey', label: 'Bodega', getValue: (r) => String(r.warehouseKey ?? '—') },
+  { key: 'message', label: 'Mensaje', getValue: (r) => String(r.message ?? '') },
+];
+
 export function EimsPlanningAlertsPage() {
-  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  const [rows, setRows] = useState<AlertRow[]>([]);
   const [insights, setInsights] = useState<Array<Record<string, unknown>>>([]);
   const [error, setError] = useState('');
 
@@ -18,59 +38,55 @@ export function EimsPlanningAlertsPage() {
       listEimsPlanningAlerts(false),
       listEimsAiInsights(),
     ]);
-    setRows(a as Array<Record<string, unknown>>);
+    setRows((a as Array<Record<string, unknown>>).map((row) => withRowId(row, 'id', 'alertKey')));
     setInsights(i as Array<Record<string, unknown>>);
   };
 
   useEffect(() => { reload().catch((e) => setError(e.message)); }, []);
 
+  const rowActions: RowAction<AlertRow>[] = [
+    {
+      id: 'ack',
+      label: 'Acusar',
+      onAction: (r) => {
+        acknowledgeEimsPlanningAlert(String(r.alertKey))
+          .then(reload)
+          .catch((e) => setError(e.message));
+      },
+    },
+  ];
+
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Panel de alertas de planificación"
         subtitle="Stock bajo, sobrestock, inmovilizado, vencimientos y reservas"
         actions={
-          <>
-            <button className="btn" onClick={() => refreshEimsPlanningAlerts().then(reload).catch((e) => setError(e.message))}>
+          <PageActions>
+            <button
+              className="btn"
+              onClick={() => refreshEimsPlanningAlerts().then(reload).catch((e) => setError(e.message))}
+            >
               Regenerar
             </button>
             <Link to="/inventario/abastecimiento" className="btn">Abastecimiento</Link>
-          </>
+          </PageActions>
         }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
-      <section className="panel">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Tipo</th>
-              <th>Severidad</th>
-              <th>Artículo</th>
-              <th>Bodega</th>
-              <th>Mensaje</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={String(r.id)}>
-                <td>{String(r.alertType)}</td>
-                <td>{String(r.severity)}</td>
-                <td>{String(r.itemKey ?? '—')}</td>
-                <td>{String(r.warehouseKey ?? '—')}</td>
-                <td>{String(r.message)}</td>
-                <td>
-                  <button className="btn" onClick={() => acknowledgeEimsPlanningAlert(String(r.alertKey)).then(reload).catch((e) => setError(e.message))}>
-                    Acusar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-      <section className="panel">
-        <h3>Insights IA</h3>
+      {error ? <PageState variant="error" message={error} /> : null}
+
+      <PageSection title="Alertas">
+        <SimpleRecordsTable
+          gridId="eims-planning-alerts"
+          columns={columns}
+          data={rows}
+          selectable={false}
+          rowActions={rowActions}
+          emptyMessage="Sin alertas"
+        />
+      </PageSection>
+
+      <PageSection title="Insights IA">
         <ul>
           {insights.slice(0, 40).map((i) => (
             <li key={String(i.id)}>
@@ -78,7 +94,7 @@ export function EimsPlanningAlertsPage() {
             </li>
           ))}
         </ul>
-      </section>
-    </>
+      </PageSection>
+    </PageLayout>
   );
 }

@@ -18,7 +18,7 @@ export function EventsTimelinePage() {
     <>
       <Header
         title="Centro de eventos"
-        subtitle="Timeline unificado de dominio y notificaciones"
+        subtitle="Historial unificado de avisos y actividad"
         actions={
           <div className="row-actions">
             <Link to="/notificaciones" className="btn">Bandeja</Link>

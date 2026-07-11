@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageToolbar,
+  FieldGroup,
+  FormActions,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
 import { compareCoffeePeriods, getCoffeeAnalytics } from '../api/coffee';
 import { LoadingState } from '../components/ux/LoadingState';
 
@@ -15,7 +25,7 @@ export function CoffeeAnalyticsPage() {
     compareCoffeePeriods(30, 30).then(setCompare);
   }, []);
 
-  if (!analytics) return <LoadingState variant="page" message="Cargando analítica..." />;
+  if (!analytics) return <LoadingState variant="page" message="Cargando analítica…" />;
 
   const trends = (analytics.trends ?? {}) as Record<string, Array<Record<string, unknown>>>;
   const frequent = (analytics.frequentProducers ?? []) as Array<Record<string, unknown>>;
@@ -25,65 +35,71 @@ export function CoffeeAnalyticsPage() {
   const heatMap = (analytics.heatMap ?? []) as Array<Record<string, unknown>>;
   const delta = ((compare?.delta ?? {}) as Record<string, Record<string, number>>);
 
+  const deltaData = Object.entries(delta).map(([k, v]) =>
+    withRowId({ ...v, metric: k } as Record<string, unknown>, 'metric'),
+  );
+  const zoneData = qualityByZone.map((z) => withRowId(z, 'id', 'zone'));
+
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Analítica de compras"
         subtitle="Tendencias, comparativos y mapas de calor"
         actions={
-          <>
+          <PageActions>
             <Link to="/compras/ops" className="btn">Operations</Link>
             <Link to="/compras/ops/reportes" className="btn">Reportes</Link>
-          </>
+          </PageActions>
         }
       />
 
-      <section className="panel">
-        <h3>Comparador de periodos</h3>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input value={currentDays} onChange={(e) => setCurrentDays(e.target.value)} />
-          <input value={previousDays} onChange={(e) => setPreviousDays(e.target.value)} />
+      <PageSection title="Comparador de periodos">
+        <PageToolbar>
+          <FieldGroup label="Días actuales">
+            <input value={currentDays} onChange={(e) => setCurrentDays(e.target.value)} />
+          </FieldGroup>
+          <FieldGroup label="Días anteriores">
+            <input value={previousDays} onChange={(e) => setPreviousDays(e.target.value)} />
+          </FieldGroup>
+        </PageToolbar>
+        <FormActions>
           <button
+            type="button"
             className="btn"
             onClick={() => compareCoffeePeriods(Number(currentDays), Number(previousDays)).then(setCompare)}
           >
             Comparar
           </button>
-        </div>
-        <table className="data-table">
-          <thead><tr><th>Métrica</th><th>Actual</th><th>Anterior</th><th>Delta %</th></tr></thead>
-          <tbody>
-            {Object.entries(delta).map(([k, v]) => (
-              <tr key={k}>
-                <td>{k}</td>
-                <td>{Number(v.current ?? 0).toLocaleString()}</td>
-                <td>{Number(v.previous ?? 0).toLocaleString()}</td>
-                <td>{Number(v.deltaPct ?? 0).toFixed(1)}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+        </FormActions>
+        <SimpleRecordsTable
+          gridId="coffee-analytics-delta"
+          selectable={false}
+          data={deltaData}
+          columns={[
+            { key: 'metric', label: 'Métrica', getValue: (r) => String(r.metric) },
+            { key: 'current', label: 'Actual', getValue: (r) => Number(r.current ?? 0).toLocaleString() },
+            { key: 'previous', label: 'Anterior', getValue: (r) => Number(r.previous ?? 0).toLocaleString() },
+            { key: 'deltaPct', label: 'Delta %', getValue: (r) => `${Number(r.deltaPct ?? 0).toFixed(1)}%` },
+          ]}
+        />
+      </PageSection>
 
-      <section className="panel">
-        <h3>Mapa de calor (día × hora)</h3>
-        <div style={{ overflowX: 'auto' }}>
+      <PageSection title="Mapa de calor (día × hora)">
+        <div className="heat-map">
           {(heatMap ?? []).slice(-14).map((d) => {
             const buckets = (d.hourBuckets ?? {}) as Record<string, number>;
             return (
-              <div key={String(d.day)} style={{ display: 'flex', gap: 2, marginBottom: 2, alignItems: 'center' }}>
-                <small style={{ width: 90 }}>{String(d.day)}</small>
+              <div key={String(d.day)} className="heat-map-row">
+                <small className="heat-map-label">{String(d.day)}</small>
                 {Array.from({ length: 24 }).map((_, h) => {
                   const count = buckets[String(h)] ?? 0;
+                  const level = count === 0 ? 0 : Math.min(4, Math.ceil(count));
                   return (
                     <div
                       key={h}
                       title={`${h}:00 = ${count}`}
-                      style={{
-                        width: 14,
-                        height: 14,
-                        background: count === 0 ? '#ffffff10' : `rgba(46,160,67,${Math.min(1, 0.2 + count * 0.2)})`,
-                      }}
+                      className="heat-map-cell"
+                      data-level={level || undefined}
                     />
                   );
                 })}
@@ -91,49 +107,42 @@ export function CoffeeAnalyticsPage() {
             );
           })}
         </div>
-      </section>
+      </PageSection>
 
-      <section className="panel">
-        <h3>Productores frecuentes</h3>
+      <PageSection title="Productores frecuentes">
         <ul>{frequent.map((p) => <li key={String(p.name)}>{String(p.name)} — {String(p.count)} compras</li>)}</ul>
-      </section>
+      </PageSection>
 
-      <section className="panel">
-        <h3>Productores inactivos</h3>
+      <PageSection title="Productores inactivos">
         <ul>{inactive.map((p) => <li key={String(p.id)}>{String(p.name)}</li>)}</ul>
-      </section>
+      </PageSection>
 
-      <section className="panel">
-        <h3>Centros con mayor volumen</h3>
+      <PageSection title="Centros con mayor volumen">
         <ul>{topCenters.map((c) => <li key={String(c.centerId)}>{String(c.centerId)} — {Number(c.kg).toLocaleString()} kg</li>)}</ul>
-      </section>
+      </PageSection>
 
-      <section className="panel">
-        <h3>Calidad por zona / finca</h3>
-        <table className="data-table">
-          <thead><tr><th>Zona</th><th>Score prom.</th><th>Muestras</th></tr></thead>
-          <tbody>
-            {qualityByZone.map((z) => (
-              <tr key={String(z.zone)}>
-                <td>{String(z.zone)}</td>
-                <td>{Number(z.avgScore ?? 0).toFixed(1)}</td>
-                <td>{String(z.samples)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <PageSection title="Calidad por zona / finca">
+        <SimpleRecordsTable
+          gridId="coffee-analytics-quality-zone"
+          selectable={false}
+          data={zoneData}
+          columns={[
+            { key: 'zone', label: 'Zona', getValue: (r) => String(r.zone) },
+            { key: 'avgScore', label: 'Score prom.', getValue: (r) => Number(r.avgScore ?? 0).toFixed(1) },
+            { key: 'samples', label: 'Muestras', getValue: (r) => String(r.samples) },
+          ]}
+        />
+      </PageSection>
 
-      <section className="panel">
-        <h3>Variación de precios</h3>
-        <div style={{ display: 'flex', gap: 2, alignItems: 'end', minHeight: 100, overflowX: 'auto' }}>
+      <PageSection title="Variación de precios">
+        <div className="spark-chart">
           {(trends.prices ?? []).slice(-30).map((p) => (
-            <div key={String(p.day)} style={{ minWidth: 16 }} title={`${p.day}: ${p.avgPrice}`}>
-              <div style={{ background: '#1f6feb88', height: Math.max(4, Number(p.avgPrice) / 500) }} />
+            <div key={String(p.day)} className="spark-chart-col-fixed" title={`${p.day}: ${p.avgPrice}`}>
+              <div className="spark-bar" style={{ height: Math.max(4, Number(p.avgPrice) / 500) }} />
             </div>
           ))}
         </div>
-      </section>
-    </>
+      </PageSection>
+    </PageLayout>
   );
 }

@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
 import { FormsPlatformNav } from '../components/forms/FormsPlatformNav';
+import {
+  PageLayout,
+  PageHeader,
+  PageSection,
+  PageSummary,
+  MetricCard,
+  TableToolbar,
+  SimpleRecordsTable,
+  type SimpleColumn,
+} from '../components/page';
 import { LoadingState } from '../components/ux/LoadingState';
 import { getFormDashboard, listForms, runFormReport } from '../api/forms';
 
@@ -19,6 +28,24 @@ interface DataCenterReport {
   submissionsByDay?: Array<{ date: string; count: number }>;
   campaigns?: Array<{ id: string; code: string; name: string; status: string; expectedCount?: number | null }>;
 }
+
+type CampaignRow = {
+  id: string;
+  code: string;
+  name: string;
+  status: string;
+  expectedCount?: number | null;
+};
+
+const campaignColumns: SimpleColumn<CampaignRow>[] = [
+  { key: 'name', label: 'Nombre', getValue: (r) => r.name },
+  { key: 'status', label: 'Estado', getValue: (r) => r.status },
+  {
+    key: 'expectedCount',
+    label: 'Meta',
+    getValue: (r) => String(r.expectedCount ?? '—'),
+  },
+];
 
 export function FormDataCenterPage() {
   const [dashboard, setDashboard] = useState<Awaited<ReturnType<typeof getFormDashboard>> | null>(null);
@@ -46,38 +73,38 @@ export function FormDataCenterPage() {
   useEffect(() => { load(); }, [load]);
 
   const maxDay = Math.max(...(report?.submissionsByDay?.map((d) => d.count) ?? [1]), 1);
+  const campaigns = (report?.campaigns ?? []) as CampaignRow[];
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Centro de Datos"
         subtitle="Indicadores, tendencias y cruce de información recolectada"
       />
       <FormsPlatformNav />
 
-      <div className="filter-bar">
+      <TableToolbar>
         <select value={formId} onChange={(e) => setFormId(e.target.value)}>
           <option value="">Todos los formularios publicados</option>
           {forms.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
         </select>
         <Link to="/formularios/recoleccion" className="btn btn-sm">Ver registros</Link>
         <Link to="/formularios/exportar" className="btn btn-sm btn-primary">Exportar</Link>
-      </div>
+      </TableToolbar>
 
       {loading ? <LoadingState variant="dashboard" /> : (
         <>
-          <div className="kpi-grid">
-            <div className="kpi-card kpi-green"><span className="kpi-label">Envíos</span><span className="kpi-value">{report?.totals?.submissions ?? dashboard?.kpis.totalSubmissions ?? 0}</span></div>
-            <div className="kpi-card"><span className="kpi-label">Sincronizados</span><span className="kpi-value">{report?.totals?.synced ?? 0}</span></div>
-            <div className="kpi-card"><span className="kpi-label">Pendientes sync</span><span className="kpi-value">{report?.totals?.pending ?? dashboard?.kpis.pendingSync ?? 0}</span></div>
-            <div className="kpi-card"><span className="kpi-label">Con GPS</span><span className="kpi-value">{report?.totals?.withGps ?? 0}</span></div>
-            <div className="kpi-card"><span className="kpi-label">Campañas activas</span><span className="kpi-value">{report?.totals?.activeCampaigns ?? 0}</span></div>
-            <div className="kpi-card"><span className="kpi-label">Formularios pub.</span><span className="kpi-value">{dashboard?.kpis.publishedForms ?? 0}</span></div>
-          </div>
+          <PageSummary>
+            <MetricCard label="Envíos" value={report?.totals?.submissions ?? dashboard?.kpis.totalSubmissions ?? 0} tone="green" />
+            <MetricCard label="Sincronizados" value={report?.totals?.synced ?? 0} />
+            <MetricCard label="Pendientes sync" value={report?.totals?.pending ?? dashboard?.kpis.pendingSync ?? 0} />
+            <MetricCard label="Con GPS" value={report?.totals?.withGps ?? 0} />
+            <MetricCard label="Campañas activas" value={report?.totals?.activeCampaigns ?? 0} />
+            <MetricCard label="Formularios pub." value={dashboard?.kpis.publishedForms ?? 0} />
+          </PageSummary>
 
           <div className="form-datacenter-grid">
-            <section className="panel">
-              <h3 className="ds-h4">Envíos por formulario</h3>
+            <PageSection title="Envíos por formulario">
               {(report?.submissionsByForm?.length ?? 0) === 0 ? (
                 <p className="muted">Aún no hay información.</p>
               ) : (
@@ -98,10 +125,9 @@ export function FormDataCenterPage() {
                   ))}
                 </ul>
               )}
-            </section>
+            </PageSection>
 
-            <section className="panel">
-              <h3 className="ds-h4">Tendencia diaria</h3>
+            <PageSection title="Tendencia diaria">
               {(report?.submissionsByDay?.length ?? 0) === 0 ? (
                 <p className="muted">Sin tendencia registrada.</p>
               ) : (
@@ -114,39 +140,32 @@ export function FormDataCenterPage() {
                   ))}
                 </div>
               )}
-            </section>
+            </PageSection>
 
-            <section className="panel">
-              <h3 className="ds-h4">Campañas</h3>
+            <PageSection title="Campañas">
               {(report?.campaigns?.length ?? 0) === 0 ? (
                 <p className="muted">Sin campañas. <Link to="/formularios/campanas">Crear campaña</Link></p>
               ) : (
-                <table className="data-table">
-                  <thead><tr><th>Nombre</th><th>Estado</th><th>Meta</th></tr></thead>
-                  <tbody>
-                    {report?.campaigns?.map((c) => (
-                      <tr key={c.id}>
-                        <td>{c.name}</td>
-                        <td>{c.status}</td>
-                        <td>{c.expectedCount ?? '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <SimpleRecordsTable
+                  gridId="form-datacenter-campaigns"
+                  columns={campaignColumns}
+                  data={campaigns}
+                  selectable={false}
+                  emptyMessage="Sin campañas"
+                />
               )}
-            </section>
+            </PageSection>
 
-            <section className="panel">
-              <h3 className="ds-h4">Mapa (GPS)</h3>
+            <PageSection title="Mapa (GPS)">
               <p className="muted">
                 Exporte a <strong>GeoJSON</strong> desde la sección Exportar para visualizar en GIS externo o AGROERP GIS.
                 Registros con coordenadas: <strong>{report?.totals?.withGps ?? 0}</strong>.
               </p>
               <Link to="/formularios/exportar" className="btn btn-sm">Exportar GeoJSON</Link>
-            </section>
+            </PageSection>
           </div>
         </>
       )}
-    </>
+    </PageLayout>
   );
 }

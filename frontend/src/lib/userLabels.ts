@@ -7,6 +7,13 @@ export const ENTITY_TYPE_LABELS: Record<string, string> = {
   field_lot: 'Lote',
   form: 'Formulario',
   workflow: 'Proceso',
+  purchase: 'Compra',
+  ticket: 'Compra',
+  settlement: 'Liquidación',
+  inventory: 'Inventario',
+  document: 'Documento',
+  user: 'Usuario',
+  person: 'Persona',
 };
 
 export const WORKFLOW_STATUS_LABELS: Record<string, string> = {

@@ -75,7 +75,7 @@ export function EnterpriseDataGrid<T extends { id: string }>({
   rowActions,
   bulkActions,
   onExport,
-  emptyMessage = 'Sin registros',
+  emptyMessage = 'Aún no hay información',
   emptyDescription,
   emptyAction,
   emptyIllustration = 'data',
@@ -242,7 +242,7 @@ export function EnterpriseDataGrid<T extends { id: string }>({
       <EmptyState
         illustration={emptyIllustration}
         title={emptyMessage}
-        description={emptyDescription ?? 'No hay registros que coincidan con los filtros actuales.'}
+        description={emptyDescription ?? 'No hay resultados con los filtros actuales. Ajuste la búsqueda o registre el primer ítem.'}
         hint="Ajuste los filtros o cree un nuevo registro para comenzar."
         action={emptyAction}
       />

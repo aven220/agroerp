@@ -14,7 +14,7 @@ export function EfmBgCenterPage() {
         subtitle="Planificación, control y validación presupuestal"
         actions={
           <div className="row-actions">
-            <button className="btn" onClick={() => import('../api/efm-bg').then(({ seedEfmBg }) => seedEfmBg().then(reload))}>Sembrar presupuestos</button>
+            <button className="btn" onClick={() => import('../api/efm-bg').then(({ seedEfmBg }) => seedEfmBg().then(reload))}>Cargar configuración inicial</button>
             <Link to="/finanzas/presupuestos/centros-costo" className="btn">Centros de costo</Link>
             <Link to="/finanzas/presupuestos/ejecucion" className="btn">Ejecución</Link>
             <Link to="/finanzas/presupuestos/comparativos" className="btn">Comparativos</Link>

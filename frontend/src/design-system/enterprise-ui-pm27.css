@@ -1,0 +1,307 @@
+/* =========================================================
+   PM-27 — Enterprise Product Unification (Ola 3)
+   Normaliza layouts legacy al Design System sin reescribir
+   cada página. Tokens only. Dark-mode aware.
+   ========================================================= */
+
+/* ─── Legacy panels → enterprise cards ─── */
+.erp-content .panel,
+.page-body .panel,
+.page-layout .panel {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  padding: var(--ds-space-4);
+  box-shadow: none;
+  color: var(--ds-text);
+}
+
+.erp-content .panel > h3,
+.erp-content .panel > h2 {
+  font-size: var(--ds-text-base);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text);
+  margin-bottom: var(--ds-space-3);
+}
+
+.erp-content .panel-header,
+.erp-content .panel-body,
+.erp-content .widget-header,
+.erp-content .widget-card,
+.erp-content .detail-card,
+.erp-content .table-card,
+.erp-content .admin-help-card {
+  background: var(--ds-surface);
+  border-color: var(--ds-border);
+  color: var(--ds-text);
+}
+
+/* ─── Legacy KPI grid → MetricCard rhythm ─── */
+.erp-content .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--ds-space-3);
+  margin: 0;
+}
+
+.erp-content .kpi-card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-3);
+  box-shadow: none;
+}
+
+.erp-content .kpi-label {
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-xs);
+}
+
+.erp-content .kpi-value {
+  color: var(--ds-text);
+  font-size: var(--ds-text-xl);
+  font-weight: var(--ds-weight-semibold);
+}
+
+/* ─── Legacy data-table → enterprise table look ─── */
+.erp-content .table-wrap,
+.erp-content .table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+}
+
+.erp-content table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text);
+  background: transparent;
+}
+
+.erp-content table.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: color-mix(in srgb, var(--ds-surface-2, var(--ds-surface)) 92%, var(--ds-border));
+  color: var(--ds-text-muted);
+  font-weight: var(--ds-weight-semibold);
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--ds-border);
+  white-space: nowrap;
+}
+
+.erp-content table.data-table tbody td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-border) 70%, transparent);
+  vertical-align: middle;
+}
+
+.erp-content table.data-table tbody tr:hover {
+  background: color-mix(in srgb, var(--ds-primary) 6%, transparent);
+}
+
+.erp-content table.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ─── Toolbars / row-actions flood → compact wrap ─── */
+.erp-content .row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  align-items: center;
+  max-width: 100%;
+}
+
+.erp-content header.topbar .row-actions,
+.erp-content .page-topbar .row-actions,
+.erp-content .page-actions .row-actions {
+  max-height: none;
+}
+
+/* Cap visual density of oversized hub toolbars */
+.erp-content header.topbar .row-actions > .btn:nth-child(n + 8),
+.erp-content .page-topbar .row-actions > .btn:nth-child(n + 8),
+.erp-content header.topbar .row-actions > a.btn:nth-child(n + 8) {
+  /* keep accessible but visually secondary */
+  opacity: 0.92;
+}
+
+/* ─── Forms legacy → DS spacing ─── */
+.erp-content .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--ds-space-3);
+}
+
+.erp-content .form-grid label,
+.erp-content .panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.erp-content input,
+.erp-content select,
+.erp-content textarea {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+}
+
+.erp-content input:focus,
+.erp-content select:focus,
+.erp-content textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--ds-primary) 45%, transparent);
+  outline-offset: 1px;
+  border-color: var(--ds-primary);
+}
+
+/* ─── Alerts / muted → semantic ─── */
+.erp-content .alert {
+  border-radius: var(--ds-radius-md);
+  border: 1px solid var(--ds-border);
+  padding: var(--ds-space-3);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+}
+
+.erp-content .alert-error,
+.erp-content .error-panel {
+  border-color: color-mix(in srgb, #dc2626 40%, var(--ds-border));
+  background: color-mix(in srgb, #dc2626 10%, var(--ds-surface));
+  color: var(--ds-text);
+}
+
+.erp-content .alert-info {
+  border-color: color-mix(in srgb, var(--ds-primary) 35%, var(--ds-border));
+  background: color-mix(in srgb, var(--ds-primary) 8%, var(--ds-surface));
+}
+
+.erp-content .muted,
+.erp-content .text-muted {
+  color: var(--ds-text-muted) !important;
+}
+
+/* ─── Badges / chips ─── */
+.erp-content .badge,
+.erp-content .score-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: var(--ds-text-xs);
+  border: 1px solid var(--ds-border);
+  background: color-mix(in srgb, var(--ds-border) 35%, var(--ds-surface));
+  color: var(--ds-text);
+}
+
+/* ─── Code / pre dumps (soften) ─── */
+.erp-content .code-block,
+.erp-content pre {
+  background: color-mix(in srgb, var(--ds-surface-2, var(--ds-surface)) 90%, var(--ds-border));
+  color: var(--ds-text);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-3);
+  overflow-x: auto;
+  font-size: var(--ds-text-xs);
+}
+
+/* ─── Dark mode neutralization ─── */
+[data-theme='dark'] .erp-content .panel,
+[data-theme='dark'] .erp-content .kpi-card,
+[data-theme='dark'] .erp-content .table-wrap,
+[data-theme='dark'] .erp-content table.data-table thead th {
+  background: var(--ds-surface);
+  border-color: var(--ds-border);
+  color: var(--ds-text);
+}
+
+[data-theme='dark'] .erp-content table.data-table tbody tr:hover {
+  background: color-mix(in srgb, var(--ds-primary) 12%, transparent);
+}
+
+[data-theme='dark'] .erp-content input,
+[data-theme='dark'] .erp-content select,
+[data-theme='dark'] .erp-content textarea {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border-color: var(--ds-border);
+}
+
+/* ─── Responsive: prevent double scroll / overflow ─── */
+@media (max-width: 1024px) {
+  .erp-content .kpi-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  .erp-content header.topbar,
+  .erp-content .page-topbar {
+    flex-wrap: wrap;
+    gap: var(--ds-space-2);
+  }
+
+  .erp-content header.topbar .row-actions,
+  .erp-content .page-actions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-content .panel {
+    padding: var(--ds-space-3);
+  }
+
+  .erp-content .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-content table.data-table {
+    font-size: var(--ds-text-xs);
+  }
+
+  .erp-shell-mobile .erp-content {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 390px) {
+  .erp-content .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ─── Align experience centers with same rhythm ─── */
+.eoc-grid,
+.eic-card-grid,
+.eic-domain-grid,
+.emc-kv-grid {
+  gap: var(--ds-space-3);
+}
+
+.eoc-next-action,
+.eic-certified,
+.eic-link-card,
+.emc-kv,
+.eic-domain-card {
+  border-radius: var(--ds-radius-lg);
+}
+
+/* ─── Compact filter inputs in page actions ─── */
+.erp-content .input-compact {
+  width: 4.5rem;
+  max-width: 100%;
+}
+
+.erp-content .bar-fill-danger {
+  background: var(--ds-danger, #c0392b);
+}

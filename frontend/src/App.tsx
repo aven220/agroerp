@@ -15,6 +15,7 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage, WorkspaceHomePage } from './pages/DashboardPage';
 import { OperationCenterPage } from './pages/OperationCenterPage';
+import { HelpCenterPage } from './pages/HelpCenterPage';
 import { ManagementCenterPage } from './pages/ManagementCenterPage';
 import {
   ImplementationSummaryPage,
@@ -647,6 +648,7 @@ export function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/inicio-workspace" element={<WorkspaceHomePage />} />
             <Route path="/operacion" element={<OperationCenterPage />} />
+            <Route path="/ayuda" element={<HelpCenterPage />} />
             <Route path="/gerencia" element={<ManagementCenterPage />} />
             <Route path="/implementacion" element={<ImplementationSummaryPage />} />
             <Route path="/implementacion/empresa" element={<ImplementationEmpresaPage />} />

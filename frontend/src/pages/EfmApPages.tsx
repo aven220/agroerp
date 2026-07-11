@@ -18,7 +18,7 @@ export function EfmApCenterPage() {
         subtitle="Obligaciones, pagos, programación y proveedores"
         actions={
           <div className="row-actions">
-            <button className="btn" onClick={() => import('../api/efm-ap').then(({ seedEfmAp }) => seedEfmAp().then(reload))}>Sembrar CxP</button>
+            <button className="btn" onClick={() => import('../api/efm-ap').then(({ seedEfmAp }) => seedEfmAp().then(reload))}>Cargar configuración inicial</button>
             <Link to="/finanzas/cxp/facturas" className="btn">Facturas</Link>
             <Link to="/finanzas/cxp/pagos" className="btn">Pagos</Link>
             <Link to="/finanzas/cxp/programacion" className="btn">Programación</Link>

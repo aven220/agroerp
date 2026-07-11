@@ -1,6 +1,17 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageToolbar,
+  FieldGroup,
+  FormActions,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
+import type { RowAction } from '../lib/data-grid/types';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import {
@@ -30,6 +41,10 @@ const STEPS = [
   'Confirmación',
   'Pesaje',
 ];
+
+type ProducerRow = Record<string, unknown> & { id: string };
+type FarmRow = Record<string, unknown> & { id: string };
+type LotRow = Record<string, unknown> & { id: string };
 
 export function CoffeeWizardPage() {
   const [step, setStep] = useState(0);
@@ -82,26 +97,64 @@ export function CoffeeWizardPage() {
     setStep(5);
   };
 
+  const producerData = producers.map((p) => withRowId(p, 'id', 'producerCode'));
+  const farmData = farms.map((f) => withRowId(f, 'id', 'farmCode'));
+  const lotData = lots.map((l) => withRowId(l, 'id', 'lotCode'));
+
+  const producerActions: RowAction<ProducerRow>[] = [
+    {
+      id: 'select',
+      label: 'Seleccionar',
+      onAction: (r) => {
+        selectProducer(String(r.id));
+      },
+    },
+  ];
+
+  const farmActions: RowAction<FarmRow>[] = [
+    {
+      id: 'lots',
+      label: 'Ver lotes',
+      onAction: (r) => {
+        selectFarm(String(r.id));
+      },
+    },
+  ];
+
+  const lotActions: RowAction<LotRow>[] = [
+    {
+      id: 'use',
+      label: 'Usar',
+      onAction: (r) => {
+        selectLot(String(r.id), String(r.lotCode));
+      },
+    },
+  ];
+
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Asistente de recepción de café"
         subtitle="Siga los pasos: llegada → productor → origen → pesaje → confirmación"
-        actions={<Link to="/compras/cola" className="btn">Ver cola</Link>}
+        actions={
+          <PageActions>
+            <Link to="/compras/cola" className="btn">Ver cola</Link>
+          </PageActions>
+        }
       />
 
       <FlowProgress flowId="purchases" currentStepId="wizard" />
 
       <FlowNextActions
         title="Después de la recepción"
-        subtitle="Continúe el proceso de compra sin volver al menú."
+        subtitle="Continúe el flujo de compra sin volver al menú."
         actions={[
           { label: 'Ir a pesaje', description: 'Registre el peso del café recibido', to: '/compras/pesaje', icon: '⚖️' },
           { label: 'Control de calidad', description: 'Evalúe muestras y fotos', to: '/compras/calidad', icon: '🔬' },
           { label: 'Liquidaciones', description: 'Cierre la compra con el productor', to: '/compras/liquidaciones', icon: '💰' },
         ]}
       />
-      <section className="panel">
+      <PageSection>
         <div className="row-actions">
           {STEPS.map((s, i) => (
             <span key={s} className={`badge${i === step ? ' badge-primary' : ''}`}>{i + 1}. {s}</span>
@@ -109,44 +162,49 @@ export function CoffeeWizardPage() {
         </div>
         {message && <p>{message}</p>}
         {ticketKey && <p><strong>Ticket:</strong> {ticketKey}</p>}
-      </section>
+      </PageSection>
 
       {step === 0 && (
-        <section className="panel">
-          <button type="button" className="btn" onClick={start}>1. Registrar llegada</button>
-        </section>
+        <PageSection>
+          <FormActions>
+            <button type="button" className="btn btn-primary" onClick={start}>1. Registrar llegada</button>
+          </FormActions>
+        </PageSection>
       )}
 
       {step >= 1 && step < 4 && (
-        <section className="panel">
-          <h3>2-4. Búsqueda y validación</h3>
-          <div className="row-actions">
-            <select value={method} onChange={(e) => setMethod(e.target.value)}>
-              <option value="document">Documento</option>
-              <option value="code">Código</option>
-              <option value="qr">QR</option>
-              <option value="barcode">Barcode</option>
-              <option value="nfc">NFC</option>
-              <option value="name">Nombre</option>
-            </select>
-            <input placeholder="Buscar productor" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <PageSection title="2-4. Búsqueda y validación">
+          <PageToolbar>
+            <FieldGroup label="Método">
+              <select value={method} onChange={(e) => setMethod(e.target.value)}>
+                <option value="document">Documento</option>
+                <option value="code">Código</option>
+                <option value="qr">QR</option>
+                <option value="barcode">Barcode</option>
+                <option value="nfc">NFC</option>
+                <option value="name">Nombre</option>
+              </select>
+            </FieldGroup>
+            <FieldGroup label="Buscar">
+              <input placeholder="Buscar productor" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </FieldGroup>
+          </PageToolbar>
+          <FormActions>
             <button type="button" className="btn" onClick={search}>Buscar</button>
-          </div>
-          <table className="data-table" style={{ marginTop: 12 }}>
-            <thead><tr><th>Código</th><th>Nombre</th><th>Documento</th><th></th></tr></thead>
-            <tbody>
-              {producers.map((p) => (
-                <tr key={String(p.id)}>
-                  <td>{String(p.producerCode)}</td>
-                  <td>{String(p.producerName)}</td>
-                  <td>{String(p.identityDoc ?? '')}</td>
-                  <td><button type="button" className="btn btn-sm" onClick={() => selectProducer(String(p.id))}>Seleccionar</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          </FormActions>
+          <SimpleRecordsTable
+            gridId="coffee-wizard-producers"
+            selectable={false}
+            data={producerData}
+            columns={[
+              { key: 'producerCode', label: 'Código', getValue: (r) => String(r.producerCode) },
+              { key: 'producerName', label: 'Nombre', getValue: (r) => String(r.producerName) },
+              { key: 'identityDoc', label: 'Documento', getValue: (r) => String(r.identityDoc ?? '') },
+            ]}
+            rowActions={producerActions}
+          />
           {gate && (
-            <div style={{ marginTop: 12 }}>
+            <div>
               <strong>{gate.allowed ? 'Permisos OK' : 'Bloqueos detectados'}</strong>
               <ul>
                 {((gate.checks as Array<Record<string, unknown>>) ?? []).map((c, i) => (
@@ -155,60 +213,63 @@ export function CoffeeWizardPage() {
               </ul>
             </div>
           )}
-        </section>
+        </PageSection>
       )}
 
       {step >= 4 && step < 6 && (
-        <section className="panel">
-          <h3>5. Finca y lote</h3>
-          <table className="data-table">
-            <thead><tr><th>Finca</th><th></th></tr></thead>
-            <tbody>
-              {farms.map((f) => (
-                <tr key={String(f.id)}>
-                  <td>{String(f.farmName)}</td>
-                  <td><button type="button" className="btn btn-sm" onClick={() => selectFarm(String(f.id))}>Ver lotes</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <table className="data-table" style={{ marginTop: 12 }}>
-            <thead><tr><th>Lote</th><th></th></tr></thead>
-            <tbody>
-              {lots.map((l) => (
-                <tr key={String(l.id)}>
-                  <td>{String(l.lotCode)} — {String(l.lotName)}</td>
-                  <td><button type="button" className="btn btn-sm" onClick={() => selectLot(String(l.id), String(l.lotCode))}>Usar</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+        <PageSection title="5. Finca y lote">
+          <SimpleRecordsTable
+            gridId="coffee-wizard-farms"
+            selectable={false}
+            data={farmData}
+            columns={[
+              { key: 'farmName', label: 'Finca', getValue: (r) => String(r.farmName) },
+            ]}
+            rowActions={farmActions}
+          />
+          <SimpleRecordsTable
+            gridId="coffee-wizard-lots"
+            selectable={false}
+            data={lotData}
+            columns={[
+              {
+                key: 'lot',
+                label: 'Lote',
+                getValue: (r) => `${String(r.lotCode)} — ${String(r.lotName)}`,
+              },
+            ]}
+            rowActions={lotActions}
+          />
+        </PageSection>
       )}
 
       {step >= 5 && step < 8 && (
-        <section className="panel">
-          <h3>6-8. Vehículo, fotos y turno</h3>
-          <div className="row-actions">
-            <input placeholder="Placa" value={plate} onChange={(e) => setPlate(e.target.value)} />
-            <input placeholder="Conductor" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
+        <PageSection title="6-8. Vehículo, fotos y turno">
+          <PageToolbar>
+            <FieldGroup label="Placa">
+              <input placeholder="Placa" value={plate} onChange={(e) => setPlate(e.target.value)} />
+            </FieldGroup>
+            <FieldGroup label="Conductor">
+              <input placeholder="Conductor" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
+            </FieldGroup>
+          </PageToolbar>
+          <FormActions>
             <button type="button" className="btn" onClick={() => wizardSetVehicle(ticketKey, { plate, driverName, vehicleType: 'camion' }).then(() => setStep(6))}>Registrar vehículo</button>
             <button type="button" className="btn" onClick={() => wizardAddPhoto(ticketKey, { photoKey: `photo-${Date.now()}`, caption: 'Ingreso' }).then(() => setStep(7))}>Foto</button>
             <button type="button" className="btn" onClick={() => wizardAssignTurn(ticketKey).then(() => { setStep(8); setMessage('Turno asignado'); })}>Asignar turno auto</button>
             <button type="button" className="btn" onClick={() => wizardAssignTurn(ticketKey, { preferential: true, priority: 1 }).then(() => setStep(8))}>Turno preferencial</button>
-          </div>
-        </section>
+          </FormActions>
+        </PageSection>
       )}
 
       {step >= 8 && (
-        <section className="panel">
-          <h3>9-10. Confirmación y pesaje</h3>
-          <div className="row-actions">
+        <PageSection title="9-10. Confirmación y pesaje">
+          <FormActions>
             <button type="button" className="btn" onClick={() => wizardConfirm(ticketKey, { signerName: 'Productor', signatureData: 'signed' }).then(() => setStep(9))}>Confirmar ingreso</button>
             <button type="button" className="btn" onClick={() => wizardToWeighing(ticketKey).then(() => { setStep(9); setMessage('Enviado a pesaje'); refreshState(); })}>Enviar a pesaje</button>
-          </div>
-        </section>
+          </FormActions>
+        </PageSection>
       )}
-    </>
+    </PageLayout>
   );
 }

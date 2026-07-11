@@ -15,7 +15,7 @@ export function HcmCenterPage() {
         subtitle="Empleados, organización y expedientes"
         actions={
           <div className="row-actions">
-            <button className="btn" onClick={() => import('../api/hcm').then(({ seedHcm }) => seedHcm().then(reload))}>Sembrar HCM</button>
+            <button className="btn" onClick={() => import('../api/hcm').then(({ seedHcm }) => seedHcm().then(reload))}>Cargar configuración inicial</button>
             <Link to="/rrhh/organizacion" className="btn">Organización</Link>
             <Link to="/rrhh/empleados" className="btn">Empleados</Link>
             <Link to="/rrhh/organigrama" className="btn">Organigrama</Link>

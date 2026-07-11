@@ -1,47 +1,36 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Header } from '../components/layout/Header';
-import { PageLayout, PageSection, PageSummary, MetricCard, EmptyPanel } from '../components/page';
+import {
+  PageLayout,
+  PageSection,
+  PageSummary,
+  MetricCard,
+  EmptyPanel,
+} from '../components/page';
+import { LoadingState } from '../components/ux/LoadingState';
 import { useExperienceCenter } from '../context/ExperienceCenterContext';
-import { getCoffeeCenter } from '../api/coffee';
-import { getEimsCenter } from '../api/eims';
-
-type StageStatus = 'not_started' | 'in_progress' | 'complete' | 'blocked';
-
-interface Stage {
-  id: string;
-  label: string;
-  status: StageStatus;
-  domain: string;
-  href?: string;
-  note?: string;
-}
+import {
+  certifyGoLive,
+  implementationStatusLabel,
+  revokeGoLiveCertification,
+  useImplementationEngine,
+  type DomainStatus,
+  type ImplementationDomain,
+} from '../lib/implementationEngine';
 
 const EIC_SECTIONS = [
   { to: '/implementacion', label: 'Resumen', end: true },
   { to: '/implementacion/empresa', label: 'Empresa' },
-  { to: '/implementacion/configuracion', label: 'Configuración' },
   { to: '/implementacion/usuarios', label: 'Usuarios' },
-  { to: '/implementacion/modulos', label: 'Módulos' },
+  { to: '/implementacion/configuracion', label: 'Configuración' },
   { to: '/implementacion/procesos', label: 'Procesos' },
   { to: '/implementacion/documentos', label: 'Documentos' },
   { to: '/implementacion/integraciones', label: 'Integraciones' },
+  { to: '/implementacion/modulos', label: 'Paquete' },
   { to: '/implementacion/estado', label: 'Estado' },
   { to: '/implementacion/go-live', label: 'Go Live' },
 ];
-
-function statusLabel(s: StageStatus): string {
-  switch (s) {
-    case 'complete':
-      return 'Completa';
-    case 'in_progress':
-      return 'En progreso';
-    case 'blocked':
-      return 'Bloqueada';
-    default:
-      return 'No iniciada';
-  }
-}
 
 function EicShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   const { packageId } = useExperienceCenter();
@@ -52,7 +41,7 @@ function EicShell({ title, subtitle, children }: { title: string; subtitle?: str
       <Header
         title={title}
         subtitle={subtitle ?? `Centro de Implementación · ${packageLabel}`}
-        description="Configure, verifique y certifique que la empresa está lista para operar."
+        description="Punto único para configurar, verificar y certificar que la empresa está lista para operar."
         showExperience={false}
       />
       <PageLayout
@@ -77,182 +66,151 @@ function EicShell({ title, subtitle, children }: { title: string; subtitle?: str
   );
 }
 
-function useImplementationSnapshot() {
-  const [coffee, setCoffee] = useState<Awaited<ReturnType<typeof getCoffeeCenter>> | null>(null);
-  const [eims, setEims] = useState<Record<string, unknown> | null>(null);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    Promise.all([
-      getCoffeeCenter().catch(() => null),
-      getEimsCenter().catch(() => null),
-    ]).then(([c, e]) => {
-      setCoffee(c);
-      setEims(e as Record<string, unknown> | null);
-      setLoaded(true);
-    });
-  }, []);
-
-  const stages: Stage[] = useMemo(() => {
-    const warehouses = Number(eims?.warehousesCount ?? 0);
-    const items = Number(eims?.itemsCount ?? 0);
-    const hasCoffee = Boolean(coffee);
-    const tickets = coffee?.ticketsToday ?? 0;
-    const inventory = coffee?.inventoryToday ?? 0;
-
-    return [
-      { id: 'E01', label: 'Empresa creada', status: 'complete', domain: 'Empresa', href: '/implementacion/empresa' },
-      {
-        id: 'E02',
-        label: 'Datos fiscales',
-        status: 'in_progress',
-        domain: 'Empresa',
-        href: '/implementacion/empresa',
-        note: 'Complete razón social y NIT en configuración de empresa',
-      },
-      {
-        id: 'E04',
-        label: 'Usuarios operativos',
-        status: 'in_progress',
-        domain: 'Usuarios',
-        href: '/administracion/usuarios',
-      },
-      {
-        id: 'E09',
-        label: 'Configuración compras',
-        status: hasCoffee ? 'in_progress' : 'not_started',
-        domain: 'Compras',
-        href: '/compras/config',
-      },
-      {
-        id: 'E10',
-        label: 'Configuración inventario',
-        status: warehouses > 0 && items > 0 ? 'complete' : warehouses > 0 || items > 0 ? 'in_progress' : 'not_started',
-        domain: 'Inventario',
-        href: '/inventario',
-        note: warehouses === 0 ? 'Falta al menos una bodega' : items === 0 ? 'Falta al menos un artículo' : undefined,
-      },
-      {
-        id: 'E11',
-        label: 'Productores',
-        status: 'in_progress',
-        domain: 'Operación',
-        href: '/productores',
-      },
-      {
-        id: 'E17',
-        label: 'Procesos configurados',
-        status: 'not_started',
-        domain: 'Procesos',
-        href: '/procesos',
-      },
-      {
-        id: 'E20',
-        label: 'Prueba operativa',
-        status: inventory > 0 ? 'complete' : tickets > 0 ? 'in_progress' : 'not_started',
-        domain: 'Go Live',
-        href: '/implementacion/go-live',
-        note: inventory === 0 ? 'Complete recepción → pesaje → calidad → liquidación → inventario' : undefined,
-      },
-      {
-        id: 'E21',
-        label: 'Empresa lista',
-        status: warehouses > 0 && items > 0 && inventory > 0 ? 'in_progress' : 'blocked',
-        domain: 'Go Live',
-        href: '/implementacion/go-live',
-        note: 'Requiere criterios obligatorios y jornada de prueba',
-      },
-    ];
-  }, [coffee, eims]);
-
-  const complete = stages.filter((s) => s.status === 'complete').length;
-  const pct = stages.length ? Math.floor((complete / stages.length) * 100) : 0;
-  const next = stages.find((s) => s.status === 'in_progress' || s.status === 'not_started' || s.status === 'blocked');
-  const blockers = stages.filter((s) => s.status === 'blocked' || (s.note && s.status !== 'complete'));
-
-  return { loaded, stages, pct, next, blockers, coffee, eims };
+function StatusBadge({ status }: { status: DomainStatus }) {
+  return <span className={`eic-status eic-status-${status}`}>{implementationStatusLabel(status)}</span>;
 }
 
-export function ImplementationCenterLayout() {
-  return <Outlet />;
-}
-
-export function ImplementationSummaryPage() {
-  const { loaded, stages, pct, next, blockers } = useImplementationSnapshot();
-
+function DomainHelpBlock({ domain }: { domain: ImplementationDomain }) {
   return (
-    <EicShell title="Resumen de implementación">
-      {!loaded ? <p className="muted">Calculando estado…</p> : null}
+    <dl className="eic-help-dl">
+      <div>
+        <dt>¿Por qué es necesaria?</dt>
+        <dd>{domain.help.why}</dd>
+      </div>
+      <div>
+        <dt>¿Qué ocurre si no la hago?</dt>
+        <dd>{domain.help.ifNot}</dd>
+      </div>
+      <div>
+        <dt>¿Quién debe hacerla?</dt>
+        <dd>{domain.help.who}</dd>
+      </div>
+      <div>
+        <dt>¿Cuánto tarda normalmente?</dt>
+        <dd>{domain.help.duration}</dd>
+      </div>
+    </dl>
+  );
+}
+
+function DomainCard({ domain }: { domain: ImplementationDomain }) {
+  return (
+    <article className={`eic-live-card eic-live-card-${domain.status}`}>
+      <header>
+        <h3>{domain.label}</h3>
+        <StatusBadge status={domain.status} />
+      </header>
+      <p className="eic-live-evidence">{domain.evidence}</p>
+      {domain.risk ? <p className="eic-live-risk">{domain.risk}</p> : null}
+      {domain.dependencies.length > 0 ? (
+        <p className="muted eic-live-deps">
+          Depende de:{' '}
+          {domain.dependencies
+            .map((d) => {
+              const labels: Record<string, string> = {
+                empresa: 'Empresa',
+                usuarios: 'Usuarios',
+                configuracion: 'Configuración',
+                compras: 'Compras',
+                inventario: 'Inventario',
+                productores: 'Productores',
+                workflow: 'Procesos',
+                prueba: 'Prueba operativa',
+              };
+              return labels[d] ?? d;
+            })
+            .join(' → ')}
+        </p>
+      ) : null}
+      <p className="eic-live-next">
+        <strong>Siguiente acción:</strong> {domain.nextAction}
+      </p>
+      <p className="muted">
+        Responsable: {domain.responsible}
+      </p>
+      <DomainHelpBlock domain={domain} />
+      <Link to={domain.href} className="btn btn-sm">
+        Abrir
+      </Link>
+    </article>
+  );
+}
+
+function DependencyChain({ chain }: { chain: ImplementationDomain[] }) {
+  return (
+    <ol className="eic-dep-chain" aria-label="Cadena de dependencias">
+      {chain.map((d, i) => (
+        <li key={d.id} className={`eic-dep-node eic-dep-node-${d.status}`}>
+          {i > 0 ? <span className="eic-dep-arrow" aria-hidden>↓</span> : null}
+          <Link to={d.href} className="eic-dep-link">
+            <span className="eic-dep-label">{d.label}</span>
+            <StatusBadge status={d.status} />
+          </Link>
+          {d.status === 'blocked' && d.blockedReason ? (
+            <p className="eic-dep-block-reason">{d.blockedReason}</p>
+          ) : null}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ConsultantPanel({
+  consultant,
+  certified,
+}: {
+  consultant: ReturnType<typeof useImplementationEngine>['consultant'];
+  certified: boolean;
+}) {
+  return (
+    <PageSection title="Panel del consultor">
       <PageSummary>
-        <MetricCard label="Preparación" value={`${pct}%`} tone="coffee" hint="Derivado de etapas verificables" />
+        <MetricCard label="Tiempo estimado restante" value={consultant.estimatedLabel} tone="coffee" />
+        <MetricCard label="Etapas pendientes" value={consultant.pendingCount} />
+        <MetricCard label="Bloqueadas" value={consultant.blockedCount} />
+        <MetricCard label="Completas" value={consultant.completeCount} tone="green" />
         <MetricCard
-          label="Etapas completas"
-          value={`${stages.filter((s) => s.status === 'complete').length}/${stages.length}`}
-          tone="green"
+          label="Última modificación"
+          value={consultant.lastModifiedLabel}
+          hint="Registro local de este navegador"
         />
-        <MetricCard label="Bloqueos / riesgos" value={blockers.length} />
+        <MetricCard
+          label="Certificación"
+          value={certified ? 'Registrada' : 'Pendiente'}
+          tone={certified ? 'green' : undefined}
+        />
       </PageSummary>
-
-      <PageSection title="Siguiente acción recomendada">
-        {next ? (
-          <div className="eoc-next-action">
+      {consultant.nextDomain ? (
+        <div className="eoc-next-action">
+          <div>
+            <p className="mi-dia-hero-kicker">Qué debo hacer ahora</p>
             <p>
-              <strong>{next.label}</strong>
-              {next.note ? <span className="muted"> — {next.note}</span> : null}
+              <strong>{consultant.nextDomain.label}</strong> — {consultant.nextDomain.nextAction}
             </p>
-            {next.href ? (
-              <Link to={next.href} className="btn btn-primary">
-                Ir a configurar
-              </Link>
-            ) : null}
+            <p className="muted">Responsable: {consultant.nextDomain.responsible}</p>
           </div>
-        ) : (
-          <EmptyPanel title="Sin pendientes" description="Revise Go Live para certificar." />
-        )}
-      </PageSection>
-
-      <PageSection title="Etapas">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Etapa</th>
-              <th>Dominio</th>
-              <th>Estado</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {stages.map((s) => (
-              <tr key={s.id}>
-                <td>
-                  {s.id} · {s.label}
-                </td>
-                <td>{s.domain}</td>
-                <td>
-                  <span className={`eic-status eic-status-${s.status}`}>{statusLabel(s.status)}</span>
-                </td>
-                <td>{s.href ? <Link to={s.href}>Abrir</Link> : null}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </PageSection>
-
-      <PageSection title="Riesgos para producción">
-        {blockers.length === 0 ? (
-          <EmptyPanel title="Sin riesgos abiertos" description="Continúe con la certificación en Go Live." />
-        ) : (
-          <ul className="emc-alerts">
-            {blockers.map((b) => (
-              <li key={b.id}>
-                <strong>{b.label}</strong>
-                {b.note ? <span className="muted"> — {b.note}</span> : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </PageSection>
-    </EicShell>
+          <Link to={consultant.nextDomain.href} className="btn btn-primary">
+            Continuar
+          </Link>
+        </div>
+      ) : null}
+      {consultant.alerts.length > 0 ? (
+        <ul className="emc-alerts eic-consultant-alerts">
+          {consultant.alerts.map((a) => (
+            <li key={a.id}>
+              <strong>{a.title}</strong>
+              <span className="muted"> — {a.detail}</span>{' '}
+              <Link to={a.href}>Resolver</Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <EmptyPanel
+          title="Sin alertas de implementación"
+          description="No hay bloqueos ni riesgos destacados en este momento."
+        />
+      )}
+    </PageSection>
   );
 }
 
@@ -265,23 +223,139 @@ function LinkCard({ title, description, to }: { title: string; description: stri
   );
 }
 
+function DomainSpotlight({ domainId }: { domainId: ImplementationDomain['id'] }) {
+  const { loaded, domains } = useImplementationEngine();
+  const domain = domains.find((d) => d.id === domainId);
+
+  if (!loaded) return <LoadingState variant="card" message="Calculando estado…" />;
+  if (!domain) return null;
+
+  return (
+    <PageSection title={`Estado: ${domain.label}`}>
+      <div className="eic-spotlight">
+        <StatusBadge status={domain.status} />
+        <p>{domain.evidence}</p>
+        {domain.risk ? <p className="eic-live-risk">{domain.risk}</p> : null}
+        <p>
+          <strong>Siguiente acción:</strong> {domain.nextAction}
+        </p>
+        <DomainHelpBlock domain={domain} />
+      </div>
+    </PageSection>
+  );
+}
+
+export function ImplementationCenterLayout() {
+  return <Outlet />;
+}
+
+export function ImplementationSummaryPage() {
+  const snap = useImplementationEngine();
+  const { loaded, chain, supporting, consultant, certified, signals } = snap;
+
+  const answers = useMemo(() => {
+    const missing = chain.filter((d) => d.status !== 'complete');
+    const ready = chain.filter((d) => d.status === 'complete');
+    const blocking = chain.filter((d) => d.status === 'blocked');
+    return {
+      missing: missing.map((d) => d.label).join(', ') || 'Nada crítico pendiente en la cadena',
+      ready: ready.map((d) => d.label).join(', ') || 'Aún sin etapas completas',
+      blocking: blocking.map((d) => d.label).join(', ') || 'Sin bloqueos en cadena',
+      now: consultant.nextDomain
+        ? `${consultant.nextDomain.label}: ${consultant.nextDomain.nextAction}`
+        : 'Revise Go Live',
+      certify: consultant.canCertify
+        ? 'Puede certificar en Go Live'
+        : `Aún no: ${consultant.certifyBlockers.slice(0, 3).join('; ')}`,
+    };
+  }, [chain, consultant]);
+
+  if (!loaded) {
+    return (
+      <EicShell title="Centro de implementación">
+        <LoadingState variant="page" message="Calculando checklist vivo de la empresa…" />
+      </EicShell>
+    );
+  }
+
+  return (
+    <EicShell title="Centro de implementación">
+      <PageSection title="Respuestas del consultor">
+        <ul className="eic-answer-list">
+          <li>
+            <strong>¿Qué falta?</strong> {answers.missing}
+          </li>
+          <li>
+            <strong>¿Qué está listo?</strong> {answers.ready}
+          </li>
+          <li>
+            <strong>¿Qué bloquea la operación?</strong> {answers.blocking}
+          </li>
+          <li>
+            <strong>¿Qué debo hacer ahora?</strong> {answers.now}
+          </li>
+          <li>
+            <strong>¿Qué puedo certificar?</strong> {answers.certify}
+          </li>
+        </ul>
+        <p className="muted eic-align-note">
+          Indicadores alineados con Operación y Gerencia (mismos centros): cola {signals.queueLength}, tickets hoy{' '}
+          {signals.ticketsToday}, kg {signals.kgToday.toFixed(0)}, liquidaciones {signals.settlementsToday}, bodegas{' '}
+          {signals.warehouses}, artículos {signals.items}.
+        </p>
+      </PageSection>
+
+      <ConsultantPanel consultant={consultant} certified={certified} />
+
+      <PageSection title="Cadena de dependencias">
+        <p className="muted">
+          Si falta un requisito superior, los inferiores se muestran bloqueados con la causa. Los estados no se marcan a
+          mano: se calculan con datos verificables.
+        </p>
+        <DependencyChain chain={chain} />
+      </PageSection>
+
+      <PageSection title="Checklist vivo (cadena crítica)">
+        <div className="eic-live-grid">
+          {chain.map((d) => (
+            <DomainCard key={d.id} domain={d} />
+          ))}
+        </div>
+      </PageSection>
+
+      <PageSection title="Complementarios">
+        <div className="eic-live-grid">
+          {supporting.map((d) => (
+            <DomainCard key={d.id} domain={d} />
+          ))}
+        </div>
+      </PageSection>
+    </EicShell>
+  );
+}
+
 export function ImplementationEmpresaPage() {
   return (
     <EicShell title="Empresa">
-      <PageSection title="Identidad y datos legales">
+      <DomainSpotlight domainId="empresa" />
+      <PageSection title="Configurar empresa">
         <div className="eic-card-grid">
           <LinkCard
             title="Usuarios y accesos"
-            description="Administración de usuarios (punto de entrada actual de configuración)"
+            description="Cuentas de la organización"
             to="/administracion"
           />
-          <LinkCard title="Configuración de compras" description="Centros, precios y parámetros de café" to="/compras/config" />
-          <LinkCard title="Finanzas — empresa" description="Datos de empresa y moneda (lectura)" to="/finanzas/configuracion" />
+          <LinkCard
+            title="Finanzas — datos de empresa"
+            description="Razón social, moneda y datos fiscales (lectura)"
+            to="/finanzas/configuracion"
+          />
+          <LinkCard
+            title="Paquete contratado"
+            description="Alcance visible de la cooperativa"
+            to="/implementacion/modulos"
+          />
         </div>
-        <p className="muted eic-hint">
-          Complete razón social, NIT, dirección fiscal y sucursal principal. La pantalla unificada de empresa se
-          consolidará en una fase posterior; use los enlaces existentes.
-        </p>
       </PageSection>
     </EicShell>
   );
@@ -289,13 +363,23 @@ export function ImplementationEmpresaPage() {
 
 export function ImplementationConfigPage() {
   return (
-    <EicShell title="Configuración">
-      <PageSection title="Parámetros transversales">
+    <EicShell title="Centro de configuración">
+      <DomainSpotlight domainId="configuracion" />
+      <PageSection title="Por lenguaje funcional">
         <div className="eic-card-grid">
-          <LinkCard title="Compras de café" description="Catálogos, parámetros, precios, centros" to="/compras/config" />
-          <LinkCard title="Inventario" description="Bodegas, artículos, parámetros" to="/inventario" />
-          <LinkCard title="Documentos" description="Archivos y formatos" to="/documentos" />
+          <LinkCard title="Empresa" description="Identidad y datos legales" to="/implementacion/empresa" />
+          <LinkCard title="Operación" description="Mi día y flujo de trabajo" to="/operacion" />
+          <LinkCard title="Inventario" description="Bodegas, artículos y movimientos" to="/inventario" />
+          <LinkCard title="Compras" description="Catálogos, precios, centros y parámetros" to="/compras/config" />
+          <LinkCard title="Usuarios" description="Cuentas, roles y accesos" to="/implementacion/usuarios" />
+          <LinkCard title="Documentos" description="Archivos, formatos y numeración" to="/implementacion/documentos" />
+          <LinkCard title="Procesos" description="Aprobaciones y flujos" to="/implementacion/procesos" />
+          <LinkCard title="Integraciones" description="Balanzas y conectores" to="/implementacion/integraciones" />
+          <LinkCard title="Reportes" description="Analítica e indicadores" to="/bi" />
         </div>
+        <p className="muted eic-hint">
+          No se listan módulos técnicos. Cada tarjeta abre la configuración funcional existente.
+        </p>
       </PageSection>
     </EicShell>
   );
@@ -304,14 +388,15 @@ export function ImplementationConfigPage() {
 export function ImplementationUsuariosPage() {
   return (
     <EicShell title="Usuarios">
-      <PageSection title="Identidades y acceso">
+      <DomainSpotlight domainId="usuarios" />
+      <PageSection title="Accesos operativos">
         <div className="eic-card-grid">
           <LinkCard title="Usuarios" description="Invitar y gestionar cuentas" to="/administracion/usuarios" />
-          <LinkCard title="Roles y permisos" description="Administración de roles" to="/administracion" />
-          <LinkCard title="Seguridad y accesos" description="Políticas, auditoría y MFA" to="/iam" />
+          <LinkCard title="Roles y permisos" description="Perfiles de acceso" to="/administracion" />
+          <LinkCard title="Seguridad" description="Políticas, auditoría y MFA" to="/iam" />
         </div>
         <p className="muted eic-hint">
-          Usuarios mínimos cooperativa: Administrador, Compras, Calidad, Inventario, Supervisor, Campo, Consulta.
+          Mínimo recomendado cooperativa: Administrador, Compras, Calidad, Inventario, Supervisor, Campo, Consulta.
         </p>
       </PageSection>
     </EicShell>
@@ -321,8 +406,8 @@ export function ImplementationUsuariosPage() {
 export function ImplementationModulosPage() {
   const { packageId, setPackageId } = useExperienceCenter();
   return (
-    <EicShell title="Módulos">
-      <PageSection title="Paquete contratado">
+    <EicShell title="Paquete contratado">
+      <PageSection title="Alcance de la implementación">
         <PageSummary>
           <MetricCard
             label="Paquete activo"
@@ -347,12 +432,12 @@ export function ImplementationModulosPage() {
           </button>
         </div>
         <p className="muted eic-hint">
-          El paquete define el menú visible. Cooperativa cafetera oculta hospital, manufactura, hotelería y demás
-          verticales no contratadas.
+          El paquete define el menú visible. Cooperativa cafetera oculta verticales no contratadas (no las muestra
+          deshabilitadas).
         </p>
         <ul className="eoc-list">
           <li>Incluidos: Compras, Inventario, Productores, Fincas, Lotes, Calidad, Liquidación, Documentos, Procesos</li>
-          <li>Ocultos: Hospital, Manufactura, Hotelería, Educación, APIs, IoT plataforma, etc.</li>
+          <li>Ocultos en cooperativa: Hospital, Manufactura, Hotelería, Educación, IoT plataforma, etc.</li>
         </ul>
       </PageSection>
     </EicShell>
@@ -362,10 +447,11 @@ export function ImplementationModulosPage() {
 export function ImplementationProcesosPage() {
   return (
     <EicShell title="Procesos">
-      <PageSection title="Procesos y aprobaciones">
+      <DomainSpotlight domainId="workflow" />
+      <PageSection title="Aprobaciones y flujos">
         <div className="eic-card-grid">
           <LinkCard title="Bandeja de aprobaciones" description="Trámites pendientes" to="/procesos/bandeja" />
-          <LinkCard title="Procesos y flujos" description="Definiciones de proceso" to="/procesos" />
+          <LinkCard title="Procesos y flujos" description="Definiciones publicadas" to="/procesos" />
           <LinkCard title="Solicitudes en curso" description="Trámites activos" to="/procesos/instancias" />
         </div>
       </PageSection>
@@ -376,12 +462,16 @@ export function ImplementationProcesosPage() {
 export function ImplementationDocumentosPage() {
   return (
     <EicShell title="Documentos">
-      <PageSection title="Formatos y numeración">
+      <DomainSpotlight domainId="documentos" />
+      <PageSection title="Formatos y evidencia">
         <div className="eic-card-grid">
           <LinkCard title="Documentos" description="Archivos y plantillas" to="/documentos" />
-          <LinkCard title="Configuración compras" description="Series y parámetros de documentos de café" to="/compras/config" />
+          <LinkCard
+            title="Configuración de compras"
+            description="Series y parámetros de documentos de café"
+            to="/compras/config"
+          />
         </div>
-        <p className="muted eic-hint">Verifique numeración de recepción y liquidación antes del go-live.</p>
       </PageSection>
     </EicShell>
   );
@@ -390,137 +480,208 @@ export function ImplementationDocumentosPage() {
 export function ImplementationIntegracionesPage() {
   return (
     <EicShell title="Integraciones">
+      <DomainSpotlight domainId="integraciones" />
       <PageSection title="Conectividad operativa">
         <div className="eic-card-grid">
           <LinkCard title="Balanzas" description="Dispositivos de pesaje" to="/compras/balanzas" />
           <LinkCard title="Integraciones" description="Conectores y flujos" to="/integraciones" />
         </div>
+        <p className="muted eic-hint">Las balanzas son opcionales para el piloto; se puede operar en pesaje manual.</p>
       </PageSection>
     </EicShell>
   );
 }
 
 export function ImplementationEstadoPage() {
-  const { stages, pct, eims, coffee } = useImplementationSnapshot();
-  const domains = useMemo(() => {
-    const map = new Map<string, Stage[]>();
-    for (const s of stages) {
-      const list = map.get(s.domain) ?? [];
-      list.push(s);
-      map.set(s.domain, list);
-    }
-    return [...map.entries()].map(([domain, list]) => {
-      const done = list.filter((x) => x.status === 'complete').length;
-      const domainPct = list.length ? Math.floor((done / list.length) * 100) : 0;
-      const worst = list.some((x) => x.status === 'blocked')
-        ? 'blocked'
-        : list.every((x) => x.status === 'complete')
-          ? 'complete'
-          : list.some((x) => x.status === 'in_progress' || x.status === 'complete')
-            ? 'in_progress'
-            : 'not_started';
-      return { domain, pct: domainPct, status: worst as StageStatus };
-    });
-  }, [stages]);
+  const { loaded, chain, supporting, consultant, signals } = useImplementationEngine();
+
+  if (!loaded) {
+    return (
+      <EicShell title="Estado de implementación">
+        <LoadingState variant="page" message="Calculando semáforos…" />
+      </EicShell>
+    );
+  }
 
   return (
     <EicShell title="Estado de implementación">
       <PageSummary>
-        <MetricCard label="Global" value={`${pct}%`} tone="coffee" />
-        <MetricCard label="Bodegas" value={String(eims?.warehousesCount ?? '—')} />
-        <MetricCard label="Artículos" value={String(eims?.itemsCount ?? '—')} />
-        <MetricCard label="Tickets hoy" value={coffee?.ticketsToday ?? '—'} />
+        <MetricCard label="Completas" value={consultant.completeCount} tone="green" />
+        <MetricCard label="En progreso / pendientes" value={consultant.pendingCount} />
+        <MetricCard label="Bloqueadas" value={consultant.blockedCount} />
+        <MetricCard label="Tiempo estimado" value={consultant.estimatedLabel} tone="coffee" />
       </PageSummary>
-      <PageSection title="Preparación por dominio">
-        <div className="eic-domain-grid">
-          {domains.map((d) => (
-            <div key={d.domain} className="eic-domain-card">
-              <span className="kpi-label">{d.domain}</span>
-              <span className="kpi-value">{d.pct}%</span>
-              <span className={`eic-status eic-status-${d.status}`}>{statusLabel(d.status)}</span>
+
+      <PageSection title="Semáforos por dominio (criterios verificables)">
+        <div className="eic-domain-grid eic-semaphore-grid">
+          {[...chain, ...supporting].map((d) => (
+            <div key={d.id} className={`eic-domain-card eic-live-card-${d.status}`}>
+              <span className="kpi-label">{d.label}</span>
+              <StatusBadge status={d.status} />
+              <span className="muted">{d.evidence}</span>
             </div>
           ))}
         </div>
+        <p className="muted eic-hint">
+          No se usan porcentajes arbitrarios. Cada semáforo deriva de conteos y disponibilidad de centros existentes
+          (usuarios, precios, bodegas, productores, procesos, inventario del día, etc.).
+        </p>
       </PageSection>
+
+      <PageSection title="Señales operativas (mismas que Operación / Gerencia)">
+        <PageSummary>
+          <MetricCard label="Cola" value={signals.queueLength} />
+          <MetricCard label="Tickets hoy" value={signals.ticketsToday} tone="coffee" />
+          <MetricCard label="Kg hoy" value={signals.kgToday.toFixed(0)} />
+          <MetricCard label="Liquidaciones" value={signals.settlementsToday} />
+          <MetricCard label="Bodegas" value={signals.warehouses} />
+          <MetricCard label="Artículos" value={signals.items} />
+        </PageSummary>
+      </PageSection>
+
+      <DependencyChain chain={chain} />
     </EicShell>
   );
 }
 
 export function ImplementationGoLivePage() {
-  const { stages, pct, blockers } = useImplementationSnapshot();
-  const ready = pct >= 80 && !stages.some((s) => s.id === 'E20' && s.status === 'not_started');
-  const [certified, setCertified] = useState(() => {
-    try {
-      return localStorage.getItem('agroerp_golive_certified') === '1';
-    } catch {
-      return false;
-    }
-  });
+  const snap = useImplementationEngine();
+  const { loaded, chain, consultant, certified, certifiedAt, signals, refresh } = snap;
   const [note, setNote] = useState('');
+  const [error, setError] = useState('');
+
+  const prueba = chain.find((d) => d.id === 'prueba');
+  const prerequisites = chain.filter((d) => d.id !== 'golive');
 
   const certify = () => {
-    const payload = {
-      at: new Date().toISOString(),
-      pct,
-      note,
-    };
-    try {
-      localStorage.setItem('agroerp_golive_certified', '1');
-      localStorage.setItem('agroerp_golive_record', JSON.stringify(payload));
-    } catch {
-      /* ignore */
+    const result = certifyGoLive(note, consultant);
+    if (!result.ok) {
+      setError(result.error ?? 'No se puede certificar');
+      return;
     }
-    setCertified(true);
+    setError('');
+    refresh();
   };
 
   const revoke = () => {
-    try {
-      localStorage.removeItem('agroerp_golive_certified');
-      localStorage.removeItem('agroerp_golive_record');
-    } catch {
-      /* ignore */
-    }
-    setCertified(false);
+    revokeGoLiveCertification();
+    refresh();
   };
 
+  if (!loaded) {
+    return (
+      <EicShell title="Go Live">
+        <LoadingState variant="page" message="Verificando prerrequisitos…" />
+      </EicShell>
+    );
+  }
+
   return (
-    <EicShell title="Go Live">
+    <EicShell title="Go Live — Certificación">
       {certified ? (
         <PageSection title="Empresa lista para operar">
           <div className="eic-certified">
-            <h2>✓ EMPRESA LISTA PARA OPERAR</h2>
-            <p className="muted">Certificación interna registrada en este navegador (evidencia local).</p>
-            <button type="button" className="btn btn-ghost" onClick={revoke}>
-              Revocar certificación
-            </button>
+            <h2>✓ Empresa lista para operar</h2>
+            <p className="muted">
+              Certificación registrada en este navegador
+              {certifiedAt ? ` · ${new Date(certifiedAt).toLocaleString()}` : ''}.
+            </p>
+            {!consultant.canCertify ? (
+              <p className="eic-live-risk">
+                Atención: hay bloqueos visibles otra vez. Revise el checklist antes de operar en producción.
+              </p>
+            ) : null}
+            <div className="row-actions">
+              <Link to="/operacion" className="btn btn-primary">
+                Ir a Mi día
+              </Link>
+              <button type="button" className="btn btn-ghost" onClick={revoke}>
+                Revocar certificación
+              </button>
+            </div>
           </div>
         </PageSection>
       ) : (
         <PageSection title="Certificación">
           <PageSummary>
-            <MetricCard label="Preparación" value={`${pct}%`} tone={ready ? 'green' : 'coffee'} />
-            <MetricCard label="Riesgos abiertos" value={blockers.length} />
+            <MetricCard
+              label="¿Se puede certificar?"
+              value={consultant.canCertify ? 'Sí' : 'No'}
+              tone={consultant.canCertify ? 'green' : 'coffee'}
+            />
+            <MetricCard label="Bloqueantes" value={consultant.certifyBlockers.length} />
+            <MetricCard label="Prueba operativa" value={prueba ? implementationStatusLabel(prueba.status) : '—'} />
+            <MetricCard label="Inventario hoy" value={signals.inventoryToday} hint="Evidencia de ciclo completo" />
           </PageSummary>
-          {!ready ? (
-            <p className="muted eic-hint">
-              Complete la jornada de prueba (recepción → pesaje → calidad → liquidación → inventario) y los criterios
-              obligatorios antes de certificar.
-            </p>
-          ) : null}
+
+          {!consultant.canCertify ? (
+            <div className="eic-cert-blocked">
+              <p>
+                <strong>No se puede indicar «Empresa lista»</strong> mientras existan bloqueos verificables:
+              </p>
+              <ul className="eoc-list">
+                {consultant.certifyBlockers.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <EmptyPanel
+              title="Prerrequisitos cumplidos"
+              description="La cadena crítica está completa según criterios verificables. Puede registrar la certificación."
+            />
+          )}
+
+          {error ? <p className="eic-live-risk">{error}</p> : null}
+
           <label className="eic-cert-note">
-            Notas de certificación
+            Notas de certificación (jornada piloto, observaciones)
             <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
           </label>
-          <button type="button" className="btn btn-primary" onClick={certify} disabled={!ready && blockers.length > 3}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={certify}
+            disabled={!consultant.canCertify}
+          >
             Certificar empresa lista
           </button>
           <p className="muted eic-hint">
-            La certificación es una evidencia de producto en el cliente. No modifica permisos ni APIs.
+            La certificación es evidencia de producto en el cliente. No modifica permisos ni APIs. El botón permanece
+            deshabilitado si hay bloqueos.
           </p>
         </PageSection>
       )}
 
-      <PageSection title="Jornada de prueba">
+      <PageSection title="Prerrequisitos de la cadena">
+        <div className="eic-domain-grid">
+          {prerequisites.map((d) => (
+            <div key={d.id} className={`eic-domain-card eic-live-card-${d.status}`}>
+              <span className="kpi-label">{d.label}</span>
+              <StatusBadge status={d.status} />
+              <span className="muted">{d.evidence}</span>
+              {d.status !== 'complete' ? <Link to={d.href}>Resolver</Link> : null}
+            </div>
+          ))}
+        </div>
+      </PageSection>
+
+      <PageSection title="Riesgos y complementarios">
+        {consultant.alerts.length === 0 ? (
+          <EmptyPanel title="Sin riesgos abiertos" description="No hay alertas de implementación pendientes." />
+        ) : (
+          <ul className="emc-alerts">
+            {consultant.alerts.map((a) => (
+              <li key={a.id}>
+                <strong>{a.title}</strong>
+                <span className="muted"> — {a.detail}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PageSection>
+
+      <PageSection title="Jornada piloto">
         <ol className="eic-journey">
           <li>
             <Link to="/compras/recepcion">Recepción</Link>
@@ -538,10 +699,16 @@ export function ImplementationGoLivePage() {
             <Link to="/compras/inventario">Inventario</Link>
           </li>
           <li>
-            <Link to="/gerencia">Dashboard gerencia</Link>
+            <Link to="/gerencia">Resumen ejecutivo</Link>
           </li>
         </ol>
+        <p className="muted">
+          Evidencia actual: tickets {signals.ticketsToday}, pesados {signals.weighedToday}, calidad{' '}
+          {signals.qualityToday}, liquidaciones {signals.settlementsToday}, inventario {signals.inventoryToday}.
+        </p>
       </PageSection>
+
+      <DependencyChain chain={chain} />
     </EicShell>
   );
 }

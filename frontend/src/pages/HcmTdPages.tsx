@@ -11,7 +11,7 @@ export function HcmTdCenterPage() {
     <>
       <Header title="Centro de capacitación" subtitle="Formación, competencias, desempeño y desarrollo del talento" actions={
         <div className="row-actions">
-          <button className="btn" onClick={() => import('../api/hcm-td').then(({ seedHcmTd }) => seedHcmTd().then(reload))}>Sembrar TD</button>
+          <button className="btn" onClick={() => import('../api/hcm-td').then(({ seedHcmTd }) => seedHcmTd().then(reload))}>Cargar configuración inicial</button>
           <Link to="/rrhh/talento/cursos" className="btn">Cursos</Link>
           <Link to="/rrhh/talento/evaluaciones" className="btn">Evaluaciones</Link>
           <Link to="/rrhh/talento/competencias" className="btn">Competencias</Link>

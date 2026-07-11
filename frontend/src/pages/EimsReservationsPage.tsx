@@ -183,7 +183,8 @@ export function EimsReservationsPage() {
             data={rows}
             selectable={false}
             rowActions={rowActions}
-            emptyMessage="Sin reservas"
+            emptyMessage="Aún no hay reservas"
+            emptyDescription="Las reservas aparecerán cuando se aparten existencias para un pedido o proceso."
           />
         )}
       </PageSection>

@@ -317,7 +317,11 @@ export function CoffeeSettlementsPage() {
 
       <PageSection title="Cola de liquidación">
         {pending.length === 0 ? (
-          <EmptyPanel title="Sin tickets" description="No hay tickets pendientes de liquidación." />
+          <EmptyPanel
+            title="Sin liquidaciones pendientes"
+            description="No hay tickets listos para liquidar. Avance calidad y pesaje para generar la cola de liquidación."
+            action={{ label: 'Ir a calidad', to: '/compras/calidad' }}
+          />
         ) : (
           <EnterpriseDataGrid
             gridId="coffee-settlement-queue"

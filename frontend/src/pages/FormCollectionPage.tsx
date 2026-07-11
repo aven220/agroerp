@@ -1,19 +1,28 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
 import { FormsPlatformNav } from '../components/forms/FormsPlatformNav';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { FlowProgress } from '../components/flow/FlowProgress';
 import { ProcessWorkspacePanel } from '../components/process/ProcessWorkspacePanel';
-import { EmptyState } from '../components/ui/EmptyState';
-import { LoadingState } from '../components/ux/LoadingState';
+import {
+  PageLayout,
+  PageHeader,
+  PageSection,
+  PageState,
+  PageSummary,
+  MetricCard,
+  TableToolbar,
+  DescriptionList,
+  SimpleRecordsTable,
+  type SimpleColumn,
+} from '../components/page';
 import { listForms, listSubmissions, type FormSubmission } from '../api/forms';
 import { formatFormDate } from '../form-studio/form-lifecycle';
 import {
   buildRecordExplorerPath,
   type UreRouteEntityType,
 } from '../record-explorer/types';
-import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
+import { useOnEntityUpdated } from '../lib/entitySync';
 
 const SYNC_LABELS: Record<string, string> = {
   synced: 'Sincronizado',
@@ -76,9 +85,36 @@ export function FormCollectionPage() {
 
   const selectedEntityLink = selected ? extractEntityLinkFromSubmission(selected) : null;
 
+  const columns: SimpleColumn<FormSubmission>[] = [
+    {
+      key: 'form',
+      label: 'Formulario',
+      getValue: (r) => r.form?.name ?? r.formId,
+    },
+    { key: 'status', label: 'Estado', getValue: (r) => r.status },
+    {
+      key: 'syncStatus',
+      label: 'Sincronización',
+      render: (r) => (
+        <span className={`badge sync-${r.syncStatus}`}>{SYNC_LABELS[r.syncStatus] ?? r.syncStatus}</span>
+      ),
+      getValue: (r) => SYNC_LABELS[r.syncStatus] ?? r.syncStatus,
+    },
+    {
+      key: 'gps',
+      label: 'GPS',
+      getValue: (r) => (r.gpsLocation || hasGpsInData(r.data) ? 'Sí' : '—'),
+    },
+    {
+      key: 'createdAt',
+      label: 'Fecha',
+      getValue: (r) => formatFormDate(r.createdAt),
+    },
+  ];
+
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Recolección"
         subtitle="Cada envío es un registro con trazabilidad, evidencias y estado de sincronización"
       />
@@ -114,116 +150,91 @@ export function FormCollectionPage() {
         ]}
       />
 
-      <div className="kpi-grid">
-        <div className="kpi-card"><span className="kpi-label">Diligenciados</span><span className="kpi-value">{kpis.total}</span></div>
-        <div className="kpi-card kpi-green"><span className="kpi-label">Sincronizados</span><span className="kpi-value">{kpis.synced}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Pendientes</span><span className="kpi-value">{kpis.pending}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Errores</span><span className="kpi-value">{kpis.failed}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Con GPS</span><span className="kpi-value">{kpis.withGps}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Con multimedia</span><span className="kpi-value">{kpis.withMedia}</span></div>
-      </div>
+      <PageSummary>
+        <MetricCard label="Diligenciados" value={kpis.total} />
+        <MetricCard label="Sincronizados" value={kpis.synced} tone="green" />
+        <MetricCard label="Pendientes" value={kpis.pending} />
+        <MetricCard label="Errores" value={kpis.failed} />
+        <MetricCard label="Con GPS" value={kpis.withGps} />
+        <MetricCard label="Con multimedia" value={kpis.withMedia} />
+      </PageSummary>
 
-      {error ? <div className="alert alert-error">{error}</div> : null}
+      {error ? <PageState variant="error" message={error} onRetry={load} /> : null}
 
-      <div className="filter-bar">
-        <input placeholder="Buscar…" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <select value={formFilter} onChange={(e) => setFormFilter(e.target.value)}>
-          <option value="">Todos los formularios</option>
-          {forms.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-        </select>
-        <select value={syncFilter} onChange={(e) => setSyncFilter(e.target.value)}>
-          <option value="">Toda sincronización</option>
-          <option value="synced">Sincronizado</option>
-          <option value="pending">Pendiente</option>
-          <option value="conflict">Conflicto</option>
-        </select>
-        <button type="button" className="btn btn-sm" onClick={() => load()}>Actualizar</button>
-      </div>
+      <PageSection title="Envíos">
+        <TableToolbar>
+          <input placeholder="Buscar…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <select value={formFilter} onChange={(e) => setFormFilter(e.target.value)}>
+            <option value="">Todos los formularios</option>
+            {forms.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+          </select>
+          <select value={syncFilter} onChange={(e) => setSyncFilter(e.target.value)}>
+            <option value="">Toda sincronización</option>
+            <option value="synced">Sincronizado</option>
+            <option value="pending">Pendiente</option>
+            <option value="conflict">Conflicto</option>
+          </select>
+          <button type="button" className="btn btn-sm" onClick={() => load()}>Actualizar</button>
+        </TableToolbar>
 
-      <div className="form-collection-layout">
-        <div className="form-collection-list">
-          {loading ? (
-            <LoadingState variant="table" />
-          ) : filtered.length === 0 ? (
-            <EmptyState
-              illustration="records"
-              title="Sin envíos"
-              description="No hay registros que coincidan con los filtros actuales."
-              hint="Los envíos aparecen aquí tras sincronizar desde Capture o diligenciar en web."
-              action={{ label: 'Ver formularios', to: '/formularios' }}
+        <div className="form-collection-layout">
+          <div className="form-collection-list">
+            <SimpleRecordsTable
+              gridId="form-collection"
+              columns={columns}
+              data={filtered}
+              loading={loading}
+              selectable={false}
+              onRowClick={(s) => setSelected(s)}
+              emptyMessage="Sin envíos"
+              emptyDescription="No hay resultados con los filtros actuales."
             />
-          ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Formulario</th>
-                  <th>Estado</th>
-                  <th>Sincronización</th>
-                  <th>GPS</th>
-                  <th>Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((s) => (
-                  <tr
-                    key={s.id}
-                    className={selected?.id === s.id ? 'selected-row' : ''}
-                    onClick={() => setSelected(s)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <td>{s.form?.name ?? s.formId}</td>
-                    <td>{s.status}</td>
-                    <td><span className={`badge sync-${s.syncStatus}`}>{SYNC_LABELS[s.syncStatus] ?? s.syncStatus}</span></td>
-                    <td>{s.gpsLocation || hasGpsInData(s.data) ? '📍' : '—'}</td>
-                    <td>{formatFormDate(s.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+          </div>
 
-        <aside className="panel form-collection-detail">
-          <h3 className="ds-h4">Detalle del registro</h3>
-          {!selected ? (
-            <p className="muted">Seleccione un envío para ver campos, GPS y evidencias.</p>
-          ) : (
-            <>
-              <dl className="form-detail-dl">
-                <div><dt>ID</dt><dd><code>{selected.id.slice(0, 8)}…</code></dd></div>
-                <div><dt>Formulario</dt><dd>{selected.form?.name}</dd></div>
-                <div><dt>Versión</dt><dd>v{selected.formVersion}</dd></div>
-                <div><dt>Sincronización</dt><dd>{SYNC_LABELS[selected.syncStatus] ?? selected.syncStatus}</dd></div>
-                <div><dt>Fecha</dt><dd>{formatFormDate(selected.createdAt)}</dd></div>
-              </dl>
-              {selected.gpsLocation ? (
-                <p className="form-gps-preview">
-                  📍 {selected.gpsLocation.lat?.toFixed?.(5)}, {selected.gpsLocation.lng?.toFixed?.(5)}
-                </p>
-              ) : null}
-              <h4>Respuestas</h4>
-              <dl className="form-submission-fields">
-                {Object.entries(selected.data ?? {}).map(([key, val]) => (
-                  <div key={key}>
-                    <dt>{key}</dt>
-                    <dd>{formatValue(val)}</dd>
-                  </div>
-                ))}
-              </dl>
-              {selectedEntityLink ? (
-                <Link
-                  to={buildRecordExplorerPath(selectedEntityLink.entityType, selectedEntityLink.recordId)}
-                  className="btn btn-sm"
-                >
-                  {selectedEntityLink.label}
-                </Link>
-              ) : null}
-              <Link to="/formularios/exportar" className="btn btn-sm">Exportar datos</Link>
-            </>
-          )}
-        </aside>
-      </div>
-    </>
+          <aside className="panel form-collection-detail">
+            <h3 className="ds-h4">Detalle del registro</h3>
+            {!selected ? (
+              <p className="muted">Seleccione un envío para ver campos, GPS y evidencias.</p>
+            ) : (
+              <>
+                <DescriptionList
+                  items={[
+                    { term: 'ID', detail: <code>{selected.id.slice(0, 8)}…</code> },
+                    { term: 'Formulario', detail: selected.form?.name },
+                    { term: 'Versión', detail: `v${selected.formVersion}` },
+                    { term: 'Sincronización', detail: SYNC_LABELS[selected.syncStatus] ?? selected.syncStatus },
+                    { term: 'Fecha', detail: formatFormDate(selected.createdAt) },
+                  ]}
+                />
+                {selected.gpsLocation ? (
+                  <p className="form-gps-preview">
+                    GPS: {selected.gpsLocation.lat?.toFixed?.(5)}, {selected.gpsLocation.lng?.toFixed?.(5)}
+                  </p>
+                ) : null}
+                <h4>Respuestas</h4>
+                <dl className="form-submission-fields">
+                  {Object.entries(selected.data ?? {}).map(([key, val]) => (
+                    <div key={key}>
+                      <dt>{key}</dt>
+                      <dd>{formatValue(val)}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {selectedEntityLink ? (
+                  <Link
+                    to={buildRecordExplorerPath(selectedEntityLink.entityType, selectedEntityLink.recordId)}
+                    className="btn btn-sm"
+                  >
+                    {selectedEntityLink.label}
+                  </Link>
+                ) : null}
+                <Link to="/formularios/exportar" className="btn btn-sm">Exportar datos</Link>
+              </>
+            )}
+          </aside>
+        </div>
+      </PageSection>
+    </PageLayout>
   );
 }
 

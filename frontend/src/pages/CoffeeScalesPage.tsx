@@ -1,12 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  FieldGroup,
+  FormActions,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
+import type { RowAction } from '../lib/data-grid/types';
 import {
   diagnoseCoffeeScale,
   listRegisteredScales,
   syncCoffeeScalesFromIot,
   upsertCoffeeScale,
 } from '../api/coffee';
+
+type ScaleRow = Record<string, unknown> & { id: string };
 
 export function CoffeeScalesPage() {
   const [scales, setScales] = useState<Array<Record<string, unknown>>>([]);
@@ -36,86 +48,94 @@ export function CoffeeScalesPage() {
     await reload();
   };
 
+  const data = scales.map((s) => withRowId(s, 'id', 'scaleKey'));
+
+  const rowActions: RowAction<ScaleRow>[] = [
+    {
+      id: 'diagnose',
+      label: 'Diagnóstico',
+      onAction: (r) => {
+        diagnoseCoffeeScale(String(r.scaleKey)).then(setDiagnosis);
+      },
+    },
+  ];
+
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Balanzas y dispositivos"
         subtitle="USB, Serial, Ethernet, TCP/IP, Bluetooth, Wi-Fi e IoT"
         actions={
-          <>
-            <button className="btn" onClick={() => syncCoffeeScalesFromIot().then(reload)}>Sincronizar IoT</button>
+          <PageActions>
+            <button type="button" className="btn" onClick={() => syncCoffeeScalesFromIot().then(reload)}>Sincronizar IoT</button>
             <Link to="/compras/pesaje" className="btn">Pesaje</Link>
             <Link to="/compras" className="btn">Centro</Link>
-          </>
+          </PageActions>
         }
       />
 
-      <section className="panel">
-        <h3>Registrar / actualizar balanza</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-          <input placeholder="scaleKey" value={form.scaleKey} onChange={(e) => setForm({ ...form, scaleKey: e.target.value })} />
-          <input placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <select value={form.connectionType} onChange={(e) => setForm({ ...form, connectionType: e.target.value })}>
-            <option value="usb">USB</option>
-            <option value="serial_rs232">Serial RS-232</option>
-            <option value="ethernet">Ethernet</option>
-            <option value="tcp_ip">TCP/IP</option>
-            <option value="bluetooth">Bluetooth</option>
-            <option value="wifi">Wi-Fi</option>
-            <option value="iot_gateway">IoT Gateway</option>
-          </select>
-          <input placeholder="Driver" value={form.driverKey} onChange={(e) => setForm({ ...form, driverKey: e.target.value })} />
-          <input placeholder="Host" value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} />
-          <input placeholder="Puerto" value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })} />
+      <PageSection title="Registrar / actualizar balanza">
+        <div className="form-grid">
+          <FieldGroup label="Clave">
+            <input placeholder="scaleKey" value={form.scaleKey} onChange={(e) => setForm({ ...form, scaleKey: e.target.value })} />
+          </FieldGroup>
+          <FieldGroup label="Nombre">
+            <input placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </FieldGroup>
+          <FieldGroup label="Conexión">
+            <select value={form.connectionType} onChange={(e) => setForm({ ...form, connectionType: e.target.value })}>
+              <option value="usb">USB</option>
+              <option value="serial_rs232">Serial RS-232</option>
+              <option value="ethernet">Ethernet</option>
+              <option value="tcp_ip">TCP/IP</option>
+              <option value="bluetooth">Bluetooth</option>
+              <option value="wifi">Wi-Fi</option>
+              <option value="iot_gateway">IoT Gateway</option>
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Driver">
+            <input placeholder="Driver" value={form.driverKey} onChange={(e) => setForm({ ...form, driverKey: e.target.value })} />
+          </FieldGroup>
+          <FieldGroup label="Host">
+            <input placeholder="Host" value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} />
+          </FieldGroup>
+          <FieldGroup label="Puerto">
+            <input placeholder="Puerto" value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })} />
+          </FieldGroup>
         </div>
-        <button className="btn" style={{ marginTop: 8 }} onClick={save}>Guardar balanza</button>
-      </section>
+        <FormActions>
+          <button type="button" className="btn btn-primary" onClick={save}>Guardar balanza</button>
+        </FormActions>
+      </PageSection>
 
-      <section className="panel">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Clave</th>
-              <th>Nombre</th>
-              <th>Conexión</th>
-              <th>Estado</th>
-              <th>Certificada</th>
-              <th>Firmware</th>
-              <th>Última señal</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {scales.map((s) => (
-              <tr key={String(s.id ?? s.scaleKey)}>
-                <td>{String(s.scaleKey)}</td>
-                <td>{String(s.name)}</td>
-                <td>{String(s.connectionType)}</td>
-                <td>{String(s.status)}</td>
-                <td>{s.certified ? 'Sí' : 'No'}</td>
-                <td>{String(s.firmwareVersion ?? '—')}</td>
-                <td>{s.lastSeenAt ? new Date(String(s.lastSeenAt)).toLocaleString() : '—'}</td>
-                <td>
-                  <button
-                    className="btn"
-                    onClick={() => diagnoseCoffeeScale(String(s.scaleKey)).then(setDiagnosis)}
-                  >
-                    Diagnóstico
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <PageSection title="Balanzas registradas">
+        <SimpleRecordsTable
+          gridId="coffee-scales"
+          selectable={false}
+          data={data}
+          columns={[
+            { key: 'scaleKey', label: 'Clave', getValue: (r) => String(r.scaleKey) },
+            { key: 'name', label: 'Nombre', getValue: (r) => String(r.name) },
+            { key: 'connectionType', label: 'Conexión', getValue: (r) => String(r.connectionType) },
+            { key: 'status', label: 'Estado', getValue: (r) => String(r.status) },
+            { key: 'certified', label: 'Certificada', getValue: (r) => (r.certified ? 'Sí' : 'No') },
+            { key: 'firmwareVersion', label: 'Firmware', getValue: (r) => String(r.firmwareVersion ?? '—') },
+            {
+              key: 'lastSeenAt',
+              label: 'Última señal',
+              getValue: (r) => (r.lastSeenAt ? new Date(String(r.lastSeenAt)).toLocaleString() : '—'),
+            },
+          ]}
+          rowActions={rowActions}
+        />
+      </PageSection>
 
       {diagnosis ? (
-        <section className="panel">
-          <h3>Diagnóstico {String((diagnosis.scale as Record<string, unknown>)?.scaleKey ?? '')}</h3>
+        <PageSection title={`Diagnóstico ${String((diagnosis.scale as Record<string, unknown>)?.scaleKey ?? '')}`}>
           <p>Conectada: {diagnosis.connected ? 'Sí' : 'No'} · Saludable: {diagnosis.healthy ? 'Sí' : 'No'}</p>
-          <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(diagnosis, null, 2)}</pre>
-        </section>
+          <pre className="code-block">{JSON.stringify(diagnosis, null, 2)}</pre>
+        </PageSection>
       ) : null}
-    </>
+    </PageLayout>
   );
 }

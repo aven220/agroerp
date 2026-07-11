@@ -11,7 +11,7 @@ export function HcmTaCenterPage() {
     <>
       <Header title="Centro de asistencia" subtitle="Marcaciones, turnos, horarios y novedades" actions={
         <div className="row-actions">
-          <button className="btn" onClick={() => import('../api/hcm-ta').then(({ seedHcmTa }) => seedHcmTa().then(reload))}>Sembrar TA</button>
+          <button className="btn" onClick={() => import('../api/hcm-ta').then(({ seedHcmTa }) => seedHcmTa().then(reload))}>Cargar configuración inicial</button>
           <Link to="/rrhh/asistencia/marcaciones" className="btn">Marcaciones</Link>
           <Link to="/rrhh/asistencia/turnos" className="btn">Turnos</Link>
           <Link to="/rrhh/asistencia/calendario" className="btn">Calendario</Link>

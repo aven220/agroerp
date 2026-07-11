@@ -1,15 +1,36 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  SimpleRecordsTable,
+  withRowId,
+  type SimpleColumn,
+} from '../components/page';
+import type { RowAction } from '../lib/data-grid/types';
 import { listEimsParameters, upsertEimsParameter } from '../api/eims';
 
-export function EimsParametersPage() {
-  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+type ParameterRow = Record<string, unknown> & { id: string };
 
-  const reload = () => listEimsParameters().then((r) => setRows(r as Array<Record<string, unknown>>));
+const columns: SimpleColumn<ParameterRow>[] = [
+  { key: 'parameterKey', label: 'Clave', getValue: (r) => String(r.parameterKey ?? '') },
+  { key: 'name', label: 'Nombre', getValue: (r) => String(r.name ?? '') },
+  { key: 'value', label: 'Valor', getValue: (r) => JSON.stringify(r.value ?? {}) },
+  { key: 'version', label: 'Versión', getValue: (r) => String(r.version ?? '') },
+];
+
+export function EimsParametersPage() {
+  const [rows, setRows] = useState<ParameterRow[]>([]);
+
+  const reload = () =>
+    listEimsParameters().then((r) =>
+      setRows((r as Array<Record<string, unknown>>).map((row) => withRowId(row, 'id', 'parameterKey'))),
+    );
   useEffect(() => { reload(); }, []);
 
-  const toggle = async (row: Record<string, unknown>, enabled: boolean) => {
+  const toggle = async (row: ParameterRow, enabled: boolean) => {
     const value = { ...(row.value as Record<string, unknown>), enabled };
     await upsertEimsParameter({
       parameterKey: row.parameterKey,
@@ -19,39 +40,49 @@ export function EimsParametersPage() {
     await reload();
   };
 
+  const toggleActions: RowAction<ParameterRow>[] = [
+    {
+      id: 'disable',
+      label: 'Desactivar',
+      hidden: (r) => {
+        const value = (r.value ?? {}) as Record<string, unknown>;
+        return !('enabled' in value) || !Boolean(value.enabled);
+      },
+      onAction: (r) => { void toggle(r, false); },
+    },
+    {
+      id: 'enable',
+      label: 'Activar',
+      hidden: (r) => {
+        const value = (r.value ?? {}) as Record<string, unknown>;
+        return !('enabled' in value) || Boolean(value.enabled);
+      },
+      onAction: (r) => { void toggle(r, true); },
+    },
+  ];
+
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Parámetros de inventario"
         subtitle="Lote, serie, negativo, FIFO/LIFO y valoración"
-        actions={<Link to="/inventario" className="btn">Inventario</Link>}
+        actions={
+          <PageActions>
+            <Link to="/inventario" className="btn">Inventario</Link>
+          </PageActions>
+        }
       />
-      <section className="panel">
-        <table className="data-table">
-          <thead><tr><th>Clave</th><th>Nombre</th><th>Valor</th><th>Versión</th><th></th></tr></thead>
-          <tbody>
-            {rows.map((r) => {
-              const value = (r.value ?? {}) as Record<string, unknown>;
-              const enabled = Boolean(value.enabled);
-              return (
-                <tr key={String(r.id)}>
-                  <td>{String(r.parameterKey)}</td>
-                  <td>{String(r.name)}</td>
-                  <td><code>{JSON.stringify(value)}</code></td>
-                  <td>{String(r.version)}</td>
-                  <td>
-                    {'enabled' in value ? (
-                      <button className="btn" onClick={() => toggle(r, !enabled)}>
-                        {enabled ? 'Desactivar' : 'Activar'}
-                      </button>
-                    ) : '—'}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
-    </>
+
+      <PageSection title="Parámetros">
+        <SimpleRecordsTable
+          gridId="eims-parameters"
+          columns={columns}
+          data={rows}
+          selectable={false}
+          rowActions={toggleActions}
+          emptyMessage="Sin parámetros"
+        />
+      </PageSection>
+    </PageLayout>
   );
 }

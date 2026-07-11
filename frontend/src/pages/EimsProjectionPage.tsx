@@ -1,7 +1,35 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  PageSummary,
+  MetricCard,
+  SimpleRecordsTable,
+  withRowId,
+  type SimpleColumn,
+} from '../components/page';
 import { getEimsSupplyProjection } from '../api/eims';
+
+type ProjectionRow = Record<string, unknown> & { id: string };
+
+const columns: SimpleColumn<ProjectionRow>[] = [
+  { key: 'itemName', label: 'Artículo', getValue: (r) => String(r.itemName ?? r.itemKey ?? '') },
+  { key: 'warehouseKey', label: 'Bodega', getValue: (r) => String(r.warehouseKey ?? '') },
+  { key: 'availableQty', label: 'Disponible', getValue: (r) => String(r.availableQty ?? '') },
+  { key: 'dailyDemand', label: 'Demanda/día', getValue: (r) => String(r.dailyDemand ?? '') },
+  { key: 'stockoutInDays', label: 'Agotamiento (d)', getValue: (r) => String(r.stockoutInDays ?? '') },
+  { key: 'rotationRate', label: 'Rotación', getValue: (r) => String(r.rotationRate ?? '') },
+  { key: 'projectedQtyEnd', label: 'Proy. fin', getValue: (r) => String(r.projectedQtyEnd ?? '') },
+  {
+    key: 'value',
+    label: 'Valor',
+    getValue: (r) => Number(r.value ?? 0).toLocaleString(),
+  },
+];
 
 export function EimsProjectionPage() {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
@@ -14,47 +42,46 @@ export function EimsProjectionPage() {
 
   useEffect(() => { reload().catch((e) => setError(e.message)); }, [horizon]);
 
-  const lines = (data?.lines as Array<Record<string, unknown>>) ?? [];
+  const lines = ((data?.lines as Array<Record<string, unknown>>) ?? []).map((row, idx) =>
+    withRowId({ ...row, _idx: idx }, 'itemKey', '_idx'),
+  );
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Proyección de inventario"
         subtitle="Agotamiento, rotación y valor proyectado"
         actions={
-          <>
-            <input value={horizon} onChange={(e) => setHorizon(e.target.value)} style={{ width: 60 }} />
+          <PageActions>
+            <input
+              className="input-compact"
+              value={horizon}
+              onChange={(e) => setHorizon(e.target.value)}
+              aria-label="Horizonte en días"
+            />
             <span>días</span>
             <Link to="/inventario/planificador" className="btn">Planificador</Link>
-          </>
+          </PageActions>
         }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
+      {error ? <PageState variant="error" message={error} /> : null}
+
       {data ? (
-        <div className="kpi-grid">
-          <div className="kpi-card"><span className="kpi-label">Valor total</span><span className="kpi-value">{Number(data.totalValue ?? 0).toLocaleString()}</span></div>
-          <div className="kpi-card"><span className="kpi-label">Horizonte</span><span className="kpi-value">{String(data.horizonDays)} d</span></div>
-        </div>
+        <PageSummary>
+          <MetricCard label="Valor total" value={Number(data.totalValue ?? 0).toLocaleString()} />
+          <MetricCard label="Horizonte" value={`${String(data.horizonDays)} d`} />
+        </PageSummary>
       ) : null}
-      <section className="panel">
-        <table className="data-table">
-          <thead><tr><th>Artículo</th><th>Bodega</th><th>Disponible</th><th>Demanda/día</th><th>Agotamiento (d)</th><th>Rotación</th><th>Proy. fin</th><th>Valor</th></tr></thead>
-          <tbody>
-            {lines.map((r, idx) => (
-              <tr key={`${String(r.itemKey)}-${idx}`}>
-                <td>{String(r.itemName ?? r.itemKey)}</td>
-                <td>{String(r.warehouseKey)}</td>
-                <td>{String(r.availableQty)}</td>
-                <td>{String(r.dailyDemand)}</td>
-                <td>{String(r.stockoutInDays)}</td>
-                <td>{String(r.rotationRate)}</td>
-                <td>{String(r.projectedQtyEnd)}</td>
-                <td>{Number(r.value ?? 0).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </>
+
+      <PageSection title="Líneas de proyección">
+        <SimpleRecordsTable
+          gridId="eims-projection"
+          columns={columns}
+          data={lines}
+          selectable={false}
+          emptyMessage="Sin proyección"
+        />
+      </PageSection>
+    </PageLayout>
   );
 }

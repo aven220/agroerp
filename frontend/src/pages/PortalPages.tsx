@@ -38,7 +38,7 @@ export function PortalDashboardPage() {
     <>
       <Header title="Portal del Empleado" subtitle="Dashboard principal del colaborador" actions={
         <div className="row-actions">
-          <button className="btn" onClick={() => import('../api/portal').then(({ seedPortal }) => seedPortal().then(reload))}>Sembrar Portal</button>
+          <button className="btn" onClick={() => import('../api/portal').then(({ seedPortal }) => seedPortal().then(reload))}>Cargar configuración inicial</button>
           <Link to="/portal/perfil" className="btn">Mi perfil</Link>
           <Link to="/portal/mi-dashboard" className="btn">Mi dashboard</Link>
           <Link to="/portal/solicitudes" className="btn">Solicitudes</Link>

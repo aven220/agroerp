@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  PageSummary,
+  MetricCard,
+} from '../components/page';
 import { getEimsOpsAnalytics, getEimsOpsAi, getEimsOpsKpis } from '../api/eims';
 
 export function EimsAnalyticsPage() {
@@ -30,56 +38,64 @@ export function EimsAnalyticsPage() {
   const recommendations = ((ai?.recommendations as Array<Record<string, unknown>>) ?? []);
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Analítica de inventario"
         subtitle="Tendencias, rotación, costos y recomendaciones IA"
         actions={
-          <>
-            <input value={days} onChange={(e) => setDays(e.target.value)} style={{ width: 80 }} />
-            <button className="btn" onClick={() => reload().catch((e) => setError(e.message))}>Filtrar</button>
-            <Link to="/inventario/ops" className="btn">Ops Center</Link>
-          </>
+          <PageActions>
+            <input
+              className="input-compact"
+              value={days}
+              onChange={(e) => setDays(e.target.value)}
+              aria-label="Días"
+            />
+            <button className="btn" onClick={() => reload().catch((e) => setError(e.message))}>
+              Filtrar
+            </button>
+            <Link to="/inventario/ops" className="btn">Centro de operaciones</Link>
+          </PageActions>
         }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
-      <div className="kpi-grid kpi-grid-lg">
-        <div className="kpi-card"><span className="kpi-label">Rotación</span><span className="kpi-value">{String(kpis?.turnover ?? 0)}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Cobertura</span><span className="kpi-value">{String(kpis?.coverageDays ?? 0)}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Servicio</span><span className="kpi-value">{String(kpis?.serviceLevel ?? 0)}%</span></div>
-        <div className="kpi-card"><span className="kpi-label">Exactitud</span><span className="kpi-value">{String(kpis?.inventoryAccuracy ?? 0)}%</span></div>
-        <div className="kpi-card"><span className="kpi-label">Pérdidas</span><span className="kpi-value">{String(kpis?.losses ?? 0)}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Mermas</span><span className="kpi-value">{String(kpis?.shrinkage ?? 0)}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Ajustes</span><span className="kpi-value">{String(kpis?.adjustments ?? 0)}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Sin movimiento</span><span className="kpi-value">{String(kpis?.itemsWithoutMovement ?? 0)}</span></div>
-      </div>
-      <section className="panel">
-        <h3>Tendencia de consumo</h3>
+      {error ? <PageState variant="error" message={error} /> : null}
+
+      <PageSummary className="kpi-grid-lg">
+        <MetricCard label="Rotación" value={String(kpis?.turnover ?? 0)} />
+        <MetricCard label="Cobertura" value={String(kpis?.coverageDays ?? 0)} />
+        <MetricCard label="Servicio" value={`${String(kpis?.serviceLevel ?? 0)}%`} />
+        <MetricCard label="Exactitud" value={`${String(kpis?.inventoryAccuracy ?? 0)}%`} />
+        <MetricCard label="Pérdidas" value={String(kpis?.losses ?? 0)} />
+        <MetricCard label="Mermas" value={String(kpis?.shrinkage ?? 0)} />
+        <MetricCard label="Ajustes" value={String(kpis?.adjustments ?? 0)} />
+        <MetricCard label="Sin movimiento" value={String(kpis?.itemsWithoutMovement ?? 0)} />
+      </PageSummary>
+
+      <PageSection title="Tendencia de consumo">
         <ul>
           {trends.slice(-14).map((t) => (
             <li key={String(t.date)}>{String(t.date)}: {String(t.value)} ({String(t.changePct)}%)</li>
           ))}
         </ul>
-      </section>
-      <section className="panel">
-        <h3>Alta rotación</h3>
+      </PageSection>
+
+      <PageSection title="Alta rotación">
         <ul>{high.map((r) => <li key={String(r.itemKey)}>{String(r.itemKey)} · qty={String(r.qty)}</li>)}</ul>
-      </section>
-      <section className="panel">
-        <h3>Baja rotación / inmovilizado</h3>
+      </PageSection>
+
+      <PageSection title="Baja rotación / inmovilizado">
         <ul>
           {low.map((r) => <li key={`l-${String(r.itemKey)}`}>{String(r.itemKey)} · baja</li>)}
           {immobilized.map((r) => <li key={`i-${String(r.itemKey)}`}>{String(r.itemKey)} · inmovilizado</li>)}
         </ul>
-      </section>
-      <section className="panel">
-        <h3>Recomendaciones IA</h3>
+      </PageSection>
+
+      <PageSection title="Recomendaciones IA">
         <ul>
           {recommendations.map((r, idx) => (
             <li key={idx}>{String(r.action)} · {String(r.itemKey)} @ {String(r.warehouseKey)} — {String(r.reason)}</li>
           ))}
         </ul>
-      </section>
-    </>
+      </PageSection>
+    </PageLayout>
   );
 }

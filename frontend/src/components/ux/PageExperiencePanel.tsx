@@ -7,6 +7,9 @@ interface Props {
   hidden?: boolean;
 }
 
+/**
+ * PM-28 — Ayuda contextual: qué / por qué / cuándo / después.
+ */
 export function PageExperiencePanel({ hidden }: Props) {
   const { pathname } = useLocation();
   const experience = getPageExperience(pathname);
@@ -15,11 +18,33 @@ export function PageExperiencePanel({ hidden }: Props) {
 
   return (
     <aside className="page-experience-panel" aria-label="Ayuda de esta pantalla">
-      <p className="page-experience-desc">{humanizeCopy(experience.description)}</p>
-      <p className="page-experience-help">
-        <span className="page-experience-help-label" aria-hidden>💡</span>
-        {humanizeCopy(experience.help)}
+      <p className="page-experience-desc">
+        <span className="page-experience-q">¿Qué hago aquí?</span>{' '}
+        {humanizeCopy(experience.description)}
       </p>
+      {experience.why ? (
+        <p className="page-experience-help">
+          <span className="page-experience-q">¿Por qué existe?</span> {humanizeCopy(experience.why)}
+        </p>
+      ) : null}
+      {experience.when ? (
+        <p className="page-experience-help">
+          <span className="page-experience-q">¿Cuándo la uso?</span> {humanizeCopy(experience.when)}
+        </p>
+      ) : null}
+      {experience.after ? (
+        <p className="page-experience-help">
+          <span className="page-experience-q">¿Qué ocurre después?</span>{' '}
+          {humanizeCopy(experience.after)}
+        </p>
+      ) : (
+        <p className="page-experience-help">
+          <span className="page-experience-help-label" aria-hidden>
+            💡
+          </span>
+          {humanizeCopy(experience.help)}
+        </p>
+      )}
       {experience.nextStep ? (
         <p className="page-experience-next">
           <span className="page-experience-next-label">Siguiente paso recomendado:</span>{' '}
@@ -28,6 +53,9 @@ export function PageExperiencePanel({ hidden }: Props) {
           </Link>
         </p>
       ) : null}
+      <p className="page-experience-more">
+        <Link to="/ayuda">Más ayuda por experiencia</Link>
+      </p>
     </aside>
   );
 }

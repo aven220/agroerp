@@ -13,7 +13,7 @@ export function EmfgCenterPage() {
     <>
       <Header title="Centro de Producción" subtitle="Plan maestro, órdenes, BOM, rutas y programación" actions={
         <div className="row-actions">
-          <button className="btn" onClick={() => import('../api/emfg').then(({ seedEmfg }) => seedEmfg().then(reload))}>Sembrar EMFG</button>
+          <button className="btn" onClick={() => import('../api/emfg').then(({ seedEmfg }) => seedEmfg().then(reload))}>Cargar configuración inicial</button>
           <Link to="/manufactura/plan-maestro" className="btn">Plan Maestro</Link>
           <Link to="/manufactura/bom" className="btn">BOM</Link>
           <Link to="/manufactura/rutas" className="btn">Rutas</Link>

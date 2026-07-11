@@ -26,7 +26,7 @@ export function OpsIncidentsPage() {
     await openEopIncident({
       incidentKey: `inc-${Date.now()}`,
       title: 'Incidente operativo',
-      description: 'Creado desde Operations Center',
+      description: 'Creado desde el centro de operaciones',
       severity: 'warning',
       component: 'backend',
     });

@@ -139,8 +139,10 @@ export function CoffeeReceptionPage() {
       <PageSection title="Tickets de recepción">
         {tickets.length === 0 ? (
           <EmptyPanel
-            title="Sin tickets"
-            description="Registre la primera llegada para iniciar el flujo de compras de café."
+            title="Sin tickets de recepción"
+            description="Aún no hay llegadas registradas. Registre la primera recepción para iniciar el flujo de compra."
+            hint="Después podrá continuar con pesaje, calidad y liquidación."
+            action={{ label: 'Usar asistente de recepción', to: '/compras/wizard' }}
           />
         ) : (
           <EnterpriseDataGrid

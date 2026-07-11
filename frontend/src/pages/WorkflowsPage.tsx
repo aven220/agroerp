@@ -6,8 +6,10 @@ import {
   PageActions,
   PageSection,
   PageState,
-  EmptyPanel,
+  SimpleRecordsTable,
+  type SimpleColumn,
 } from '../components/page';
+import type { RowAction } from '../lib/data-grid/types';
 import { useAuth } from '../context/AuthContext';
 import {
   cloneWorkflowDefinition,
@@ -99,6 +101,77 @@ export function WorkflowsPage() {
     }
   }
 
+  const columns: SimpleColumn<WorkflowDefinition>[] = [
+    {
+      key: 'name',
+      label: 'Proceso',
+      render: (r) => <strong>{r.name}</strong>,
+      getValue: (r) => r.name,
+    },
+    {
+      key: 'category',
+      label: 'Categoría',
+      getValue: (r) =>
+        (r.versions[0]?.definition as { settings?: { processCategory?: string } })?.settings?.processCategory ?? '—',
+    },
+    {
+      key: 'version',
+      label: 'Versión',
+      getValue: (r) => `v${r.versions[0]?.version ?? '—'}`,
+    },
+    {
+      key: 'status',
+      label: 'Estado',
+      render: (r) => {
+        const status = r.versions[0]?.status ?? 'draft';
+        return (
+          <span className={`badge badge-${status}`}>
+            {STATUS_LABELS[status] ?? status}
+          </span>
+        );
+      },
+      getValue: (r) => r.versions[0]?.status ?? 'draft',
+    },
+    {
+      key: 'active',
+      label: 'Activo',
+      getValue: (r) => (r.active ? 'Sí' : 'No'),
+    },
+  ];
+
+  const rowActions: RowAction<WorkflowDefinition>[] = [
+    {
+      id: 'design',
+      label: 'Diseñar',
+      hidden: () => !canUpdate,
+      onAction: (r) => navigate(`/procesos/${r.id}/disenar`),
+    },
+    {
+      id: 'publish',
+      label: 'Publicar',
+      hidden: (r) => r.versions[0]?.status !== 'draft' || !canPublish,
+      onAction: (r) => { handlePublish(r); },
+    },
+    {
+      id: 'clone',
+      label: 'Clonar',
+      hidden: () => !canCreate,
+      onAction: (r) => { handleClone(r); },
+    },
+    {
+      id: 'export',
+      label: 'Exportar',
+      onAction: (r) => { handleExport(r); },
+    },
+    {
+      id: 'deactivate',
+      label: 'Desactivar',
+      variant: 'danger',
+      hidden: (r) => !r.active || !canAdmin,
+      onAction: (r) => { handleDeactivate(r); },
+    },
+  ];
+
   return (
     <PageLayout>
       <PageHeader
@@ -138,64 +211,16 @@ export function WorkflowsPage() {
       )}
 
       <PageSection title="Catálogo de procesos">
-        {loading ? (
-          <PageState variant="loading" message="Cargando procesos..." loadingVariant="table" />
-        ) : items.length === 0 ? (
-          <EmptyPanel title="Sin procesos" description="Cree o importe un proceso para comenzar." />
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Proceso</th>
-                  <th>Categoría</th>
-                  <th>Versión</th>
-                  <th>Estado</th>
-                  <th>Activo</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((row) => {
-                  const latest = row.versions[0];
-                  const category = (latest?.definition as { settings?: { processCategory?: string } })?.settings?.processCategory ?? '—';
-                  return (
-                    <tr key={row.id}>
-                      <td>
-                        <strong>{row.name}</strong>
-                      </td>
-                      <td>{category}</td>
-                      <td>v{latest?.version ?? '—'}</td>
-                      <td>
-                        <span className={`badge badge-${latest?.status ?? 'draft'}`}>
-                          {STATUS_LABELS[latest?.status ?? 'draft'] ?? latest?.status}
-                        </span>
-                      </td>
-                      <td>{row.active ? 'Sí' : 'No'}</td>
-                      <td>
-                        <div className="row-actions">
-                          {canUpdate ? (
-                            <Link to={`/procesos/${row.id}/disenar`} className="btn btn-sm">Diseñar</Link>
-                          ) : null}
-                          {latest?.status === 'draft' && canPublish ? (
-                            <button type="button" className="btn btn-sm" onClick={() => handlePublish(row)}>Publicar</button>
-                          ) : null}
-                          {canCreate ? (
-                            <button type="button" className="btn btn-sm" onClick={() => handleClone(row)}>Clonar</button>
-                          ) : null}
-                          <button type="button" className="btn btn-sm" onClick={() => handleExport(row)}>Exportar</button>
-                          {row.active && canAdmin ? (
-                            <button type="button" className="btn btn-sm btn-danger" onClick={() => handleDeactivate(row)}>Desactivar</button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <SimpleRecordsTable
+          gridId="workflows-catalog"
+          columns={columns}
+          data={items}
+          loading={loading}
+          selectable={false}
+          rowActions={rowActions}
+          emptyMessage="Sin procesos"
+          emptyDescription="Cree o importe un proceso para comenzar."
+        />
       </PageSection>
     </PageLayout>
   );

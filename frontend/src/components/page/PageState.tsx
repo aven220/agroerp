@@ -30,11 +30,11 @@ interface PageStateProps {
 
 const DEFAULTS: Record<PageStateVariant, { title: string; illustration: 'data' | 'search' | 'error' | 'permissions' | 'offline' | 'inbox' }> = {
   loading: { title: 'Cargando…', illustration: 'data' },
-  empty: { title: 'Sin registros', illustration: 'inbox' },
+  empty: { title: 'Aún no hay información', illustration: 'inbox' },
   error: { title: 'No se pudo cargar', illustration: 'error' },
   forbidden: { title: 'Sin permisos', illustration: 'permissions' },
   offline: { title: 'Sin conexión', illustration: 'offline' },
-  'no-results': { title: 'Sin resultados', illustration: 'search' },
+  'no-results': { title: 'Sin resultados para su búsqueda', illustration: 'search' },
 };
 
 export function PageState({
@@ -72,17 +72,23 @@ export function PageState({
 
 /** Replaces plain `<p className="muted">Sin datos</p>` in tab panels */
 export function EmptyPanel({
-  title = 'Sin datos',
+  title = 'Aún no hay información',
   description,
+  hint,
+  action,
 }: {
   title?: string;
   description?: string;
+  hint?: string;
+  action?: { label: string; to?: string; onClick?: () => void };
 }) {
   return (
     <EmptyState
       illustration="inbox"
       title={title}
       description={description}
+      hint={hint}
+      action={action}
     />
   );
 }

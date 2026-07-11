@@ -16,7 +16,7 @@ export function EfmFoCenterPage() {
         subtitle="Estados financieros, cierres, KPIs y analítica"
         actions={
           <div className="row-actions">
-            <button className="btn" onClick={() => import('../api/efm-fo').then(({ seedEfmFo }) => seedEfmFo().then(reload))}>Sembrar FOC</button>
+            <button className="btn" onClick={() => import('../api/efm-fo').then(({ seedEfmFo }) => seedEfmFo().then(reload))}>Cargar configuración inicial</button>
             <Link to="/finanzas/foc/estados" className="btn">Estados financieros</Link>
             <Link to="/finanzas/foc/cierres" className="btn">Cierres</Link>
             <Link to="/finanzas/foc/kpis" className="btn">Indicadores</Link>

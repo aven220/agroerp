@@ -1,6 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  PageToolbar,
+  FieldGroup,
+  FormActions,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
+import type { RowAction } from '../lib/data-grid/types';
 import {
   downloadReportExport,
   generateCoffeeReport,
@@ -12,6 +24,8 @@ const REPORT_TYPES = [
   'daily', 'weekly', 'monthly', 'yearly',
   'producer', 'farm', 'lot', 'financial', 'quality', 'audit',
 ];
+
+type ReportRow = Record<string, unknown> & { id: string };
 
 export function CoffeeReportsPage() {
   const [reports, setReports] = useState<Array<Record<string, unknown>>>([]);
@@ -53,73 +67,98 @@ export function CoffeeReportsPage() {
     }
   };
 
+  const data = reports.map((r) => withRowId(r, 'id', 'reportKey'));
+
+  const rowActions: RowAction<ReportRow>[] = [
+    {
+      id: 'download',
+      label: 'Descargar',
+      onAction: (r) => {
+        downloadReportExport(r);
+      },
+    },
+  ];
+
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Centro de reportes"
         subtitle="Diarios, financieros, calidad, auditoría y personalizados"
-        actions={<Link to="/compras/ops" className="btn">Operations</Link>}
+        actions={
+          <PageActions>
+            <Link to="/compras/ops" className="btn">Operations</Link>
+          </PageActions>
+        }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
+      {error ? <PageState variant="error" message={error} /> : null}
 
-      <section className="panel">
-        <h3>Generar reporte</h3>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <select value={reportType} onChange={(e) => setReportType(e.target.value)}>
-            {REPORT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <select value={period} onChange={(e) => setPeriod(e.target.value)}>
-            <option value="day">Día</option>
-            <option value="week">Semana</option>
-            <option value="month">Mes</option>
-            <option value="year">Año</option>
-          </select>
-          <select value={format} onChange={(e) => setFormat(e.target.value)}>
-            <option value="csv">CSV</option>
-            <option value="excel">Excel</option>
-            <option value="pdf">PDF</option>
-            <option value="json">JSON</option>
-          </select>
-          <button className="btn" onClick={generate}>Generar y exportar</button>
-        </div>
-      </section>
+      <PageSection title="Generar reporte">
+        <PageToolbar>
+          <FieldGroup label="Tipo">
+            <select value={reportType} onChange={(e) => setReportType(e.target.value)}>
+              {REPORT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Periodo">
+            <select value={period} onChange={(e) => setPeriod(e.target.value)}>
+              <option value="day">Día</option>
+              <option value="week">Semana</option>
+              <option value="month">Mes</option>
+              <option value="year">Año</option>
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Formato">
+            <select value={format} onChange={(e) => setFormat(e.target.value)}>
+              <option value="csv">CSV</option>
+              <option value="excel">Excel</option>
+              <option value="pdf">PDF</option>
+              <option value="json">JSON</option>
+            </select>
+          </FieldGroup>
+        </PageToolbar>
+        <FormActions>
+          <button type="button" className="btn btn-primary" onClick={generate}>Generar y exportar</button>
+        </FormActions>
+      </PageSection>
 
-      <section className="panel">
-        <h3>Constructor personalizado</h3>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input value={customTitle} onChange={(e) => setCustomTitle(e.target.value)} />
-          <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)}>
-            <option value="producer">Productor</option>
-            <option value="farm">Finca</option>
-            <option value="lot">Lote</option>
-            <option value="center">Centro</option>
-          </select>
-          <button className="btn" onClick={generateCustom}>Generar personalizado</button>
-        </div>
-      </section>
+      <PageSection title="Constructor personalizado">
+        <PageToolbar>
+          <FieldGroup label="Título">
+            <input value={customTitle} onChange={(e) => setCustomTitle(e.target.value)} />
+          </FieldGroup>
+          <FieldGroup label="Agrupar por">
+            <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)}>
+              <option value="producer">Productor</option>
+              <option value="farm">Finca</option>
+              <option value="lot">Lote</option>
+              <option value="center">Centro</option>
+            </select>
+          </FieldGroup>
+        </PageToolbar>
+        <FormActions>
+          <button type="button" className="btn btn-primary" onClick={generateCustom}>Generar personalizado</button>
+        </FormActions>
+      </PageSection>
 
-      <section className="panel">
-        <h3>Historial de reportes</h3>
-        <table className="data-table">
-          <thead>
-            <tr><th>Clave</th><th>Tipo</th><th>Periodo</th><th>Formato</th><th>Fecha</th><th></th></tr>
-          </thead>
-          <tbody>
-            {reports.map((r) => (
-              <tr key={String(r.id)}>
-                <td>{String(r.reportKey)}</td>
-                <td>{String(r.reportType)}</td>
-                <td>{String(r.period)}</td>
-                <td>{String(r.format)}</td>
-                <td>{r.generatedAt ? new Date(String(r.generatedAt)).toLocaleString() : '—'}</td>
-                <td>
-                  <button className="btn" onClick={() => downloadReportExport(r)}>Descargar</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </>
+      <PageSection title="Historial de reportes">
+        <SimpleRecordsTable
+          gridId="coffee-reports"
+          selectable={false}
+          data={data}
+          columns={[
+            { key: 'reportKey', label: 'Clave', getValue: (r) => String(r.reportKey) },
+            { key: 'reportType', label: 'Tipo', getValue: (r) => String(r.reportType) },
+            { key: 'period', label: 'Periodo', getValue: (r) => String(r.period) },
+            { key: 'format', label: 'Formato', getValue: (r) => String(r.format) },
+            {
+              key: 'generatedAt',
+              label: 'Fecha',
+              getValue: (r) => (r.generatedAt ? new Date(String(r.generatedAt)).toLocaleString() : '—'),
+            },
+          ]}
+          rowActions={rowActions}
+        />
+      </PageSection>
+    </PageLayout>
   );
 }

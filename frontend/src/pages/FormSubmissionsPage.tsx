@@ -1,16 +1,55 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  SimpleRecordsTable,
+  type SimpleColumn,
+} from '../components/page';
 import { listSubmissions, saveFormsReport, type FormSubmission } from '../api/forms';
-import { LoadingState } from '../components/ux/LoadingState';
+
+const columns: SimpleColumn<FormSubmission>[] = [
+  {
+    key: 'form',
+    label: 'Formulario',
+    getValue: (r) => r.form?.name ?? r.formId,
+  },
+  {
+    key: 'formVersion',
+    label: 'Versión',
+    getValue: (r) => `v${r.formVersion}`,
+  },
+  { key: 'status', label: 'Estado', getValue: (r) => r.status },
+  { key: 'syncStatus', label: 'Sync', getValue: (r) => r.syncStatus },
+  {
+    key: 'createdAt',
+    label: 'Fecha',
+    getValue: (r) => new Date(r.createdAt).toLocaleString('es-CO'),
+  },
+  {
+    key: 'data',
+    label: 'Datos',
+    render: (r) => (
+      <pre className="code-inline">{JSON.stringify(r.data).slice(0, 80)}...</pre>
+    ),
+    getValue: (r) => JSON.stringify(r.data).slice(0, 80),
+  },
+];
 
 export function FormSubmissionsPage() {
   const [items, setItems] = useState<FormSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    listSubmissions().then(setItems).finally(() => setLoading(false));
+    listSubmissions()
+      .then(setItems)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Error al cargar'))
+      .finally(() => setLoading(false));
   }, []);
 
   async function handleExport() {
@@ -25,40 +64,31 @@ export function FormSubmissionsPage() {
   }
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Envíos de formularios"
         subtitle="Capturas y sincronización"
         actions={
-          <div className="row-actions">
+          <PageActions>
             <Link to="/formularios" className="btn">Catálogo</Link>
             <button type="button" className="btn btn-primary" disabled={exporting} onClick={handleExport}>
               {exporting ? 'Generando...' : 'Descargar envíos (Excel)'}
             </button>
-          </div>
+          </PageActions>
         }
       />
-      {loading ? <LoadingState variant="table" message="Cargando..." /> : (
-        <table className="data-table">
-          <thead>
-            <tr><th>Formulario</th><th>Versión</th><th>Estado</th><th>Sync</th><th>Fecha</th><th>Datos</th></tr>
-          </thead>
-          <tbody>
-            {items.length === 0 ? (
-              <tr><td colSpan={6} className="muted">Sin envíos</td></tr>
-            ) : items.map((s) => (
-              <tr key={s.id}>
-                <td>{s.form?.name ?? s.formId}</td>
-                <td>v{s.formVersion}</td>
-                <td>{s.status}</td>
-                <td>{s.syncStatus}</td>
-                <td>{new Date(s.createdAt).toLocaleString('es-CO')}</td>
-                <td><pre className="code-inline">{JSON.stringify(s.data).slice(0, 80)}...</pre></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </>
+      {error ? <PageState variant="error" message={error} /> : null}
+
+      <PageSection title="Envíos">
+        <SimpleRecordsTable
+          gridId="form-submissions"
+          columns={columns}
+          data={items}
+          loading={loading}
+          selectable={false}
+          emptyMessage="Sin envíos"
+        />
+      </PageSection>
+    </PageLayout>
   );
 }

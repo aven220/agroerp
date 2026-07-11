@@ -1,12 +1,26 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import { useSearchParams } from 'react-router-dom';
+import { HubToolbar } from '../components/layout/HubToolbar';
+import {
+  PageLayout,
+  PageHeader,
+  PageSection,
+  PageState,
+  PageToolbar,
+  FieldGroup,
+  FormActions,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
+import type { RowAction } from '../lib/data-grid/types';
 import {
   getTraceabilityByLot,
   getTraceabilityByQr,
   getTraceabilityByTicket,
   listInventoryLots,
 } from '../api/coffee';
+
+type LotRow = Record<string, unknown> & { id: string };
 
 export function CoffeeTraceabilityPage() {
   const [searchParams] = useSearchParams();
@@ -44,68 +58,85 @@ export function CoffeeTraceabilityPage() {
   const lot = data?.lot as Record<string, unknown> | null;
   const ticket = data?.ticket as Record<string, unknown> | undefined;
 
+  const lotData = lots.map((l) => withRowId(l, 'id', 'lotKey'));
+  const mapData = map.map((m) => withRowId(m, 'id', 'sequence'));
+
+  const lotActions: RowAction<LotRow>[] = [
+    {
+      id: 'trace',
+      label: 'Trazar',
+      onAction: (r) => {
+        setMode('lot');
+        setQuery(String(r.lotKey));
+        lookup(String(r.lotKey), 'lot');
+      },
+    },
+  ];
+
   return (
-    <>
-      <Header
+    <PageLayout
+      toolbar={
+        <HubToolbar
+          primaryAction={{ label: 'Inventario', to: '/compras/inventario' }}
+          moreActions={[
+            { label: 'Kardex', to: '/compras/inventario/kardex' },
+            { label: 'Auditoría', to: '/compras/inventario/auditoria' },
+            { label: 'Centro', to: '/compras' },
+          ]}
+        />
+      }
+    >
+      <PageHeader
         title="Trazabilidad de café"
         subtitle="Productor → compra → pesaje → calidad → liquidación → inventario"
-        actions={
-          <>
-            <Link to="/compras/inventario" className="btn">Inventario</Link>
-            <Link to="/compras/inventario/kardex" className="btn">Kardex</Link>
-            <Link to="/compras/inventario/auditoria" className="btn">Auditoría</Link>
-            <Link to="/compras" className="btn">Centro</Link>
-          </>
-        }
       />
 
-      <section className="panel">
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <select value={mode} onChange={(e) => setMode(e.target.value as 'ticket' | 'lot' | 'qr')}>
-            <option value="ticket">Ticket compra</option>
-            <option value="lot">Lote inventario</option>
-            <option value="qr">QR / barcode</option>
-          </select>
-          <input
-            style={{ flex: 1 }}
-            placeholder="Buscar..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <button className="btn" onClick={() => lookup()}>Consultar</button>
-        </div>
-        {error ? <p className="error-panel">{error}</p> : null}
-      </section>
+      <PageSection title="Consulta">
+        <PageToolbar>
+          <FieldGroup label="Modo">
+            <select value={mode} onChange={(e) => setMode(e.target.value as 'ticket' | 'lot' | 'qr')}>
+              <option value="ticket">Ticket compra</option>
+              <option value="lot">Lote inventario</option>
+              <option value="qr">QR / barcode</option>
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Buscar">
+            <input
+              placeholder="Buscar..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </FieldGroup>
+        </PageToolbar>
+        <FormActions>
+          <button type="button" className="btn btn-primary" onClick={() => lookup()}>Consultar</button>
+        </FormActions>
+        {error ? <PageState variant="error" message={error} /> : null}
+      </PageSection>
 
-      <section className="panel">
-        <h3>Lotes en inventario</h3>
-        <table className="data-table">
-          <thead>
-            <tr><th>Lote</th><th>Productor</th><th>Disponible</th><th>Bodega</th><th>Estado</th><th></th></tr>
-          </thead>
-          <tbody>
-            {lots.map((l) => (
-              <tr key={String(l.id ?? l.lotKey)}>
-                <td>{String(l.lotKey)}</td>
-                <td>{String(l.producerName ?? '—')}</td>
-                <td>{l.availableKg != null ? `${l.availableKg} kg` : '—'}</td>
-                <td>{String(l.warehouse)}</td>
-                <td>{String(l.status)}</td>
-                <td>
-                  <button className="btn" onClick={() => { setMode('lot'); setQuery(String(l.lotKey)); lookup(String(l.lotKey), 'lot'); }}>
-                    Trazar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <PageSection title="Lotes en inventario">
+        <SimpleRecordsTable
+          gridId="coffee-traceability-lots"
+          selectable={false}
+          data={lotData}
+          columns={[
+            { key: 'lotKey', label: 'Lote', getValue: (r) => String(r.lotKey) },
+            { key: 'producerName', label: 'Productor', getValue: (r) => String(r.producerName ?? '—') },
+            {
+              key: 'availableKg',
+              label: 'Disponible',
+              getValue: (r) => (r.availableKg != null ? `${r.availableKg} kg` : '—'),
+            },
+            { key: 'warehouse', label: 'Bodega', getValue: (r) => String(r.warehouse) },
+            { key: 'status', label: 'Estado', getValue: (r) => String(r.status) },
+          ]}
+          rowActions={lotActions}
+        />
+      </PageSection>
 
       {data ? (
         <>
-          <section className="panel">
-            <h3>Resumen</h3>
+          <PageSection title="Resumen">
             <p>
               Ticket <strong>{String(ticket?.ticketKey ?? '—')}</strong> · Productor{' '}
               <strong>{String(ticket?.producerName ?? lot?.producerName ?? '—')}</strong> · Finca{' '}
@@ -120,10 +151,9 @@ export function CoffeeTraceabilityPage() {
                 <strong>{Number(lot.averageCost ?? 0).toLocaleString()}</strong>
               </p>
             ) : null}
-          </section>
+          </PageSection>
 
-          <section className="panel">
-            <h3>Historial completo</h3>
+          <PageSection title="Historial completo">
             <ol>
               {timeline.map((t, i) => (
                 <li key={i}>
@@ -132,31 +162,30 @@ export function CoffeeTraceabilityPage() {
                 </li>
               ))}
             </ol>
-          </section>
+          </PageSection>
 
-          <section className="panel">
-            <h3>Mapa de movimientos</h3>
-            <table className="data-table">
-              <thead>
-                <tr><th>#</th><th>Tipo</th><th>Cantidad</th><th>Bodega</th><th>Origen</th><th>Destino</th><th>Fecha</th></tr>
-              </thead>
-              <tbody>
-                {map.map((m) => (
-                  <tr key={String(m.sequence)}>
-                    <td>{String(m.sequence)}</td>
-                    <td>{String(m.movementType)}</td>
-                    <td>{String(m.quantityKg)} kg</td>
-                    <td>{String(m.warehouse)}</td>
-                    <td>{String(m.fromWarehouse ?? '—')}</td>
-                    <td>{String(m.toWarehouse ?? '—')}</td>
-                    <td>{m.postedAt ? new Date(String(m.postedAt)).toLocaleString() : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+          <PageSection title="Mapa de movimientos">
+            <SimpleRecordsTable
+              gridId="coffee-traceability-map"
+              selectable={false}
+              data={mapData}
+              columns={[
+                { key: 'sequence', label: '#', getValue: (r) => String(r.sequence) },
+                { key: 'movementType', label: 'Tipo', getValue: (r) => String(r.movementType) },
+                { key: 'quantityKg', label: 'Cantidad', getValue: (r) => `${String(r.quantityKg)} kg` },
+                { key: 'warehouse', label: 'Bodega', getValue: (r) => String(r.warehouse) },
+                { key: 'fromWarehouse', label: 'Origen', getValue: (r) => String(r.fromWarehouse ?? '—') },
+                { key: 'toWarehouse', label: 'Destino', getValue: (r) => String(r.toWarehouse ?? '—') },
+                {
+                  key: 'postedAt',
+                  label: 'Fecha',
+                  getValue: (r) => (r.postedAt ? new Date(String(r.postedAt)).toLocaleString() : '—'),
+                },
+              ]}
+            />
+          </PageSection>
         </>
       ) : null}
-    </>
+    </PageLayout>
   );
 }

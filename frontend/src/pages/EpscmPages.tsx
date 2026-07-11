@@ -51,7 +51,7 @@ export function EpscmCenterPage() {
         <div className="kpi-card"><span className="kpi-label">Cobertura prom.</span><span className="kpi-value">{ind?.avgCoverageDays ?? '—'} d</span></div>
       </div>
       <section className="card">
-        <button className="btn btn-primary" onClick={() => seedEpscm().then(() => getEpscmDashboard().then(setDash))}>Sembrar EPSCM</button>
+        <button className="btn btn-primary" onClick={() => seedEpscm().then(() => getEpscmDashboard().then(setDash))}>Cargar configuración inicial</button>
       </section>
     </>
   );

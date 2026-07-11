@@ -64,7 +64,7 @@ export function EpscmWmsCenterPage() {
         })}>Inicializar WMS</button>
         {warehouses[0] && (
           <button className="btn" style={{ marginLeft: 8 }} onClick={() => seedEpscmWmsHierarchy(String(warehouses[0].warehouseKey))}>
-            Sembrar jerarquía {String(warehouses[0].code)}
+            Cargar jerarquía {String(warehouses[0].code)}
           </button>
         )}
       </section>

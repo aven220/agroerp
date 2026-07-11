@@ -11,7 +11,7 @@ export function HcmSsCenterPage() {
     <>
       <Header title="Seguridad y salud laboral" subtitle="Salud, riesgos, EPP, incidentes, inspecciones y bienestar" actions={
         <div className="row-actions">
-          <button className="btn" onClick={() => import('../api/hcm-ss').then(({ seedHcmSs }) => seedHcmSs().then(reload))}>Sembrar SST</button>
+          <button className="btn" onClick={() => import('../api/hcm-ss').then(({ seedHcmSs }) => seedHcmSs().then(reload))}>Cargar configuración inicial</button>
           <Link to="/rrhh/sst/salud" className="btn">Salud Ocupacional</Link>
           <Link to="/rrhh/sst/riesgos" className="btn">Riesgos</Link>
           <Link to="/rrhh/sst/epp" className="btn">EPP</Link>

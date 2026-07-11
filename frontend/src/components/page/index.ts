@@ -18,6 +18,8 @@ export {
 } from './InfoGrid';
 export { PageState, EmptyPanel, type PageStateVariant } from './PageState';
 export { TableToolbar, TableSearch } from './TableToolbar';
+export { SimpleRecordsTable, withRowId } from './SimpleRecordsTable';
+export type { SimpleColumn } from './SimpleRecordsTable';
 
 export {
   FieldGroup,

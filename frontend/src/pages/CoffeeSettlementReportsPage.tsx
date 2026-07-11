@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageSummary,
+  MetricCard,
+  SimpleRecordsTable,
+  withRowId,
+} from '../components/page';
 import { getSettlementKpis, listCoffeeSettlements } from '../api/coffee';
 import { LoadingState } from '../components/ux/LoadingState';
 
@@ -13,50 +22,63 @@ export function CoffeeSettlementReportsPage() {
     listCoffeeSettlements().then((r) => setRows(r as Array<Record<string, unknown>>));
   }, []);
 
-  if (!kpis) return <LoadingState variant="page" message="Cargando reportes..." />;
+  if (!kpis) return <LoadingState variant="page" message="Cargando reportes…" />;
+
+  const data = rows.map((r) => withRowId(r, 'id', 'settlementKey'));
 
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Reportes y KPIs de liquidación"
         subtitle="Totales, pagos y calidad aplicada"
-        actions={<Link to="/compras/liquidaciones" className="btn">Centro liquidaciones</Link>}
+        actions={
+          <PageActions>
+            <Link to="/compras/liquidaciones" className="btn">Centro liquidaciones</Link>
+          </PageActions>
+        }
       />
-      <section className="panel grid-4">
-        <div><strong>Liquidaciones</strong><div>{String(kpis.count)}</div></div>
-        <div><strong>Kg liquidados</strong><div>{Number(kpis.kgSettled ?? 0).toLocaleString()}</div></div>
-        <div><strong>Bonificaciones</strong><div>{Number(kpis.bonusesTotal ?? 0).toLocaleString()}</div></div>
-        <div><strong>Castigos</strong><div>{Number(kpis.penaltiesTotal ?? 0).toLocaleString()}</div></div>
-        <div><strong>Pagadas</strong><div>{String(kpis.paidCount)}</div></div>
-        <div><strong>Parciales</strong><div>{String(kpis.partialCount)}</div></div>
-        <div><strong>Pendientes pago</strong><div>{String(kpis.pendingCount)}</div></div>
-        <div><strong>Saldo</strong><div>{Number(kpis.outstanding ?? 0).toLocaleString()}</div></div>
-      </section>
-      <section className="panel">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Liquidación</th><th>Productor</th><th>Neto</th><th>Bonos</th><th>Castigos</th><th>Total</th><th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const ticket = r.ticket as Record<string, unknown> | undefined;
-              return (
-                <tr key={String(r.id)}>
-                  <td>{String(r.settlementKey)}</td>
-                  <td>{String(ticket?.producerName ?? '')}</td>
-                  <td>{String(r.netWeightKg)}</td>
-                  <td>{Number(r.bonusesTotal ?? 0).toLocaleString()}</td>
-                  <td>{Number(r.penaltiesTotal ?? 0).toLocaleString()}</td>
-                  <td>{Number(r.totalAmount).toLocaleString()}</td>
-                  <td>{String(r.paymentStatus)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
-    </>
+      <PageSummary>
+        <MetricCard label="Liquidaciones" value={String(kpis.count)} />
+        <MetricCard label="Kg liquidados" value={Number(kpis.kgSettled ?? 0).toLocaleString()} />
+        <MetricCard label="Bonificaciones" value={Number(kpis.bonusesTotal ?? 0).toLocaleString()} />
+        <MetricCard label="Castigos" value={Number(kpis.penaltiesTotal ?? 0).toLocaleString()} />
+        <MetricCard label="Pagadas" value={String(kpis.paidCount)} />
+        <MetricCard label="Parciales" value={String(kpis.partialCount)} />
+        <MetricCard label="Pendientes pago" value={String(kpis.pendingCount)} />
+        <MetricCard label="Saldo" value={Number(kpis.outstanding ?? 0).toLocaleString()} />
+      </PageSummary>
+      <PageSection>
+        <SimpleRecordsTable
+          gridId="coffee-settlement-reports"
+          selectable={false}
+          data={data}
+          columns={[
+            { key: 'settlementKey', label: 'Liquidación', getValue: (r) => String(r.settlementKey) },
+            {
+              key: 'producerName',
+              label: 'Productor',
+              getValue: (r) => String((r.ticket as Record<string, unknown> | undefined)?.producerName ?? ''),
+            },
+            { key: 'netWeightKg', label: 'Neto', getValue: (r) => String(r.netWeightKg) },
+            {
+              key: 'bonusesTotal',
+              label: 'Bonos',
+              getValue: (r) => Number(r.bonusesTotal ?? 0).toLocaleString(),
+            },
+            {
+              key: 'penaltiesTotal',
+              label: 'Castigos',
+              getValue: (r) => Number(r.penaltiesTotal ?? 0).toLocaleString(),
+            },
+            {
+              key: 'totalAmount',
+              label: 'Total',
+              getValue: (r) => Number(r.totalAmount).toLocaleString(),
+            },
+            { key: 'paymentStatus', label: 'Estado', getValue: (r) => String(r.paymentStatus) },
+          ]}
+        />
+      </PageSection>
+    </PageLayout>
   );
 }

@@ -16,7 +16,7 @@ export function HcmPyCenterPage() {
     <>
       <Header title="Centro de nómina" subtitle="Motor de nómina, prestaciones y beneficios" actions={
         <div className="row-actions">
-          <button className="btn" onClick={() => import('../api/hcm-py').then(({ seedHcmPy }) => seedHcmPy().then(reload))}>Sembrar Nómina</button>
+          <button className="btn" onClick={() => import('../api/hcm-py').then(({ seedHcmPy }) => seedHcmPy().then(reload))}>Cargar configuración inicial</button>
           <Link to="/rrhh/nomina/conceptos" className="btn">Conceptos</Link>
           <Link to="/rrhh/nomina/liquidaciones" className="btn">Liquidaciones</Link>
           <Link to="/rrhh/nomina/beneficios" className="btn">Beneficios</Link>

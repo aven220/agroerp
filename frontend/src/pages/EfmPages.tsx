@@ -20,7 +20,7 @@ export function EfmCenterPage() {
         subtitle="Plan de cuentas, períodos, asientos y reportes contables"
         actions={
           <div className="row-actions">
-            <button className="btn" onClick={() => seedEfm().then(reload).catch((e) => setError(e.message))}>Sembrar financiero</button>
+            <button className="btn" onClick={() => seedEfm().then(reload).catch((e) => setError(e.message))}>Cargar configuración inicial</button>
             <Link to="/finanzas/plan-cuentas" className="btn">Plan de cuentas</Link>
             <Link to="/finanzas/configuracion" className="btn">Configuración</Link>
             <Link to="/finanzas/reglas" className="btn">Reglas contables</Link>
@@ -430,7 +430,7 @@ export function EfmVoucherTypesPage() {
         subtitle="Numeración, aprobación y origen permitido"
         actions={
           <div className="row-actions">
-            <button className="btn" onClick={() => import('../api/efm').then(({ seedEfmVoucherTypes }) => seedEfmVoucherTypes().then(reload))}>Sembrar tipos</button>
+            <button className="btn" onClick={() => import('../api/efm').then(({ seedEfmVoucherTypes }) => seedEfmVoucherTypes().then(reload))}>Cargar configuración inicial</button>
             <Link to="/finanzas" className="btn">Finanzas</Link>
           </div>
         }

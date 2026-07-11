@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import {
+  PageLayout,
+  PageHeader,
+  PageActions,
+  PageSection,
+  PageState,
+  SimpleRecordsTable,
+  withRowId,
+  type SimpleColumn,
+} from '../components/page';
+import type { RowAction } from '../lib/data-grid/types';
 import {
   acceptEimsSupplySuggestion,
   generateEimsSupplySuggestions,
@@ -8,57 +18,79 @@ import {
   rejectEimsSupplySuggestion,
 } from '../api/eims';
 
+type SuggestionRow = Record<string, unknown> & { id: string };
+
+const columns: SimpleColumn<SuggestionRow>[] = [
+  { key: 'suggestionType', label: 'Tipo', getValue: (r) => String(r.suggestionType ?? '') },
+  { key: 'itemKey', label: 'Artículo', getValue: (r) => String(r.itemKey ?? '') },
+  { key: 'warehouseKey', label: 'Bodega', getValue: (r) => String(r.warehouseKey ?? '') },
+  { key: 'fromWarehouseKey', label: 'Desde', getValue: (r) => String(r.fromWarehouseKey ?? '—') },
+  { key: 'suggestedQty', label: 'Cantidad', getValue: (r) => String(r.suggestedQty ?? '') },
+  { key: 'totalCost', label: 'Costo', getValue: (r) => Number(r.totalCost ?? 0).toLocaleString() },
+  { key: 'status', label: 'Estado', getValue: (r) => String(r.status ?? '') },
+];
+
 export function EimsSuggestionsPage() {
-  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  const [rows, setRows] = useState<SuggestionRow[]>([]);
   const [error, setError] = useState('');
 
   const reload = async () => {
-    setRows((await listEimsSupplySuggestions()) as Array<Record<string, unknown>>);
+    setRows(
+      ((await listEimsSupplySuggestions()) as Array<Record<string, unknown>>).map((row) =>
+        withRowId(row, 'id', 'suggestionKey'),
+      ),
+    );
   };
 
   useEffect(() => { reload().catch((e) => setError(e.message)); }, []);
 
+  const rowActions: RowAction<SuggestionRow>[] = [
+    {
+      id: 'accept',
+      label: 'Aceptar',
+      hidden: (r) => r.status !== 'proposed',
+      onAction: (r) => {
+        acceptEimsSupplySuggestion(String(r.suggestionKey)).then(reload).catch((e) => setError(e.message));
+      },
+    },
+    {
+      id: 'reject',
+      label: 'Rechazar',
+      hidden: (r) => r.status !== 'proposed',
+      onAction: (r) => {
+        rejectEimsSupplySuggestion(String(r.suggestionKey), 'Rechazada por usuario')
+          .then(reload)
+          .catch((e) => setError(e.message));
+      },
+    },
+  ];
+
   return (
-    <>
-      <Header
+    <PageLayout>
+      <PageHeader
         title="Sugerencias de compra y traslado"
         subtitle="Reabastecimiento automático por reglas y demanda"
         actions={
-          <>
+          <PageActions>
             <button className="btn" onClick={() => generateEimsSupplySuggestions().then(reload).catch((e) => setError(e.message))}>
               Regenerar
             </button>
             <Link to="/inventario/abastecimiento" className="btn">Centro</Link>
-          </>
+          </PageActions>
         }
       />
-      {error ? <section className="panel error-panel">{error}</section> : null}
-      <section className="panel">
-        <table className="data-table">
-          <thead><tr><th>Tipo</th><th>Artículo</th><th>Bodega</th><th>Desde</th><th>Cantidad</th><th>Costo</th><th>Estado</th><th></th></tr></thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={String(r.id)}>
-                <td>{String(r.suggestionType)}</td>
-                <td>{String(r.itemKey)}</td>
-                <td>{String(r.warehouseKey)}</td>
-                <td>{String(r.fromWarehouseKey ?? '—')}</td>
-                <td>{String(r.suggestedQty)}</td>
-                <td>{Number(r.totalCost ?? 0).toLocaleString()}</td>
-                <td>{String(r.status)}</td>
-                <td>
-                  {r.status === 'proposed' ? (
-                    <>
-                      <button className="btn" onClick={() => acceptEimsSupplySuggestion(String(r.suggestionKey)).then(reload).catch((e) => setError(e.message))}>Aceptar</button>
-                      <button className="btn" onClick={() => rejectEimsSupplySuggestion(String(r.suggestionKey), 'Rechazada por usuario').then(reload).catch((e) => setError(e.message))}>Rechazar</button>
-                    </>
-                  ) : null}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </>
+      {error ? <PageState variant="error" message={error} /> : null}
+
+      <PageSection title="Sugerencias">
+        <SimpleRecordsTable
+          gridId="eims-suggestions"
+          columns={columns}
+          data={rows}
+          selectable={false}
+          rowActions={rowActions}
+          emptyMessage="Sin sugerencias"
+        />
+      </PageSection>
+    </PageLayout>
   );
 }
