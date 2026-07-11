@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ALL_NAV_ITEMS, type NavItem } from '../../config/navigation';
+import type { NavItem } from '../../config/navigation';
+import { getCoopPackageNavItems } from '../../config/experienceCenters';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
-import { useExperienceCenterOptional } from '../../context/ExperienceCenterContext';
 import { canAccessPath } from '../../config/routePermissions';
 import {
   groupSearchHits,
@@ -29,7 +29,6 @@ type FlatResult =
 export function GlobalSearch() {
   const { searchOpen, setSearchOpen, addRecentSearch, recentSearches, filterNavItem, favorites } = useNavigation();
   const { hasPermission } = useAuth();
-  const experience = useExperienceCenterOptional();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
@@ -37,21 +36,8 @@ export function GlobalSearch() {
   const [searchingEntities, setSearchingEntities] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const packageNavPool = useMemo(() => {
-    if (experience?.packageId === 'coop-cafe-co' && experience.experienceNav?.length) {
-      const seen = new Set<string>();
-      const items: NavItem[] = [];
-      for (const cat of experience.experienceNav) {
-        for (const navItem of cat.items) {
-          if (seen.has(navItem.id)) continue;
-          seen.add(navItem.id);
-          items.push(navItem);
-        }
-      }
-      return items;
-    }
-    return ALL_NAV_ITEMS;
-  }, [experience?.packageId, experience?.experienceNav]);
+  /** PM-32: búsqueda de pantallas limitada al paquete cooperativa. */
+  const packageNavPool = useMemo(() => getCoopPackageNavItems(), []);
 
   useEffect(() => {
     if (searchOpen) {

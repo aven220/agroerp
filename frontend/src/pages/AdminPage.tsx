@@ -41,13 +41,23 @@ function userStatusLabel(u: SystemUser): string {
 
 interface AdminPageProps {
   defaultTab?: AdminTab;
+  /** Base de rutas para pestañas. En EIC: `/implementacion`. */
+  basePath?: '/administracion' | '/implementacion';
+  /** Sin Header propio (ya envuelto por EicShell). */
+  embedded?: boolean;
 }
 
-export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
+export function AdminPage({
+  defaultTab = 'roles',
+  basePath = '/administracion',
+  embedded = false,
+}: AdminPageProps) {
   const { user: currentUser, hasPermission } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const usersRoute = location.pathname.endsWith('/usuarios');
+  const rolesPath = basePath === '/implementacion' ? `${basePath}/roles` : basePath;
+  const usersPath = `${basePath}/usuarios`;
 
   const [tab, setTab] = useState<AdminTab>(defaultTab);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -101,11 +111,7 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
 
   function switchTab(next: AdminTab) {
     setTab(next);
-    if (next === 'users') {
-      navigate('/administracion/usuarios');
-    } else {
-      navigate('/administracion');
-    }
+    navigate(next === 'users' ? usersPath : rolesPath);
   }
 
   function openUserCreate(roleSlug?: string) {
@@ -273,11 +279,33 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
     <>
       {!wizardOpen ? (
         <>
-          <Header
-            title="Administración"
-            subtitle="Configure su organización paso a paso — sin capacitación previa"
-            actions={headerActions}
-          />
+          {embedded ? (
+            <div className="row-actions ds-mb-4" style={{ justifyContent: 'space-between' }}>
+              <div className="row-actions">
+                <button
+                  type="button"
+                  className={`btn${tab === 'roles' ? ' btn-primary' : ''}`}
+                  onClick={() => switchTab('roles')}
+                >
+                  Roles y permisos
+                </button>
+                <button
+                  type="button"
+                  className={`btn${tab === 'users' ? ' btn-primary' : ''}`}
+                  onClick={() => switchTab('users')}
+                >
+                  Usuarios
+                </button>
+              </div>
+              {headerActions}
+            </div>
+          ) : (
+            <Header
+              title="Administración"
+              subtitle="Configure su organización paso a paso — sin capacitación previa"
+              actions={headerActions}
+            />
+          )}
 
           {flowHint === 'role-created' ? (
             <FlowNextActions
@@ -333,9 +361,9 @@ export function AdminPage({ defaultTab = 'roles' }: AdminPageProps) {
                   icon: '⚙️',
                 },
                 {
-                  label: 'Revisar auditoría',
-                  description: 'Confirme el primer acceso cuando ocurra',
-                  to: '/iam/auditoria',
+                  label: 'Volver a implementación',
+                  description: 'Continúe el checklist de la cooperativa',
+                  to: '/implementacion',
                   icon: '📋',
                 },
                 {

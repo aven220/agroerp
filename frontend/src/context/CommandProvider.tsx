@@ -24,9 +24,8 @@ import { searchEnterpriseEntities } from '../lib/enterpriseSearch';
 import { useAuth } from './AuthContext';
 import { useNavigation } from './NavigationContext';
 import { useGuidedWorkspaceOptional } from './GuidedWorkspaceContext';
-import { useExperienceCenterOptional } from './ExperienceCenterContext';
 import { useOnEntityUpdated } from '../lib/entitySync';
-import { ALL_NAV_ITEMS } from '../config/navigation';
+import { getCoopPackageNavItems } from '../config/experienceCenters';
 
 interface CommandContextValue {
   mode: CommandPaletteMode;
@@ -50,24 +49,10 @@ export function CommandProvider({ children }: { children: ReactNode }) {
   const { user, hasPermission } = useAuth();
   const { favorites, navHistory, setSearchOpen } = useNavigation();
   const gw = useGuidedWorkspaceOptional();
-  const experience = useExperienceCenterOptional();
   const userId = user?.id;
 
-  const packageNavItems = useMemo(() => {
-    if (experience?.packageId === 'coop-cafe-co' && experience.experienceNav?.length) {
-      const seen = new Set<string>();
-      const items = [];
-      for (const cat of experience.experienceNav) {
-        for (const navItem of cat.items) {
-          if (seen.has(navItem.id)) continue;
-          seen.add(navItem.id);
-          items.push(navItem);
-        }
-      }
-      return items;
-    }
-    return ALL_NAV_ITEMS;
-  }, [experience?.packageId, experience?.experienceNav]);
+  /** PM-32: perímetro del paquete piloto (unión de centros), no el monorepo completo. */
+  const packageNavItems = useMemo(() => getCoopPackageNavItems(), []);
 
   const [mode, setMode] = useState<CommandPaletteMode>('launcher');
   const [query, setQuery] = useState('');

@@ -303,6 +303,10 @@ const COOP_IMPLEMENTATION: NavCategory[] = [
         keywords: ['usuarios', 'accesos'],
         searchType: 'config',
       }),
+      item('eic-roles', '/implementacion/roles', 'Roles', '🔐', {
+        keywords: ['roles', 'permisos'],
+        searchType: 'config',
+      }),
       item('eic-config', '/implementacion/configuracion', 'Configuración', '⚙', {
         keywords: ['configuración', 'empresa', 'compras', 'inventario'],
         searchType: 'config',
@@ -342,7 +346,26 @@ const COOP_IMPLEMENTATION: NavCategory[] = [
   },
 ];
 
-/** Plataforma completa — conserva navegación por experiencia (mismos centros) */
+/** Ítems de navegación del paquete cooperativa (unión de los 3 centros). */
+export function getCoopPackageNavItems(): NavItem[] {
+  const seen = new Set<string>();
+  const items: NavItem[] = [];
+  for (const cats of [COOP_OPERATION, COOP_MANAGEMENT, COOP_IMPLEMENTATION]) {
+    for (const cat of cats) {
+      for (const navItem of cat.items) {
+        if (seen.has(navItem.id)) continue;
+        seen.add(navItem.id);
+        items.push(navItem);
+      }
+    }
+  }
+  return items;
+}
+
+/**
+ * Navegación por centro. El paquete piloto certificado es cooperativa;
+ * `full-platform` no expande menú (evita bypass de licencia en UI).
+ */
 export function getExperienceNav(
   center: ExperienceCenterId,
   packageId: IndustryPackageId,

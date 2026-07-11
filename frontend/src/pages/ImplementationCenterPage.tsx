@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Header } from '../components/layout/Header';
 import {
   PageLayout,
@@ -9,7 +9,7 @@ import {
   EmptyPanel,
 } from '../components/page';
 import { LoadingState } from '../components/ux/LoadingState';
-import { useExperienceCenter } from '../context/ExperienceCenterContext';
+import { AdminPage } from './AdminPage';
 import {
   certifyGoLive,
   implementationStatusLabel,
@@ -18,11 +18,21 @@ import {
   type DomainStatus,
   type ImplementationDomain,
 } from '../lib/implementationEngine';
+import {
+  EMPTY_COMPANY_PROFILE,
+  REQUIRED_COOP_ROLES,
+  loadCompanyProfile,
+  saveCompanyProfile,
+  type CompanyProfile,
+} from '../lib/companyProfile';
+import { seedCoffeeConfig } from '../api/coffee';
+import { seedEims } from '../api/eims';
 
 const EIC_SECTIONS = [
   { to: '/implementacion', label: 'Resumen', end: true },
   { to: '/implementacion/empresa', label: 'Empresa' },
   { to: '/implementacion/usuarios', label: 'Usuarios' },
+  { to: '/implementacion/roles', label: 'Roles' },
   { to: '/implementacion/configuracion', label: 'Configuración' },
   { to: '/implementacion/procesos', label: 'Procesos' },
   { to: '/implementacion/documentos', label: 'Documentos' },
@@ -33,8 +43,7 @@ const EIC_SECTIONS = [
 ];
 
 function EicShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
-  const { packageId } = useExperienceCenter();
-  const packageLabel = packageId === 'coop-cafe-co' ? 'Cooperativa cafetera — Colombia' : 'Plataforma completa';
+  const packageLabel = 'Cooperativa cafetera — Colombia';
 
   return (
     <>
@@ -334,110 +343,411 @@ export function ImplementationSummaryPage() {
   );
 }
 
+function GuideStep({
+  title,
+  missing,
+  why,
+  ifNot,
+  depends,
+  validate,
+  actionLabel,
+  to,
+  optional,
+  unavailable,
+}: {
+  title: string;
+  missing: boolean;
+  why: string;
+  ifNot: string;
+  depends: string;
+  validate: string;
+  actionLabel: string;
+  to?: string;
+  optional?: boolean;
+  unavailable?: string;
+}) {
+  return (
+    <div className={`eic-spotlight${missing && !optional ? '' : ''}`}>
+      <p>
+        <strong>{title}</strong>{' '}
+        {unavailable ? (
+          <span className="muted">— {unavailable}</span>
+        ) : missing ? (
+          optional ? (
+            <span className="muted">— opcional / pendiente</span>
+          ) : (
+            <span className="eic-live-risk">— falta</span>
+          )
+        ) : (
+          <span>✓ listo</span>
+        )}
+      </p>
+      <ul className="eoc-list">
+        <li>
+          <strong>Qué falta / estado:</strong> {unavailable ?? (missing ? 'Pendiente' : 'Completo')}
+        </li>
+        <li>
+          <strong>Por qué:</strong> {why}
+        </li>
+        <li>
+          <strong>Si no existe:</strong> {ifNot}
+        </li>
+        <li>
+          <strong>Depende de:</strong> {depends}
+        </li>
+        <li>
+          <strong>Cómo validar:</strong> {validate}
+        </li>
+      </ul>
+      {to && !unavailable ? (
+        <Link to={to} className="btn btn-primary">
+          {actionLabel}
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
 export function ImplementationEmpresaPage() {
+  const { refresh, signals, loaded } = useImplementationEngine();
+  const [form, setForm] = useState<CompanyProfile>({ ...EMPTY_COMPANY_PROFILE });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+
+  useEffect(() => {
+    loadCompanyProfile().then(setForm).catch(() => setForm({ ...EMPTY_COMPANY_PROFILE }));
+  }, []);
+
+  useEffect(() => {
+    if (signals.company) setForm(signals.company);
+  }, [signals.company]);
+
+  const set =
+    (key: keyof CompanyProfile) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setForm((prev) => ({ ...prev, [key]: e.target.value }));
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    setOk('');
+    try {
+      await saveCompanyProfile(form);
+      setOk('Datos de empresa guardados en la organización.');
+      refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo guardar. Se requiere permiso coffee:config:manage.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <EicShell title="Empresa">
       <DomainSpotlight domainId="empresa" />
-      <PageSection title="Configurar empresa">
-        <div className="eic-card-grid">
-          <LinkCard
-            title="Usuarios y accesos"
-            description="Cuentas de la organización"
-            to="/administracion"
-          />
-          <LinkCard
-            title="Finanzas — datos de empresa"
-            description="Razón social, moneda y datos fiscales (lectura)"
-            to="/finanzas/configuracion"
-          />
-          <LinkCard
-            title="Paquete contratado"
-            description="Alcance visible de la cooperativa"
-            to="/implementacion/modulos"
-          />
-        </div>
+      <PageSection title="Ficha empresarial">
+        {!loaded ? <LoadingState variant="card" message="Cargando ficha…" /> : null}
+        <p className="muted eic-hint">
+          Datos legales y operativos de la cooperativa. Se guardan en la organización (parámetro de
+          configuración existente). La carga de logo por archivo no está disponible en esta versión.
+        </p>
+        {error ? <div className="alert alert-error">{error}</div> : null}
+        {ok ? <div className="alert alert-success">{ok}</div> : null}
+        <form className="form-grid" onSubmit={save}>
+          <label>
+            Razón social *
+            <input required value={form.legalName} onChange={set('legalName')} />
+          </label>
+          <label>
+            NIT *
+            <input required value={form.taxId} onChange={set('taxId')} />
+          </label>
+          <label>
+            Dirección
+            <input value={form.address} onChange={set('address')} />
+          </label>
+          <label>
+            Ciudad
+            <input value={form.city} onChange={set('city')} />
+          </label>
+          <label>
+            Departamento
+            <input value={form.department} onChange={set('department')} />
+          </label>
+          <label>
+            País
+            <input value={form.country} onChange={set('country')} />
+          </label>
+          <label>
+            Teléfono
+            <input value={form.phone} onChange={set('phone')} />
+          </label>
+          <label>
+            Correo
+            <input type="email" value={form.email} onChange={set('email')} />
+          </label>
+          <label>
+            Moneda *
+            <select value={form.currency} onChange={set('currency')} required>
+              <option value="COP">COP — Peso colombiano</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </label>
+          <label>
+            Zona horaria *
+            <select value={form.timezone} onChange={set('timezone')} required>
+              <option value="America/Bogota">America/Bogota</option>
+              <option value="America/Lima">America/Lima</option>
+              <option value="America/Guayaquil">America/Guayaquil</option>
+            </select>
+          </label>
+          <label>
+            Idioma
+            <select value={form.language} onChange={set('language')}>
+              <option value="es-CO">Español (Colombia)</option>
+              <option value="es">Español</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <label>
+            Logo (URL)
+            <input
+              value={form.logoUrl}
+              onChange={set('logoUrl')}
+              placeholder="Opcional — pegue una URL"
+            />
+          </label>
+          <p className="muted">
+            Logo por archivo: <strong>No disponible en esta versión</strong>. Puede dejar URL vacía
+            (opcional para Go Live).
+          </p>
+          <div className="row-actions">
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? 'Guardando…' : 'Guardar empresa'}
+            </button>
+            <Link to="/implementacion/usuarios" className="btn">
+              Siguiente: Usuarios
+            </Link>
+          </div>
+        </form>
       </PageSection>
     </EicShell>
   );
 }
 
 export function ImplementationConfigPage() {
+  const { signals, loaded, refresh } = useImplementationEngine();
+  const [seedMsg, setSeedMsg] = useState('');
+  const [seedErr, setSeedErr] = useState('');
+
+  const runCoffeeSeed = () => {
+    setSeedErr('');
+    setSeedMsg('');
+    seedCoffeeConfig()
+      .then(() => {
+        setSeedMsg('Configuración inicial de compras cargada.');
+        refresh();
+      })
+      .catch((e) => setSeedErr(e instanceof Error ? e.message : 'No se pudo cargar seed de compras'));
+  };
+
+  const runEimsSeed = () => {
+    setSeedErr('');
+    setSeedMsg('');
+    seedEims()
+      .then(() => {
+        setSeedMsg('Configuración inicial de inventario cargada.');
+        refresh();
+      })
+      .catch((e) => setSeedErr(e instanceof Error ? e.message : 'No se pudo cargar seed de inventario'));
+  };
+
+  if (!loaded) {
+    return (
+      <EicShell title="Configuración guiada">
+        <LoadingState variant="page" message="Evaluando qué falta…" />
+      </EicShell>
+    );
+  }
+
   return (
-    <EicShell title="Centro de configuración">
+    <EicShell title="Configuración guiada">
       <DomainSpotlight domainId="configuracion" />
-      <PageSection title="Por lenguaje funcional">
-        <div className="eic-card-grid">
-          <LinkCard title="Empresa" description="Identidad y datos legales" to="/implementacion/empresa" />
-          <LinkCard title="Operación" description="Mi día y flujo de trabajo" to="/operacion" />
-          <LinkCard title="Inventario" description="Bodegas, artículos y movimientos" to="/inventario" />
-          <LinkCard title="Compras" description="Catálogos, precios, centros y parámetros" to="/compras/config" />
-          <LinkCard title="Usuarios" description="Cuentas, roles y accesos" to="/implementacion/usuarios" />
-          <LinkCard title="Documentos" description="Archivos, formatos y numeración" to="/implementacion/documentos" />
-          <LinkCard title="Procesos" description="Aprobaciones y flujos" to="/implementacion/procesos" />
-          <LinkCard title="Integraciones" description="Balanzas y conectores" to="/implementacion/integraciones" />
-          <LinkCard title="Reportes" description="Analítica e indicadores" to="/bi" />
+      {seedErr ? <div className="alert alert-error">{seedErr}</div> : null}
+      {seedMsg ? <div className="alert alert-success">{seedMsg}</div> : null}
+
+      <PageSection title="1. Compras">
+        <GuideStep
+          title="Centro, precios y catálogos"
+          missing={!(signals.prices > 0 && signals.purchaseCenters > 0)}
+          why="Sin precios y centro de compra no se puede recibir ni liquidar café."
+          ifNot="La recepción falla o liquida con valores incorrectos."
+          depends="Empresa y usuarios con permiso de configuración de compras"
+          validate="Checklist: al menos 1 precio y 1 centro de compra"
+          actionLabel="Ir a configuración de compras"
+          to="/compras/config"
+        />
+        <div className="row-actions ds-mt-4">
+          <button type="button" className="btn" onClick={runCoffeeSeed}>
+            Cargar configuración inicial de compras
+          </button>
+          <Link to="/compras/config/precios" className="btn">
+            Precios
+          </Link>
+          <Link to="/compras/config/centros" className="btn">
+            Centros
+          </Link>
+          <Link to="/compras/balanzas" className="btn">
+            Balanzas (opcional)
+          </Link>
         </div>
+      </PageSection>
+
+      <PageSection title="2. Inventario">
+        <GuideStep
+          title="Bodega y artículo"
+          missing={!(signals.warehouses > 0 && signals.items > 0)}
+          why="Sin bodega y artículo no hay entrada de inventario tras liquidar."
+          ifNot="El ciclo de compra no cierra en stock."
+          depends="Compras configurada"
+          validate="Al menos 1 bodega y 1 artículo"
+          actionLabel="Ir a inventario"
+          to="/inventario"
+        />
+        <div className="row-actions ds-mt-4">
+          <button type="button" className="btn" onClick={runEimsSeed}>
+            Cargar configuración inicial de inventario
+          </button>
+          <Link to="/inventario/bodegas" className="btn">
+            Bodegas
+          </Link>
+          <Link to="/inventario/articulos" className="btn">
+            Artículos
+          </Link>
+          <Link to="/inventario/movimientos" className="btn">
+            Movimientos
+          </Link>
+        </div>
+      </PageSection>
+
+      <PageSection title="3. Workflow">
+        <GuideStep
+          title="Proceso de aprobación"
+          missing={signals.workflows === 0}
+          why="Las liquidaciones y excepciones necesitan un flujo publicado."
+          ifNot="No hay bandeja de aprobaciones operativa."
+          depends="Usuarios con roles de aprobación"
+          validate="Al menos 1 definición de proceso"
+          actionLabel="Ir a procesos"
+          to="/procesos"
+        />
+      </PageSection>
+
+      <PageSection title="4. Documentos">
+        <GuideStep
+          title="Evidencia y almacenamiento"
+          missing={false}
+          why="Los documentos de liquidación y productores quedan como evidencia."
+          ifNot="Pierde trazabilidad documental."
+          depends="Compras operativa"
+          validate="Pantalla Documentos accesible; series N/D"
+          actionLabel="Ir a documentos"
+          to="/documentos"
+          unavailable={undefined}
+        />
         <p className="muted eic-hint">
-          No se listan módulos técnicos. Cada tarjeta abre la configuración funcional existente.
+          Series / numeración configurable: <strong>No disponible en esta versión</strong>. El
+          almacenamiento de evidencia sí está operativo.
         </p>
+      </PageSection>
+
+      <PageSection title="Siguiente paso">
+        <p>
+          <strong>Acción siguiente:</strong>{' '}
+          {signals.prices > 0 && signals.purchaseCenters > 0 && signals.warehouses > 0 && signals.items > 0
+            ? 'Registrar productor y ejecutar prueba operativa'
+            : 'Completar compras e inventario con los botones de arriba'}
+        </p>
+        <p className="muted">Tiempo estimado: 2–3 horas · Responsable: consultor funcional</p>
+        <Link to="/productores" className="btn btn-primary">
+          Ir a productores
+        </Link>
       </PageSection>
     </EicShell>
   );
 }
 
 export function ImplementationUsuariosPage() {
+  const { signals, loaded } = useImplementationEngine();
   return (
     <EicShell title="Usuarios">
       <DomainSpotlight domainId="usuarios" />
-      <PageSection title="Accesos operativos">
-        <div className="eic-card-grid">
-          <LinkCard title="Usuarios" description="Invitar y gestionar cuentas" to="/administracion/usuarios" />
-          <LinkCard title="Roles y permisos" description="Perfiles de acceso" to="/administracion" />
-          <LinkCard title="Seguridad" description="Políticas, auditoría y MFA" to="/iam" />
-        </div>
+      <PageSection title="Roles mínimos del paquete">
+        {!loaded ? (
+          <LoadingState variant="card" message="Verificando roles…" />
+        ) : (
+          <ul className="eoc-list">
+            {REQUIRED_COOP_ROLES.map((r) => {
+              const ok = !signals.requiredRolesMissing.includes(r.label);
+              return (
+                <li key={r.key}>
+                  {ok ? '✓' : '○'} {r.label}
+                  {!ok ? ' — créelo en Roles con ese nombre' : ''}
+                </li>
+              );
+            })}
+          </ul>
+        )}
         <p className="muted eic-hint">
-          Mínimo recomendado cooperativa: Administrador, Compras, Calidad, Inventario, Supervisor, Campo, Consulta.
+          Cree o edite usuarios aquí. Restablecer contraseña: edite el usuario y asigne una nueva.
+          Activar/desactivar: campo Estado. Ver permisos: configure el rol.
         </p>
+        <Link to="/implementacion/roles" className="btn">
+          Ir a roles y permisos
+        </Link>
+      </PageSection>
+      <PageSection title="Gestión de usuarios">
+        <AdminPage defaultTab="users" basePath="/implementacion" embedded />
+      </PageSection>
+    </EicShell>
+  );
+}
+
+export function ImplementationRolesPage() {
+  return (
+    <EicShell title="Roles y permisos">
+      <DomainSpotlight domainId="usuarios" />
+      <PageSection title="Perfiles de acceso">
+        <p className="muted eic-hint">
+          Defina al menos: Administrador, Compras, Inventario, Calidad, Supervisor, Consulta. Asigne
+          permisos y luego cree usuarios.
+        </p>
+        <AdminPage defaultTab="roles" basePath="/implementacion" embedded />
       </PageSection>
     </EicShell>
   );
 }
 
 export function ImplementationModulosPage() {
-  const { packageId, setPackageId } = useExperienceCenter();
   return (
     <EicShell title="Paquete contratado">
       <PageSection title="Alcance de la implementación">
         <PageSummary>
-          <MetricCard
-            label="Paquete activo"
-            value={packageId === 'coop-cafe-co' ? 'Cooperativa cafetera' : 'Plataforma completa'}
-            tone="coffee"
-          />
+          <MetricCard label="Paquete activo" value="Cooperativa cafetera" tone="coffee" />
         </PageSummary>
-        <div className="row-actions ds-mt-4">
-          <button
-            type="button"
-            className={`btn${packageId === 'coop-cafe-co' ? ' btn-primary' : ''}`}
-            onClick={() => setPackageId('coop-cafe-co')}
-          >
-            Cooperativa cafetera
-          </button>
-          <button
-            type="button"
-            className={`btn${packageId === 'full-platform' ? ' btn-primary' : ''}`}
-            onClick={() => setPackageId('full-platform')}
-          >
-            Plataforma completa
-          </button>
-        </div>
         <p className="muted eic-hint">
-          El paquete define el menú visible. Cooperativa cafetera oculta verticales no contratadas (no las muestra
-          deshabilitadas).
+          El paquete define el menú y las rutas permitidas. Cooperativa cafetera no incluye verticales
+          no contratadas.
         </p>
         <ul className="eoc-list">
           <li>Incluidos: Compras, Inventario, Productores, Fincas, Lotes, Calidad, Liquidación, Documentos, Procesos</li>
-          <li>Ocultos en cooperativa: Hospital, Manufactura, Hotelería, Educación, IoT plataforma, etc.</li>
+          <li>Fuera de alcance: Hospital, Manufactura, Hotelería, Educación, IoT plataforma, etc.</li>
         </ul>
       </PageSection>
     </EicShell>
@@ -445,14 +755,28 @@ export function ImplementationModulosPage() {
 }
 
 export function ImplementationProcesosPage() {
+  const { signals } = useImplementationEngine();
   return (
     <EicShell title="Procesos">
       <DomainSpotlight domainId="workflow" />
-      <PageSection title="Aprobaciones y flujos">
-        <div className="eic-card-grid">
-          <LinkCard title="Bandeja de aprobaciones" description="Trámites pendientes" to="/procesos/bandeja" />
-          <LinkCard title="Procesos y flujos" description="Definiciones publicadas" to="/procesos" />
-          <LinkCard title="Solicitudes en curso" description="Trámites activos" to="/procesos/instancias" />
+      <PageSection title="Asistente de workflow">
+        <GuideStep
+          title="Publicar un proceso"
+          missing={signals.workflows === 0}
+          why="Sin proceso no hay aprobaciones formales."
+          ifNot="Excepciones y liquidaciones quedan sin control."
+          depends="Roles de supervisor/admin"
+          validate="Lista de procesos con al menos una definición"
+          actionLabel="Abrir procesos"
+          to="/procesos"
+        />
+        <div className="row-actions ds-mt-4">
+          <Link to="/procesos/nuevo" className="btn">
+            Crear proceso
+          </Link>
+          <Link to="/procesos/bandeja" className="btn">
+            Bandeja
+          </Link>
         </div>
       </PageSection>
     </EicShell>
@@ -463,30 +787,63 @@ export function ImplementationDocumentosPage() {
   return (
     <EicShell title="Documentos">
       <DomainSpotlight domainId="documentos" />
-      <PageSection title="Formatos y evidencia">
-        <div className="eic-card-grid">
-          <LinkCard title="Documentos" description="Archivos y plantillas" to="/documentos" />
-          <LinkCard
-            title="Configuración de compras"
-            description="Series y parámetros de documentos de café"
-            to="/compras/config"
-          />
-        </div>
+      <PageSection title="Asistente de documentos">
+        <GuideStep
+          title="Almacenamiento de evidencia"
+          missing={false}
+          why="Conserva liquidaciones y soportes del productor."
+          ifNot="Pierde trazabilidad ante auditoría."
+          depends="Compras"
+          validate="Pantalla Documentos responde"
+          actionLabel="Abrir documentos"
+          to="/documentos"
+        />
+        <GuideStep
+          title="Series y numeración"
+          missing
+          why="Numeración formal de documentos fiscales/operativos."
+          ifNot="No hay control de consecutivos configurables."
+          depends="—"
+          validate="—"
+          actionLabel=""
+          unavailable="No disponible en esta versión"
+        />
+        <GuideStep
+          title="Plantillas"
+          missing
+          why="Formatos reutilizables de documentos."
+          ifNot="Se usan documentos generados por el flujo de compras."
+          depends="—"
+          validate="—"
+          actionLabel=""
+          unavailable="No disponible como configuración independiente en esta versión"
+        />
       </PageSection>
     </EicShell>
   );
 }
 
 export function ImplementationIntegracionesPage() {
+  const { signals } = useImplementationEngine();
   return (
     <EicShell title="Integraciones">
       <DomainSpotlight domainId="integraciones" />
       <PageSection title="Conectividad operativa">
-        <div className="eic-card-grid">
-          <LinkCard title="Balanzas" description="Dispositivos de pesaje" to="/compras/balanzas" />
-          <LinkCard title="Integraciones" description="Conectores y flujos" to="/integraciones" />
-        </div>
-        <p className="muted eic-hint">Las balanzas son opcionales para el piloto; se puede operar en pesaje manual.</p>
+        <GuideStep
+          title="Balanzas"
+          missing={signals.scales === 0}
+          why="Automatiza el pesaje en recepción."
+          ifNot="Se opera pesaje manual (válido para piloto)."
+          depends="Compras"
+          validate="Al menos una balanza registrada"
+          actionLabel="Ir a balanzas"
+          to="/compras/balanzas"
+          optional
+        />
+        <p className="muted eic-hint">
+          SMTP / conectores genéricos: <strong>No disponible en el paquete cooperativa</strong> (fuera
+          de perímetro). No se ofrecen enlaces a módulos bloqueados.
+        </p>
       </PageSection>
     </EicShell>
   );
@@ -553,8 +910,8 @@ export function ImplementationGoLivePage() {
   const prueba = chain.find((d) => d.id === 'prueba');
   const prerequisites = chain.filter((d) => d.id !== 'golive');
 
-  const certify = () => {
-    const result = certifyGoLive(note, consultant);
+  const certify = async () => {
+    const result = await certifyGoLive(note, consultant);
     if (!result.ok) {
       setError(result.error ?? 'No se puede certificar');
       return;
@@ -563,8 +920,13 @@ export function ImplementationGoLivePage() {
     refresh();
   };
 
-  const revoke = () => {
-    revokeGoLiveCertification();
+  const revoke = async () => {
+    const result = await revokeGoLiveCertification();
+    if (!result.ok) {
+      setError(result.error ?? 'No se pudo revocar');
+      return;
+    }
+    setError('');
     refresh();
   };
 
@@ -583,7 +945,7 @@ export function ImplementationGoLivePage() {
           <div className="eic-certified">
             <h2>✓ Empresa lista para operar</h2>
             <p className="muted">
-              Certificación registrada en este navegador
+              Certificación registrada en la organización
               {certifiedAt ? ` · ${new Date(certifiedAt).toLocaleString()}` : ''}.
             </p>
             {!consultant.canCertify ? (

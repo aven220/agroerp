@@ -22,6 +22,7 @@ import {
   ImplementationEmpresaPage,
   ImplementationConfigPage,
   ImplementationUsuariosPage,
+  ImplementationRolesPage,
   ImplementationModulosPage,
   ImplementationProcesosPage,
   ImplementationDocumentosPage,
@@ -654,6 +655,7 @@ export function App() {
             <Route path="/implementacion/empresa" element={<ImplementationEmpresaPage />} />
             <Route path="/implementacion/configuracion" element={<ImplementationConfigPage />} />
             <Route path="/implementacion/usuarios" element={<ImplementationUsuariosPage />} />
+            <Route path="/implementacion/roles" element={<ImplementationRolesPage />} />
             <Route path="/implementacion/modulos" element={<ImplementationModulosPage />} />
             <Route path="/implementacion/procesos" element={<ImplementationProcesosPage />} />
             <Route path="/implementacion/documentos" element={<ImplementationDocumentosPage />} />

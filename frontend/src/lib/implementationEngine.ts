@@ -4,12 +4,19 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { getCoffeeCenter, getCoffeeConfigCenter, listCoffeeDocuments, listCoffeePrices, listCoffeeScales } from '../api/coffee';
-import { getEimsCenter } from '../api/eims';
+import { getCoffeeCenter, getCoffeeConfigCenter, listCoffeeDocuments, listCoffeeParameters, listCoffeePrices, listCoffeePurchaseCenters, listCoffeeScales, upsertCoffeeParameter } from '../api/coffee';
+import { getEimsCenter, listEimsMovements } from '../api/eims';
 import { getIamCenter } from '../api/iam';
 import { listUsers, listRoles } from '../api/identity';
 import { listProducers } from '../api/prm';
 import { listWorkflowDefinitions } from '../api/workflows';
+import {
+  companyMissingFields,
+  companyRequiredComplete,
+  loadCompanyProfile,
+  matchRequiredRoles,
+  type CompanyProfile,
+} from './companyProfile';
 
 export type DomainStatus = 'not_started' | 'in_progress' | 'complete' | 'blocked';
 
@@ -71,14 +78,22 @@ export interface ImplementationSignals {
   eimsOk: boolean;
   warehouses: number;
   items: number;
+  movements: number;
   users: number;
   roles: number;
+  activeUsers: number;
+  requiredRolesMatched: number;
+  requiredRolesMissing: string[];
   producers: number;
   prices: number;
+  purchaseCenters: number;
   configOk: boolean;
   workflows: number;
   documents: number;
   scales: number;
+  company: CompanyProfile | null;
+  companyComplete: boolean;
+  companyMissing: string[];
   ticketsToday: number;
   weighedToday: number;
   qualityToday: number;
@@ -116,6 +131,91 @@ export interface ImplementationSnapshot {
 
 const STORAGE_CERT = 'agroerp_golive_certified';
 const STORAGE_CERT_RECORD = 'agroerp_golive_record';
+
+/** Clave de parámetro org (API existente cpep/config/parameters). */
+const GOLIVE_PARAM_KEY = 'implementation.golive';
+
+export interface GoLiveRecord {
+  certified: boolean;
+  at: string | null;
+  note?: string;
+}
+
+function parseGoLiveValue(value: unknown): GoLiveRecord | null {
+  if (!value || typeof value !== 'object') return null;
+  const v = value as Record<string, unknown>;
+  return {
+    certified: v.certified === true,
+    at: typeof v.at === 'string' ? v.at : null,
+    note: typeof v.note === 'string' ? v.note : undefined,
+  };
+}
+
+function readCertifiedLocal(): GoLiveRecord {
+  try {
+    const certified = localStorage.getItem(STORAGE_CERT) === '1';
+    const raw = localStorage.getItem(STORAGE_CERT_RECORD);
+    const parsed = raw ? (JSON.parse(raw) as { at?: string; note?: string }) : null;
+    return {
+      certified,
+      at: parsed?.at ?? null,
+      note: parsed?.note,
+    };
+  } catch {
+    return { certified: false, at: null };
+  }
+}
+
+function writeCertifiedLocal(record: GoLiveRecord) {
+  try {
+    if (record.certified) {
+      localStorage.setItem(STORAGE_CERT, '1');
+      localStorage.setItem(
+        STORAGE_CERT_RECORD,
+        JSON.stringify({ at: record.at, note: record.note ?? '', blockers: [] as string[] }),
+      );
+    } else {
+      localStorage.removeItem(STORAGE_CERT);
+      localStorage.removeItem(STORAGE_CERT_RECORD);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Lee certificación desde backend; migra localStorage una vez si el org aún no tiene registro. */
+export async function loadGoLiveRecord(): Promise<GoLiveRecord> {
+  try {
+    const rows = await listCoffeeParameters(GOLIVE_PARAM_KEY);
+    const row = Array.isArray(rows) ? (rows[0] as { value?: unknown } | undefined) : undefined;
+    const fromApi = parseGoLiveValue(row?.value);
+    if (fromApi) {
+      writeCertifiedLocal(fromApi);
+      return fromApi;
+    }
+
+    const local = readCertifiedLocal();
+    if (local.certified) {
+      try {
+        await upsertCoffeeParameter({
+          parameterKey: GOLIVE_PARAM_KEY,
+          name: 'Certificación Go Live',
+          scopeType: 'organization',
+          value: { certified: true, at: local.at, note: local.note ?? '' },
+          dataType: 'json',
+          reason: 'Migración PM-32: certificación desde navegador a organización',
+        });
+      } catch {
+        /* sin coffee:config:manage — se mantiene lectura local hasta que un admin certifique */
+      }
+      return local;
+    }
+    return { certified: false, at: null };
+  } catch {
+    return readCertifiedLocal();
+  }
+}
+
 const STORAGE_LAST = 'agroerp_impl_last_touch';
 
 const HELP: Record<DomainId, DomainHelp> = {
@@ -232,14 +332,14 @@ const META: Record<
   },
   compras: {
     label: 'Compras',
-    href: '/compras/config',
+    href: '/implementacion/configuracion',
     responsible: 'Consultor + líder de compras',
     inChain: true,
     dependencies: ['configuracion'],
   },
   inventario: {
     label: 'Inventario',
-    href: '/inventario',
+    href: '/implementacion/configuracion',
     responsible: 'Consultor + bodega',
     inChain: true,
     dependencies: ['compras'],
@@ -316,14 +416,22 @@ function emptySignals(): ImplementationSignals {
     eimsOk: false,
     warehouses: 0,
     items: 0,
+    movements: 0,
     users: 0,
     roles: 0,
+    activeUsers: 0,
+    requiredRolesMatched: 0,
+    requiredRolesMissing: [],
     producers: 0,
     prices: 0,
+    purchaseCenters: 0,
     configOk: false,
     workflows: 0,
     documents: 0,
     scales: 0,
+    company: null,
+    companyComplete: false,
+    companyMissing: ['Razón social', 'NIT', 'Moneda', 'Zona horaria'],
     ticketsToday: 0,
     weighedToday: 0,
     qualityToday: 0,
@@ -333,17 +441,6 @@ function emptySignals(): ImplementationSignals {
     amountToday: 0,
     queueLength: 0,
   };
-}
-
-function readCertified(): { certified: boolean; at: string | null } {
-  try {
-    const certified = localStorage.getItem(STORAGE_CERT) === '1';
-    const raw = localStorage.getItem(STORAGE_CERT_RECORD);
-    const at = raw ? (JSON.parse(raw) as { at?: string }).at ?? null : null;
-    return { certified, at };
-  } catch {
-    return { certified: false, at: null };
-  }
 }
 
 function touchLastModified() {
@@ -369,76 +466,98 @@ function deriveIntrinsic(
 ): { status: DomainStatus; risk?: string; nextAction: string; evidence: string } {
   switch (id) {
     case 'empresa':
-      if (s.coffeeOk || s.eimsOk) {
+      if (s.companyComplete) {
         return {
           status: 'complete',
-          risk: 'Confirme razón social y NIT en la ficha de empresa.',
-          nextAction: 'Revisar datos de empresa',
-          evidence: s.coffeeOk && s.eimsOk ? 'Centros de compras e inventario responden' : 'Centro operativo responde',
+          nextAction: 'Revisar ficha de empresa',
+          evidence: `${s.company?.legalName ?? 'Empresa'} · NIT ${s.company?.taxId ?? '—'} · ${s.company?.currency ?? '—'}`,
         };
       }
-      return {
-        status: 'not_started',
-        risk: 'No se pudo verificar el entorno de la empresa.',
-        nextAction: 'Abrir ficha de empresa y validar acceso',
-        evidence: 'Sin respuesta de centros',
-      };
-    case 'usuarios':
-      if (s.users >= 3 && s.roles >= 2) {
-        return {
-          status: 'complete',
-          nextAction: 'Revisar roles operativos',
-          evidence: `${s.users} usuarios · ${s.roles} roles`,
-        };
-      }
-      if (s.users > 0) {
+      if (s.company && (s.company.legalName || s.company.taxId)) {
         return {
           status: 'in_progress',
-          risk: s.users < 3 ? 'Se recomiendan al menos 3 usuarios operativos.' : 'Faltan roles suficientes.',
-          nextAction: 'Crear usuarios y roles mínimos',
-          evidence: `${s.users} usuarios · ${s.roles} roles`,
+          risk: `Faltan: ${s.companyMissing.join(', ')}.`,
+          nextAction: 'Completar razón social, NIT, moneda y zona horaria',
+          evidence: 'Ficha parcial guardada',
         };
       }
       return {
         status: 'not_started',
-        risk: 'No hay usuarios cargados.',
-        nextAction: 'Invitar usuarios operativos',
+        risk: 'Sin razón social ni NIT verificables.',
+        nextAction: 'Completar ficha de empresa',
+        evidence: 'Perfil empresarial vacío',
+      };
+    case 'usuarios': {
+      const rolesOk = s.requiredRolesMissing.length === 0;
+      const usersOk = s.activeUsers >= 3;
+      if (rolesOk && usersOk) {
+        return {
+          status: 'complete',
+          nextAction: 'Revisar asignación de roles',
+          evidence: `${s.activeUsers} usuarios activos · ${s.requiredRolesMatched}/6 roles mínimos`,
+        };
+      }
+      if (s.users > 0 || s.roles > 0) {
+        const gaps: string[] = [];
+        if (!rolesOk) gaps.push(`Roles faltantes: ${s.requiredRolesMissing.join(', ')}`);
+        if (!usersOk) gaps.push(`Se requieren al menos 3 usuarios activos (hay ${s.activeUsers})`);
+        return {
+          status: 'in_progress',
+          risk: gaps.join('. '),
+          nextAction: 'Crear roles mínimos y usuarios operativos',
+          evidence: `${s.users} usuarios · ${s.roles} roles · ${s.requiredRolesMatched}/6 mínimos`,
+        };
+      }
+      return {
+        status: 'not_started',
+        risk: 'No hay usuarios ni roles del paquete cooperativa.',
+        nextAction: 'Crear roles mínimos y usuarios',
         evidence: '0 usuarios',
       };
+    }
     case 'configuracion':
-      if (s.configOk && s.prices > 0) {
+      if (s.configOk && s.prices > 0 && s.purchaseCenters > 0) {
         return {
           status: 'complete',
           nextAction: 'Revisar parámetros de compras',
-          evidence: `Configuración activa · ${s.prices} precios`,
+          evidence: `${s.prices} precios · ${s.purchaseCenters} centros · configuración activa`,
         };
       }
       if (s.configOk || s.coffeeOk) {
         return {
           status: 'in_progress',
-          risk: s.prices === 0 ? 'Faltan precios de compra.' : 'Complete catálogos y parámetros.',
-          nextAction: 'Completar configuración de compras',
+          risk:
+            s.prices === 0
+              ? 'Faltan precios de compra.'
+              : s.purchaseCenters === 0
+                ? 'Falta al menos un centro de compra.'
+                : 'Complete catálogos y parámetros.',
+          nextAction: 'Completar asistente de configuración',
           evidence: s.configOk ? 'Centro de configuración disponible' : 'Compras alcanzable',
         };
       }
       return {
         status: 'not_started',
-        nextAction: 'Abrir configuración de compras',
+        nextAction: 'Abrir asistente de configuración',
         evidence: 'Sin configuración verificable',
       };
     case 'compras':
-      if (s.coffeeOk && s.prices > 0 && s.configOk) {
+      if (s.coffeeOk && s.prices > 0 && s.purchaseCenters > 0) {
         return {
           status: 'complete',
+          risk: s.scales === 0 ? 'Balanza opcional: puede operar pesaje manual.' : undefined,
           nextAction: 'Probar recepción',
-          evidence: 'Compras y precios listos',
+          evidence: `Precios ${s.prices} · centros ${s.purchaseCenters}${s.scales ? ` · balanzas ${s.scales}` : ''}`,
         };
       }
       if (s.coffeeOk) {
+        const gaps: string[] = [];
+        if (s.prices === 0) gaps.push('precios');
+        if (s.purchaseCenters === 0) gaps.push('centro de compra');
         return {
           status: 'in_progress',
-          risk: 'Falta cerrar precios o parámetros para operar con seguridad.',
-          nextAction: 'Completar precios y parámetros',
+          risk: `Falta: ${gaps.join(', ') || 'cerrar parámetros'}.`,
+          nextAction: 'Completar precios y centro de compra',
           evidence: 'Centro de compras disponible',
         };
       }
@@ -451,8 +570,12 @@ function deriveIntrinsic(
       if (s.warehouses > 0 && s.items > 0) {
         return {
           status: 'complete',
-          nextAction: 'Revisar bodegas',
-          evidence: `${s.warehouses} bodegas · ${s.items} artículos`,
+          risk:
+            s.movements === 0 && s.inventoryToday === 0
+              ? 'Aún no hay movimientos; se validarán en la prueba operativa.'
+              : undefined,
+          nextAction: 'Revisar bodegas y artículos',
+          evidence: `${s.warehouses} bodegas · ${s.items} artículos · ${s.movements} movimientos`,
         };
       }
       if (s.warehouses > 0 || s.items > 0) {
@@ -498,19 +621,15 @@ function deriveIntrinsic(
         evidence: '0 procesos',
       };
     case 'documentos':
-      if (s.documents > 0) {
-        return {
-          status: 'complete',
-          nextAction: 'Revisar documentos',
-          evidence: `${s.documents} documentos`,
-        };
-      }
       if (s.coffeeOk) {
         return {
-          status: 'in_progress',
-          risk: 'Aún no hay documentos de evidencia.',
-          nextAction: 'Verificar numeración y plantillas',
-          evidence: 'Sin documentos registrados',
+          status: 'complete',
+          risk: 'Series documentales: No disponible en esta versión. Almacenamiento de evidencia operativo.',
+          nextAction: 'Revisar documentos de evidencia',
+          evidence:
+            s.documents > 0
+              ? `${s.documents} documentos · series N/D`
+              : 'Almacenamiento disponible · series N/D en esta versión',
         };
       }
       return {
@@ -528,7 +647,7 @@ function deriveIntrinsic(
       }
       return {
         status: 'in_progress',
-        risk: 'Opcional para piloto: se puede pesar en manual.',
+        risk: 'Opcional: se puede pesar en manual. SMTP/conectores: No disponible en el paquete cooperativa.',
         nextAction: 'Registrar balanza (opcional)',
         evidence: '0 balanzas',
       };
@@ -572,7 +691,7 @@ function deriveIntrinsic(
         return {
           status: 'complete',
           nextAction: 'Operar en Centro de Operación',
-          evidence: 'Certificación registrada en este navegador',
+          evidence: 'Certificación registrada en la organización',
         };
       }
       if (s.inventoryToday > 0) {
@@ -591,7 +710,6 @@ function deriveIntrinsic(
       return { status: 'not_started', nextAction: 'Revisar', evidence: '—' };
   }
 }
-
 function buildDomains(signals: ImplementationSignals, certified: boolean): ImplementationDomain[] {
   const intrinsic = new Map<DomainId, ReturnType<typeof deriveIntrinsic>>();
   (Object.keys(META) as DomainId[]).forEach((id) => {
@@ -771,6 +889,9 @@ export async function loadImplementationSignals(): Promise<ImplementationSignals
     listWorkflowDefinitions(),
     listCoffeeDocuments(),
     listCoffeeScales(),
+    listCoffeePurchaseCenters(),
+    listEimsMovements(),
+    loadCompanyProfile(),
   ]);
 
   const coffee = results[0].status === 'fulfilled' ? results[0].value : null;
@@ -800,10 +921,16 @@ export async function loadImplementationSignals(): Promise<ImplementationSignals
   }
 
   if (results[3].status === 'fulfilled') {
-    signals.users = Math.max(signals.users, results[3].value.length);
+    const users = results[3].value;
+    signals.users = Math.max(signals.users, users.length);
+    signals.activeUsers = users.filter((u) => u.status === 'active' && !u.lockedAt).length;
   }
   if (results[4].status === 'fulfilled') {
-    signals.roles = Math.max(signals.roles, results[4].value.length);
+    const roles = results[4].value;
+    signals.roles = Math.max(signals.roles, roles.length);
+    const matched = matchRequiredRoles(roles);
+    signals.requiredRolesMatched = matched.matched.length;
+    signals.requiredRolesMissing = matched.missing;
   }
   if (results[5].status === 'fulfilled') {
     signals.producers = results[5].value.pagination?.total ?? results[5].value.items?.length ?? 0;
@@ -813,6 +940,10 @@ export async function loadImplementationSignals(): Promise<ImplementationSignals
   }
   if (results[7].status === 'fulfilled') {
     signals.configOk = true;
+    const dash = results[7].value as Record<string, unknown>;
+    if (typeof dash.purchaseCenters === 'number') {
+      signals.purchaseCenters = Math.max(signals.purchaseCenters, dash.purchaseCenters);
+    }
   }
   if (results[8].status === 'fulfilled') {
     signals.workflows = Array.isArray(results[8].value) ? results[8].value.length : 0;
@@ -824,6 +955,21 @@ export async function loadImplementationSignals(): Promise<ImplementationSignals
     const scales = results[10].value;
     signals.scales = Array.isArray(scales) ? scales.length : 0;
   }
+  if (results[11].status === 'fulfilled') {
+    const centers = results[11].value;
+    if (Array.isArray(centers)) {
+      signals.purchaseCenters = Math.max(signals.purchaseCenters, centers.length);
+    }
+  }
+  if (results[12].status === 'fulfilled') {
+    const movs = results[12].value;
+    signals.movements = Array.isArray(movs) ? movs.length : 0;
+  }
+  if (results[13].status === 'fulfilled') {
+    signals.company = results[13].value;
+    signals.companyComplete = companyRequiredComplete(signals.company);
+    signals.companyMissing = companyMissingFields(signals.company);
+  }
 
   return signals;
 }
@@ -831,8 +977,9 @@ export async function loadImplementationSignals(): Promise<ImplementationSignals
 export function buildImplementationSnapshot(
   signals: ImplementationSignals,
   loaded: boolean,
+  goLive: GoLiveRecord = { certified: false, at: null },
 ): ImplementationSnapshot {
-  const { certified, at } = readCertified();
+  const { certified, at } = goLive;
   const lastModifiedAt = at ?? readLastModified();
   const domains = loaded ? buildDomains(signals, certified) : [];
   const chain = domains.filter((d) => d.inChain);
@@ -851,45 +998,75 @@ export function buildImplementationSnapshot(
   };
 }
 
-export function certifyGoLive(note: string, consultant: ConsultantView): { ok: boolean; error?: string } {
+/** Persiste certificación a nivel organización (API parámetros café). */
+export async function certifyGoLive(
+  note: string,
+  consultant: ConsultantView,
+): Promise<{ ok: boolean; error?: string }> {
   if (!consultant.canCertify) {
     return {
       ok: false,
       error: `No se puede certificar. Bloqueos: ${consultant.certifyBlockers.join('; ')}`,
     };
   }
-  const payload = { at: new Date().toISOString(), note, blockers: [] as string[] };
+  const at = new Date().toISOString();
+  const record: GoLiveRecord = { certified: true, at, note };
   try {
-    localStorage.setItem(STORAGE_CERT, '1');
-    localStorage.setItem(STORAGE_CERT_RECORD, JSON.stringify(payload));
+    await upsertCoffeeParameter({
+      parameterKey: GOLIVE_PARAM_KEY,
+      name: 'Certificación Go Live',
+      scopeType: 'organization',
+      value: { certified: true, at, note },
+      dataType: 'json',
+      reason: note || 'Certificación Go Live',
+    });
+    writeCertifiedLocal(record);
     touchLastModified();
+    return { ok: true };
   } catch {
-    return { ok: false, error: 'No se pudo guardar la certificación en este navegador.' };
+    return {
+      ok: false,
+      error:
+        'No se pudo guardar la certificación en el servidor. Se requiere permiso de configuración de compras (coffee:config:manage).',
+    };
   }
-  return { ok: true };
 }
 
-export function revokeGoLiveCertification() {
+export async function revokeGoLiveCertification(): Promise<{ ok: boolean; error?: string }> {
+  const at = new Date().toISOString();
   try {
-    localStorage.removeItem(STORAGE_CERT);
-    localStorage.removeItem(STORAGE_CERT_RECORD);
+    await upsertCoffeeParameter({
+      parameterKey: GOLIVE_PARAM_KEY,
+      name: 'Certificación Go Live',
+      scopeType: 'organization',
+      value: { certified: false, at, note: 'Revocada' },
+      dataType: 'json',
+      reason: 'Revocación de certificación Go Live',
+    });
+    writeCertifiedLocal({ certified: false, at: null });
     touchLastModified();
+    return { ok: true };
   } catch {
-    /* ignore */
+    return {
+      ok: false,
+      error: 'No se pudo revocar en el servidor. Se requiere coffee:config:manage.',
+    };
   }
 }
 
 export function useImplementationEngine(): ImplementationSnapshot & { refresh: () => void } {
   const [signals, setSignals] = useState<ImplementationSignals>(emptySignals);
+  const [goLive, setGoLive] = useState<GoLiveRecord>({ certified: false, at: null });
   const [loaded, setLoaded] = useState(false);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setLoaded(false);
-    loadImplementationSignals().then((s) => {
+    Promise.all([loadImplementationSignals(), loadGoLiveRecord()]).then(([s, cert]) => {
       if (cancelled) return;
       setSignals(s);
+      setGoLive(cert);
       touchLastModified();
       setLoaded(true);
     });
@@ -898,7 +1075,10 @@ export function useImplementationEngine(): ImplementationSnapshot & { refresh: (
     };
   }, [tick]);
 
-  const snapshot = useMemo(() => buildImplementationSnapshot(signals, loaded), [signals, loaded, tick]);
+  const snapshot = useMemo(
+    () => buildImplementationSnapshot(signals, loaded, goLive),
+    [signals, loaded, goLive, tick],
+  );
 
   return {
     ...snapshot,

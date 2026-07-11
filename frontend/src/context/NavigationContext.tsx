@@ -21,6 +21,7 @@ import type { DashboardRole } from '../config/navigation';
 import { DEFAULT_WIDGET_ORDER } from '../config/dashboardWidgets';
 import { resolveDashboardRole } from '../config/navigation';
 import { canAccessPath } from '../config/routePermissions';
+import { isPathAllowedForPackage } from '../config/packageAccess';
 import { parseEntityFromPath, recordWorkEntityVisit } from '../lib/workEntityHistory';
 import { useAuth } from './AuthContext';
 import { useExperienceCenterOptional } from './ExperienceCenterContext';
@@ -155,6 +156,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       if (cat.id === 'favorites') {
         const favItems: NavItem[] = favorites
           .filter((f) => canAccessPath(f.to, hasPermission))
+          .filter((f) =>
+            !experience || isPathAllowedForPackage(f.to, experience.packageId),
+          )
           .sort((a, b) => a.order - b.order)
           .map((f) => ({ id: f.id, to: f.to, label: f.label, icon: f.icon }));
         return { ...cat, items: favItems };
@@ -163,7 +167,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       if (items.length === 0 && cat.id !== 'home') return null;
       return { ...cat, items };
     }).filter(Boolean) as NavCategory[];
-  }, [baseCategories, favorites, filterNavItem, hasPermission]);
+  }, [baseCategories, favorites, filterNavItem, hasPermission, experience]);
 
   const toggleGroup = useCallback((id: NavCategoryId) => {
     setCollapsedGroups((prev) => {
