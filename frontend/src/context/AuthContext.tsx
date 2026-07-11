@@ -58,30 +58,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       roles:
         effective.roles?.length
           ? effective.roles
-          : (profile.roles as (string | { slug: string })[]).map((r) =>
-              typeof r === 'string' ? r : r.slug,
+          : (Array.isArray(profile.roles) ? profile.roles : []).map((r) =>
+              typeof r === 'string' ? r : (r as { slug: string }).slug,
             ),
     });
   }, []);
 
   const applyLoginResult = useCallback(
     async (res: LoginResult) => {
-      setUser({
-        id: res.user.id,
-        email: res.user.email,
-        firstName: res.user.firstName,
-        lastName: res.user.lastName,
-        organizationId: res.user.organizationId,
-        roles: res.user.roles,
-        permissions: res.user.permissions ?? [],
-        status: 'active',
-        organization: {
-          id: res.user.organizationId,
-          name: '',
-          slug: '',
-        },
-      });
-      await refreshProfile();
+      try {
+        await refreshProfile();
+      } catch {
+        setUser({
+          id: res.user.id,
+          email: res.user.email,
+          firstName: res.user.firstName,
+          lastName: res.user.lastName,
+          organizationId: res.user.organizationId,
+          roles: res.user.roles,
+          permissions: res.user.permissions ?? [],
+          status: 'active',
+          organization: {
+            id: res.user.organizationId,
+            name: '',
+            slug: '',
+          },
+        });
+      }
       if (res.user.roles.includes('admin')) {
         try {
           await ensureDomainSchemas();

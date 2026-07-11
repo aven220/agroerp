@@ -60,7 +60,9 @@ services:
       target: production
     container_name: agroerp-backend
     restart: unless-stopped
-    # API solo vía nginx HTTPS (no exponer 3080 públicamente)
+    # API vía nginx; publicar solo en loopback para Vite local (no expuesto a la red).
+    ports:
+      - "127.0.0.1:3080:3080"
     env_file:
       - ../.env
     environment:

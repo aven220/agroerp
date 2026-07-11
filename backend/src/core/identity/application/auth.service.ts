@@ -379,7 +379,9 @@ export class AuthService {
       email: user.email,
       orgId: user.organizationId,
       roles: access.roles.length ? access.roles : roles,
-      permissions: access.permissions,
+      // No embeber cientos de permisos en el JWT: rompe nginx (header >8k) y
+      // JwtStrategy ya resuelve permisos en cada request vía AccessControlService.
+      permissions: [],
       sessionId,
       userType: user.userType,
       jti,
@@ -417,7 +419,7 @@ export class AuthService {
         lastName: user.lastName,
         organizationId: user.organizationId,
         roles: payload.roles,
-        permissions: payload.permissions,
+        permissions: access.permissions,
         scopes: access.scopes,
       },
     };
