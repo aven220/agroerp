@@ -11,6 +11,8 @@ coverage/
 
 # Prisma
 backend/prisma/*.db
+# Clientes Prisma empaquetados para build Docker (generar con: pnpm docker:stage-prisma)
+infra/docker-prisma/
 
 # Android
 mobile-android/.gradle/

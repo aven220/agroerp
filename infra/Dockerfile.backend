@@ -1,4 +1,9 @@
-FROM node:20-alpine AS base
+# Bookworm (glibc + OpenSSL 3) — coincide con binaryTargets debian-openssl-3.0.x
+# Alpine/musl provocaba mismatch o generate OOM; generate se hace en el host.
+FROM node:20-bookworm-slim AS base
+RUN apt-get update -y \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 # prisma generate no conecta a la DB; run-with-env.mjs exige estas variables en image build.
@@ -32,9 +37,15 @@ RUN pnpm --filter @agroerp/shared build
 # ─── Build backend ───────────────────────────────────────────────────────────
 FROM build-shared AS build-backend
 COPY backend/ ./backend/
+# Clientes Prisma pre-generados en el host (evita OOM de prisma generate en Docker).
+# Prerrequisito: pnpm docker:stage-prisma
+COPY infra/docker-prisma /prisma-stage
+COPY infra/scripts/restore-prisma-in-docker.sh /restore-prisma.sh
 WORKDIR /app/backend
-RUN pnpm db:generate
-RUN pnpm build
+RUN test -f /prisma-stage/dot-prisma-client/index.js \
+  || (echo "ERROR: falta infra/docker-prisma. Ejecute: pnpm docker:stage-prisma" && exit 1)
+RUN chmod +x /restore-prisma.sh && /restore-prisma.sh /app/backend /prisma-stage
+RUN NODE_OPTIONS=--max-old-space-size=4096 pnpm build
 
 # ─── Production ──────────────────────────────────────────────────────────────
 FROM base AS production
@@ -42,15 +53,17 @@ FROM base AS production
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY shared/package.json ./shared/
 COPY backend/package.json ./backend/
-# Instalación completa: prisma CLI necesario para generate + db push en entrypoint
+# prisma CLI necesario para db push en entrypoint
 RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 
 COPY --from=build-shared /app/shared/dist ./shared/dist
 COPY --from=build-backend /app/backend/dist ./backend/dist
 COPY --from=build-backend /app/backend/prisma ./backend/prisma
 
+COPY infra/docker-prisma /prisma-stage
+COPY infra/scripts/restore-prisma-in-docker.sh /restore-prisma.sh
 WORKDIR /app/backend
-RUN pnpm db:generate
+RUN chmod +x /restore-prisma.sh && /restore-prisma.sh /app/backend /prisma-stage
 
 EXPOSE 3080
 
@@ -64,8 +77,12 @@ CMD ["/start-backend.sh"]
 # ─── Development target ──────────────────────────────────────────────────────
 FROM build-shared AS development
 COPY backend/ ./backend/
+COPY infra/docker-prisma /prisma-stage
+COPY infra/scripts/restore-prisma-in-docker.sh /restore-prisma.sh
 WORKDIR /app/backend
-RUN pnpm db:generate
+RUN test -f /prisma-stage/dot-prisma-client/index.js \
+  || (echo "ERROR: falta infra/docker-prisma. Ejecute: pnpm docker:stage-prisma" && exit 1)
+RUN chmod +x /restore-prisma.sh && /restore-prisma.sh /app/backend /prisma-stage
 EXPOSE 3080
 
 COPY infra/docker-entrypoint.sh /docker-entrypoint.sh

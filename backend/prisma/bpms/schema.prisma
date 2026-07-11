@@ -1,6 +1,7 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../../node_modules/@agroerp/prisma-bpms-client"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
