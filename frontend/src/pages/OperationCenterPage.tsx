@@ -25,6 +25,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '../context/NavigationContext';
 import { labelTicketStatus, nextActionForTicket } from '../lib/productLabels';
 import { humanizeCopy } from '../lib/humanizeCopy';
+import { useOnEntityUpdated } from '../lib/entitySync';
 
 type WorkItem = {
   id: string;
@@ -52,9 +53,11 @@ export function OperationCenterPage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoaded(false);
     Promise.all([
       getCoffeeCenter().catch((e: Error) => {
-        setError(e.message);
+        if (!cancelled) setError(e.message);
         return null;
       }),
       getWorkflowInbox().catch(() => [] as WorkflowAssignment[]),
@@ -64,6 +67,7 @@ export function OperationCenterPage() {
       listEimsMovements({ status: 'pending' }).catch(() => []),
       listCoffeeDocuments().catch(() => []),
     ]).then(([center, wf, settle, qual, opsAlerts, movs, docs]) => {
+      if (cancelled) return;
       if (center) setDash(center);
       setInbox(Array.isArray(wf) ? wf : []);
       setSettlements(Array.isArray(settle) ? settle : []);
@@ -82,7 +86,25 @@ export function OperationCenterPage() {
       );
       setLoaded(true);
     });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  useOnEntityUpdated(() => {
+    getCoffeeCenter()
+      .then((center) => setDash(center))
+      .catch(() => undefined);
+    getWorkflowInbox()
+      .then((wf) => setInbox(Array.isArray(wf) ? wf : []))
+      .catch(() => undefined);
+    listSettlementPending()
+      .then((settle) => setSettlements(Array.isArray(settle) ? settle : []))
+      .catch(() => undefined);
+    listQualityPending()
+      .then((qual) => setQuality(Array.isArray(qual) ? qual : []))
+      .catch(() => undefined);
+  }, ['purchase', 'inventory', 'workflow']);
 
   const queue = useMemo(() => (dash?.queue ?? []).slice(0, 10), [dash]);
 

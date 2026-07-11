@@ -59,21 +59,31 @@ export function CoffeeWeighingPage() {
   }, ['purchase', 'inventory']);
 
   useEffect(() => {
+    let cancelled = false;
     reload().catch(() => undefined);
     const ticketFromQuery = searchParams.get('ticket');
     if (ticketFromQuery) {
       startWeighingSession(ticketFromQuery)
         .then(async (s) => {
+          if (cancelled || !mounted.current) return;
           try {
             await verifyWeighingScale(String(s.sessionKey));
           } catch {
             // allow contingency path if scale verify fails
           }
+          if (cancelled || !mounted.current) return;
           setSession(await getWeighingSession(String(s.sessionKey)));
         })
-        .catch((e) => setError(e instanceof Error ? e.message : 'No se pudo iniciar pesaje'));
+        .catch((e) => {
+          if (!cancelled && mounted.current) {
+            setError(e instanceof Error ? e.message : 'No se pudo iniciar pesaje');
+          }
+        });
     }
-  }, [searchParams]);
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, mounted]);
 
   useEffect(() => {
     const t = setInterval(() => {

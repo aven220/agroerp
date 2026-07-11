@@ -27,7 +27,7 @@ export function CoffeeWeighingMonitorPage() {
 
   useEffect(() => {
     reload().catch(() => undefined);
-    const t = setInterval(() => reload().catch(() => undefined), 3000);
+    const t = setInterval(() => reload().catch(() => undefined), 10000);
     return () => clearInterval(t);
   }, [mounted]);
 

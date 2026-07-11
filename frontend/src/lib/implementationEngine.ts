@@ -3,7 +3,15 @@
  * Estados derivados de APIs existentes; sin checkboxes manuales ni backend nuevo.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  createElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { getCoffeeCenter, getCoffeeConfigCenter, listCoffeeDocuments, listCoffeeParameters, listCoffeePrices, listCoffeePurchaseCenters, listCoffeeScales, upsertCoffeeParameter } from '../api/coffee';
 import { getEimsCenter, listEimsMovements } from '../api/eims';
 import { getIamCenter } from '../api/iam';
@@ -1054,7 +1062,7 @@ export async function revokeGoLiveCertification(): Promise<{ ok: boolean; error?
   }
 }
 
-export function useImplementationEngine(): ImplementationSnapshot & { refresh: () => void } {
+export function useImplementationEngineState(): ImplementationSnapshot & { refresh: () => void } {
   const [signals, setSignals] = useState<ImplementationSignals>(emptySignals);
   const [goLive, setGoLive] = useState<GoLiveRecord>({ certified: false, at: null });
   const [loaded, setLoaded] = useState(false);
@@ -1084,4 +1092,22 @@ export function useImplementationEngine(): ImplementationSnapshot & { refresh: (
     ...snapshot,
     refresh: () => setTick((t) => t + 1),
   };
+}
+
+const ImplementationEngineContext = createContext<
+  (ImplementationSnapshot & { refresh: () => void }) | null
+>(null);
+
+/** PM-36 — Una sola carga de señales por árbol EIC (evita 2×14 APIs por página). */
+export function ImplementationEngineProvider({ children }: { children: ReactNode }) {
+  const value = useImplementationEngineState();
+  return createElement(ImplementationEngineContext.Provider, { value }, children);
+}
+
+export function useImplementationEngine(): ImplementationSnapshot & { refresh: () => void } {
+  const ctx = useContext(ImplementationEngineContext);
+  if (!ctx) {
+    throw new Error('useImplementationEngine must be used within ImplementationEngineProvider');
+  }
+  return ctx;
 }

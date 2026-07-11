@@ -121,25 +121,63 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     [user?.roles],
   );
 
+  const [prefsUserId, setPrefsUserId] = useState(userId);
+
   useEffect(() => {
+    try {
+      setCollapsedGroups(JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed')) ?? '{}'));
+    } catch {
+      setCollapsedGroups({});
+    }
+    try {
+      setFavorites(JSON.parse(localStorage.getItem(storageKey(userId, 'favorites')) ?? '[]'));
+    } catch {
+      setFavorites([]);
+    }
+    try {
+      setRecentSearches(JSON.parse(localStorage.getItem(storageKey(userId, 'recent_searches')) ?? '[]'));
+    } catch {
+      setRecentSearches([]);
+    }
+    try {
+      setNavHistory(JSON.parse(localStorage.getItem(storageKey(userId, 'nav_history')) ?? '[]'));
+    } catch {
+      setNavHistory([]);
+    }
+    try {
+      setWidgetLayout(
+        JSON.parse(localStorage.getItem(storageKey(userId, 'dashboard_layout')) ?? '{"order":[],"hidden":[]}'),
+      );
+    } catch {
+      setWidgetLayout({ order: [], hidden: [] });
+    }
+    setPrefsUserId(userId);
+  }, [userId]);
+
+  useEffect(() => {
+    if (prefsUserId !== userId) return;
     localStorage.setItem(storageKey(userId, 'nav_collapsed'), JSON.stringify(collapsedGroups));
-  }, [collapsedGroups, userId]);
+  }, [collapsedGroups, userId, prefsUserId]);
 
   useEffect(() => {
+    if (prefsUserId !== userId) return;
     localStorage.setItem(storageKey(userId, 'favorites'), JSON.stringify(favorites));
-  }, [favorites, userId]);
+  }, [favorites, userId, prefsUserId]);
 
   useEffect(() => {
+    if (prefsUserId !== userId) return;
     localStorage.setItem(storageKey(userId, 'recent_searches'), JSON.stringify(recentSearches));
-  }, [recentSearches, userId]);
+  }, [recentSearches, userId, prefsUserId]);
 
   useEffect(() => {
+    if (prefsUserId !== userId) return;
     localStorage.setItem(storageKey(userId, 'nav_history'), JSON.stringify(navHistory));
-  }, [navHistory, userId]);
+  }, [navHistory, userId, prefsUserId]);
 
   useEffect(() => {
+    if (prefsUserId !== userId) return;
     localStorage.setItem(storageKey(userId, 'dashboard_layout'), JSON.stringify(widgetLayout));
-  }, [widgetLayout, userId]);
+  }, [widgetLayout, userId, prefsUserId]);
 
   const filterNavItem = useCallback(
     (item: NavItem) => {

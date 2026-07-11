@@ -6,6 +6,7 @@ import { LoadingState } from '../components/ux/LoadingState';
 import { getCoffeeCenter, getOpsAlerts, getExecutiveDashboard } from '../api/coffee';
 import { getWorkflowDashboard } from '../api/workflows';
 import { humanizeCopy } from '../lib/humanizeCopy';
+import { useOnEntityUpdated } from '../lib/entitySync';
 
 /**
  * PM-28 — Centro de Gerencia: solo KPIs, tendencias, riesgos y alertas.
@@ -19,15 +20,17 @@ export function ManagementCenterPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
     Promise.all([
       getCoffeeCenter().catch((e: Error) => {
-        setError(e.message);
+        if (!cancelled) setError(e.message);
         return null;
       }),
       getExecutiveDashboard().catch(() => null),
       getOpsAlerts(false).catch(() => []),
       getWorkflowDashboard().catch(() => null),
     ]).then(([center, executive, opsAlerts, workflow]) => {
+      if (cancelled) return;
       if (center) setDash(center);
       if (executive) setExec(executive as Record<string, unknown>);
       if (Array.isArray(opsAlerts)) setAlerts(opsAlerts as Array<Record<string, unknown>>);
@@ -36,7 +39,26 @@ export function ManagementCenterPage() {
       }
       if (workflow) setWf(workflow);
     });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  useOnEntityUpdated(() => {
+    getCoffeeCenter()
+      .then((center) => setDash(center))
+      .catch(() => undefined);
+    getExecutiveDashboard()
+      .then((executive) => {
+        if (executive) setExec(executive as Record<string, unknown>);
+      })
+      .catch(() => undefined);
+    getWorkflowDashboard()
+      .then((workflow) => {
+        if (workflow) setWf(workflow);
+      })
+      .catch(() => undefined);
+  }, ['purchase', 'inventory', 'workflow']);
 
   const risks = useMemo(() => {
     const items: Array<{ title: string; detail: string; level: 'alto' | 'medio' | 'bajo' }> = [];
