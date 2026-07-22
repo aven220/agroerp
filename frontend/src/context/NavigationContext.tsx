@@ -49,6 +49,8 @@ interface NavigationContextValue {
   recordVisit: (pathname: string) => void;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (collapsed: boolean) => void;
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
   filterNavItem: (item: NavItem) => boolean;
@@ -78,9 +80,17 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
     try {
-      return JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v5')) ?? '{}');
+      return JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v6')) ?? '{}');
     } catch {
       return {};
+    }
+  });
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(storageKey(userId, 'nav_sidebar_rail_v1')) === '1';
+    } catch {
+      return false;
     }
   });
 
@@ -144,9 +154,14 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      setCollapsedGroups(JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v5')) ?? '{}'));
+      setCollapsedGroups(JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v6')) ?? '{}'));
     } catch {
       setCollapsedGroups({});
+    }
+    try {
+      setSidebarCollapsed(localStorage.getItem(storageKey(userId, 'nav_sidebar_rail_v1')) === '1');
+    } catch {
+      setSidebarCollapsed(false);
     }
     try {
       setSidebarScroll(Number(localStorage.getItem(storageKey(userId, 'nav_sidebar_scroll_v1')) || '0') || 0);
@@ -185,8 +200,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (prefsUserId !== userId) return;
-    localStorage.setItem(storageKey(userId, 'nav_collapsed_v5'), JSON.stringify(collapsedGroups));
+    localStorage.setItem(storageKey(userId, 'nav_collapsed_v6'), JSON.stringify(collapsedGroups));
   }, [collapsedGroups, userId, prefsUserId]);
+
+  useEffect(() => {
+    if (prefsUserId !== userId) return;
+    localStorage.setItem(storageKey(userId, 'nav_sidebar_rail_v1'), sidebarCollapsed ? '1' : '0');
+  }, [sidebarCollapsed, userId, prefsUserId]);
 
   useEffect(() => {
     if (prefsUserId !== userId) return;
@@ -388,6 +408,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       recordVisit,
       sidebarOpen,
       setSidebarOpen,
+      sidebarCollapsed,
+      setSidebarCollapsed,
       searchOpen,
       setSearchOpen,
       filterNavItem,
@@ -405,7 +427,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     [
       collapsedGroups, toggleGroup, expandGroup, favorites, addFavorite, removeFavorite,
       reorderFavorites, isFavorite, recentSearches, addRecentSearch, clearRecentSearches,
-      navHistory, recordVisit, sidebarOpen, searchOpen, filterNavItem, visibleCategories,
+      navHistory, recordVisit, sidebarOpen, sidebarCollapsed, searchOpen, filterNavItem, visibleCategories,
       widgetLayout, setWidgetOrder, toggleWidget, replaceWidgetLayout, resetWidgetLayout, dashboardRole,
       sidebarScroll, lastMenuPath,
     ],

@@ -47,3 +47,5 @@ a:hover {
 @import './design-system/enterprise-workspace-pm45.css';
 @import './design-system/enterprise-ux-pm48.css';
 @import './design-system/enterprise-visual-pm49.css';
+/* PM-41B — Enterprise Sidebar (wins over legacy nav chrome) */
+@import './design-system/enterprise-sidebar.css';

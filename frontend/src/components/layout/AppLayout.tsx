@@ -27,7 +27,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       className={`erp-shell${isMobile ? ' erp-shell-mobile' : ''}${isTablet ? ' erp-shell-tablet' : ''}${panelOpen && !isMobile && !focusMode ? ' guided-workspace-open' : ''}${focusMode ? ' erp-shell-focus' : ''}${chromeLevel === 'compact' ? ' erp-shell-compact-chrome' : ''}`}
     >
       <a href="#main-content" className="skip-link">Saltar al contenido</a>
-      {!isMobile && !focusMode ? <SmartSidebar /> : null}
+      {!focusMode ? <SmartSidebar /> : null}
       <div className="erp-main">
         <AppShellBar compact={isMobile} />
         <OfflineBanner />

@@ -10,6 +10,7 @@ export type NavCategoryId =
   | 'favorites'
   | 'company'
   | 'operation'
+  | 'gestion'
   | 'analytics'
   | 'reports'
   | 'configuration'

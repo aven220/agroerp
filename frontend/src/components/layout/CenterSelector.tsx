@@ -1,48 +1,66 @@
 import { useExperienceCenter } from '../../context/ExperienceCenterContext';
 import type { ExperienceCenterId } from '../../config/experienceCenters';
+import { NavIcon, SidebarChromeIcons } from './navIcons';
 
 const CENTER_ICONS: Record<ExperienceCenterId, string> = {
-  operation: '⚙',
-  management: '◈',
-  implementation: '🧭',
+  operation: 'shopping-cart',
+  management: 'bar-chart-3',
+  implementation: 'settings',
 };
 
+/**
+ * PM-41B — Selector de centro (dropdown compacto bajo el logo).
+ */
 export function CenterSelector({ compact = false }: { compact?: boolean }) {
   const { center, setCenter, centers, centerMeta } = useExperienceCenter();
 
-  return (
-    <div className="center-selector" role="group" aria-label="Centro de experiencia">
-      {!compact ? (
-        <span className="center-selector-label" aria-hidden>
-          Centro
-        </span>
-      ) : null}
-      <div className="center-selector-pills">
+  if (compact) {
+    return (
+      <div className="esb-center-compact" role="group" aria-label="Centro de experiencia">
         {centers.map((c) => {
           const active = c.id === center;
           return (
             <button
               key={c.id}
               type="button"
-              className={`center-selector-pill${active ? ' active' : ''}`}
+              className={`esb-center-pill${active ? ' is-active' : ''}`}
               aria-pressed={active}
-              aria-label={`${c.label}. ${c.description}`}
               title={c.description}
               onClick={() => {
                 if (!active) setCenter(c.id);
               }}
             >
-              <span className="center-selector-icon" aria-hidden>
-                {CENTER_ICONS[c.id]}
-              </span>
-              {!compact ? <span>{c.shortLabel}</span> : null}
+              <NavIcon name={CENTER_ICONS[c.id]} size={16} />
+              <span className="sr-only">{c.shortLabel}</span>
             </button>
           );
         })}
       </div>
-      {compact ? (
-        <span className="center-selector-current sr-only">{centerMeta.label}</span>
-      ) : null}
+    );
+  }
+
+  return (
+    <div className="esb-center-selector" role="group" aria-label="Centro de experiencia">
+      <span className="esb-center-label">Centro</span>
+      <div className="esb-center-control">
+        <NavIcon name={CENTER_ICONS[center]} size={16} className="esb-center-leading" />
+        <select
+          className="esb-center-select"
+          value={center}
+          aria-label={`Centro actual: ${centerMeta.label}`}
+          onChange={(e) => {
+            const next = e.target.value as ExperienceCenterId;
+            if (next !== center) setCenter(next);
+          }}
+        >
+          {centers.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.shortLabel}
+            </option>
+          ))}
+        </select>
+        <SidebarChromeIcons.chevronDown size={14} strokeWidth={1.75} className="esb-center-caret" />
+      </div>
     </div>
   );
 }
