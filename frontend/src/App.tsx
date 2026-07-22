@@ -32,6 +32,7 @@ import {
   ImplementationGoLivePage,
 } from './pages/ImplementationCenterPage';
 import { ProducersPage } from './pages/ProducersPage';
+import { ProducersLandingPage } from './pages/ProducersLandingPage';
 import { ProducerDetailPage } from './pages/ProducerDetailPage';
 import { ProducerFormPage } from './pages/ProducerFormPage';
 import { ProducerDashboardPage } from './pages/ProducerDashboardPage';
@@ -542,6 +543,8 @@ import { EscmQuotationDetailPage } from './pages/EscmQuotationDetailPage';
 import { EscmAgendaPage } from './pages/EscmAgendaPage';
 import { EscmCustomerTimelinePage } from './pages/EscmCustomerTimelinePage';
 import { DocumentsPage } from './pages/DocumentsPage';
+import { DocumentsLandingPage } from './pages/DocumentsLandingPage';
+import { ConfigLandingPage } from './pages/ConfigLandingPage';
 import { AdminPage } from './pages/AdminPage';
 import { GisMapPage } from './pages/GisMapPage';
 import { GisDashboardPage } from './pages/GisDashboardPage';
@@ -665,7 +668,8 @@ export function App() {
               <Route path="estado" element={<ImplementationEstadoPage />} />
               <Route path="go-live" element={<ImplementationGoLivePage />} />
             </Route>
-            <Route path="/productores" element={<ProducersPage />} />
+            <Route path="/productores" element={<ProducersLandingPage />} />
+            <Route path="/productores/lista" element={<ProducersPage />} />
             <Route path="/productores/dashboard" element={<ProducerDashboardPage />} />
             <Route path="/productores/mapa" element={<ProducerDashboardPage />} />
             <Route path="/productores/nuevo" element={<ProducerFormPage />} />
@@ -1012,7 +1016,9 @@ export function App() {
             <Route path="/portal/analytics/ia" element={<HpaAiPanelPage />} />
             <Route path="/comercial/agenda" element={<EscmAgendaPage />} />
             <Route path="/comercial/historial-cliente" element={<EscmCustomerTimelinePage />} />
-            <Route path="/documentos" element={<DocumentsPage />} />
+            <Route path="/documentos" element={<DocumentsLandingPage />} />
+            <Route path="/documentos/lista" element={<DocumentsPage />} />
+            <Route path="/configuracion" element={<ConfigLandingPage />} />
             <Route path="/gis" element={<GisMapPage />} />
             <Route path="/gis/dashboard" element={<GisDashboardPage />} />
             <Route path="/gis/capas" element={<GisLayersPage />} />

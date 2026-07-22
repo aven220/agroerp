@@ -1,113 +1,129 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
-import { HubToolbar } from '../components/layout/HubToolbar';
-import { PageLayout, PageSection, PageSummary, MetricCard } from '../components/page';
-import { EnterpriseDataGrid } from '../components/data-workspace/EnterpriseDataGrid';
-import type { GridColumnDef, RowAction } from '../lib/data-grid/types';
-import { getCoffeeCenter, type CoffeeDashboard, type CoffeeTicket } from '../api/coffee';
+import { DomainLanding } from '../components/landing/DomainLanding';
 import { LoadingState } from '../components/ux/LoadingState';
+import {
+  getCoffeeCenter,
+  listQualityPending,
+  listSettlementPending,
+  listWeighingPending,
+  type CoffeeDashboard,
+  type CoffeeTicket,
+} from '../api/coffee';
+import { useOnEntityUpdated } from '../lib/entitySync';
 import { labelTicketStatus } from '../lib/productLabels';
 
 /**
- * PM-25 — Hub de compras simplificado (máx. Nueva acción · Buscar · Filtros · Más acciones)
+ * PM-43 — Centro de Compras (landing). Sin tablas; el proceso está en rutas hijas.
  */
 export function CoffeeCenterPage() {
-  const navigate = useNavigate();
   const [dash, setDash] = useState<CoffeeDashboard | null>(null);
-  const [search, setSearch] = useState('');
+  const [quality, setQuality] = useState<CoffeeTicket[]>([]);
+  const [weighing, setWeighing] = useState<CoffeeTicket[]>([]);
+  const [settlements, setSettlements] = useState<CoffeeTicket[]>([]);
+
+  const reload = () => {
+    getCoffeeCenter().then(setDash).catch(() => setDash(null));
+    listQualityPending().then((r) => setQuality(Array.isArray(r) ? r : [])).catch(() => setQuality([]));
+    listWeighingPending().then((r) => setWeighing(Array.isArray(r) ? r : [])).catch(() => setWeighing([]));
+    listSettlementPending().then((r) => setSettlements(Array.isArray(r) ? r : [])).catch(() => setSettlements([]));
+  };
 
   useEffect(() => {
-    getCoffeeCenter().then(setDash);
+    reload();
   }, []);
 
-  if (!dash) return <LoadingState variant="page" message="Cargando compras de café…" />;
+  useOnEntityUpdated(() => reload(), ['purchase']);
 
-  const queue = (dash.queue ?? []).filter((t) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      t.ticketKey?.toLowerCase().includes(q) ||
-      t.producerName?.toLowerCase().includes(q) ||
-      labelTicketStatus(t.status).toLowerCase().includes(q)
-    );
-  });
+  if (!dash) return <LoadingState variant="page" message="Cargando centro de compras…" />;
 
-  const gridRows = queue.slice(0, 12).map((t) => ({ ...t, id: t.id || t.ticketKey }));
-
-  const columns: GridColumnDef<CoffeeTicket>[] = [
-    { key: 'ticketKey', label: 'Ticket', getValue: (r) => r.ticketKey },
-    { key: 'producerName', label: 'Productor', getValue: (r) => r.producerName ?? '—' },
-    { key: 'status', label: 'Estado', render: (r) => labelTicketStatus(r.status) },
-  ];
-
-  const rowActions: RowAction<CoffeeTicket>[] = [
-    {
-      id: 'attend',
-      label: 'Atender',
-      onAction: (r) => navigate(`/compras/pesaje?ticket=${encodeURIComponent(r.ticketKey)}`),
-    },
-  ];
+  const queue = dash.queue ?? [];
 
   return (
-    <>
-      <Header
-        title="Compras de café"
-        subtitle="Recepción, pesaje, calidad, liquidación e inventario"
-        showExperience={false}
-      />
-      <PageLayout
-        toolbar={
-          <HubToolbar
-            primaryAction={{ label: 'Nueva recepción', to: '/compras/recepcion' }}
-            searchPlaceholder="Buscar ticket o productor…"
-            searchValue={search}
-            onSearchChange={setSearch}
-            moreActions={[
-              { label: 'Pesaje', to: '/compras/pesaje' },
-              { label: 'Calidad', to: '/compras/calidad' },
-              { label: 'Liquidaciones', to: '/compras/liquidaciones' },
-              { label: 'Inventario café', to: '/compras/inventario' },
-              { label: 'Balanzas', to: '/compras/balanzas' },
-              { label: 'Configuración', to: '/compras/config' },
-              { label: 'Trazabilidad', to: '/compras/trazabilidad' },
-              { label: 'Reportes', to: '/compras/ops/reportes' },
-            ]}
-          />
-        }
-      >
-        <PageSummary>
-          <MetricCard label="Tickets hoy" value={dash.ticketsToday} tone="coffee" />
-          <MetricCard label="En cola" value={dash.queueLength} />
-          <MetricCard label="Pesados" value={dash.weighedToday} />
-          <MetricCard label="Calidad" value={dash.qualityToday} tone="green" />
-          <MetricCard label="Liquidaciones" value={dash.settlementsToday} />
-          <MetricCard label="Kg hoy" value={dash.kgToday.toFixed(0)} tone="teal" />
-        </PageSummary>
-
-        <PageSection title="Cola del día">
-          <EnterpriseDataGrid
-            gridId="coffee-center-queue"
-            columns={columns}
-            data={gridRows}
-            selectable={false}
-            rowActions={rowActions}
-            emptyMessage="No hay tickets que coincidan con la búsqueda."
-          />
-        </PageSection>
-
-        {(dash.alerts?.length ?? 0) > 0 ? (
-          <PageSection title="Alertas operativas">
-            <ul>
-              {(dash.alerts ?? []).slice(0, 5).map((a, i) => (
-                <li key={i}>
-                  [{String(a.severity)}] {String(a.title)} — {String(a.message)}
-                </li>
-              ))}
-            </ul>
-          </PageSection>
-        ) : null}
-      </PageLayout>
-    </>
+    <DomainLanding
+      title="Centro de Compras"
+      subtitle="Recepción → pesaje → calidad → liquidación"
+      description="Resumen del dominio. Entre a cada proceso solo cuando necesite operar."
+      metrics={[
+        { label: 'Tickets hoy', value: dash.ticketsToday, tone: 'coffee' },
+        { label: 'En cola', value: dash.queueLength },
+        { label: 'Pesados', value: dash.weighedToday },
+        { label: 'Calidad', value: dash.qualityToday, tone: 'green' },
+        { label: 'Liquidaciones', value: dash.settlementsToday },
+        { label: 'Kg hoy', value: dash.kgToday.toFixed(0), tone: 'teal' },
+      ]}
+      quickActions={[
+        { label: 'Nueva recepción', to: '/compras/recepcion', primary: true },
+        { label: 'Cola de espera', to: '/compras/cola' },
+      ]}
+      modules={[
+        {
+          id: 'rec',
+          title: 'Recepciones',
+          description: 'Registrar llegadas y turnos',
+          to: '/compras/recepcion',
+          icon: '📥',
+          badge: dash.queueLength || undefined,
+        },
+        {
+          id: 'pes',
+          title: 'Pesajes',
+          description: 'Balanza y confirmación de pesos',
+          to: '/compras/pesaje',
+          icon: '⚖',
+          badge: weighing.length || undefined,
+        },
+        {
+          id: 'cal',
+          title: 'Calidad',
+          description: 'Muestras y evaluación',
+          to: '/compras/calidad',
+          icon: '✓',
+          badge: quality.length || undefined,
+        },
+        {
+          id: 'liq',
+          title: 'Liquidaciones',
+          description: 'Cierre y pago al productor',
+          to: '/compras/liquidaciones',
+          icon: '💵',
+          badge: settlements.length || undefined,
+        },
+        {
+          id: 'dia',
+          title: 'Compras del día',
+          description: 'Vista operativa del día',
+          to: '/compras/cola',
+          icon: '🛒',
+        },
+        {
+          id: 'inv',
+          title: 'Café en bodega',
+          description: 'Inventario del flujo de compra',
+          to: '/compras/inventario',
+          icon: '📦',
+        },
+      ]}
+      pending={[
+        ...(dash.queueLength
+          ? [{ id: 'q', label: 'Tickets en cola', meta: String(dash.queueLength), to: '/compras/cola' }]
+          : []),
+        ...(weighing.length
+          ? [{ id: 'w', label: 'Pesajes pendientes', meta: String(weighing.length), to: '/compras/pesaje' }]
+          : []),
+        ...(quality.length
+          ? [{ id: 'c', label: 'Calidad pendiente', meta: String(quality.length), to: '/compras/calidad' }]
+          : []),
+        ...(settlements.length
+          ? [{ id: 's', label: 'Liquidaciones pendientes', meta: String(settlements.length), to: '/compras/liquidaciones' }]
+          : []),
+      ]}
+      activity={queue.slice(0, 6).map((t) => ({
+        id: t.id || t.ticketKey,
+        label: t.producerName || t.ticketKey,
+        meta: labelTicketStatus(t.status),
+        to: `/compras/pesaje?ticket=${encodeURIComponent(t.ticketKey)}`,
+      }))}
+      activityTitle="Actividad en cola"
+    />
   );
 }

@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   PageLayout,
   PageHeader,
@@ -111,17 +112,26 @@ export function DocumentsPage() {
   return (
     <PageLayout>
       <PageHeader
-        title="Documentos"
-        subtitle="Documentos operativos y archivos asociados a productores"
+        title="Repositorio de documentos"
+        subtitle="Listado operativo · volver al Centro de Documentos"
         showExperience={false}
         actions={
           canUpload ? (
             <PageActions>
+              <Link to="/documentos" className="btn btn-ghost">
+                Centro
+              </Link>
               <button type="button" className="btn btn-primary" onClick={() => setModalOpen(true)}>
                 + Subir documento
               </button>
             </PageActions>
-          ) : undefined
+          ) : (
+            <PageActions>
+              <Link to="/documentos" className="btn btn-ghost">
+                Centro
+              </Link>
+            </PageActions>
+          )
         }
       />
 

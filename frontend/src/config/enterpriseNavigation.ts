@@ -114,9 +114,9 @@ export const ENTERPRISE_NAV_CATEGORIES: NavCategory[] = [
         keywords: ['dashboard', 'ejecutivo', 'gerencia', 'kpis'],
         searchType: 'report',
       }),
-      item('nav-reportes', '/bi/reportes', 'Reportes', '📋', {
+      item('nav-reportes', '/bi', 'Reportes', '📋', {
         permission: 'analytics:read',
-        keywords: ['reportes', 'informes'],
+        keywords: ['reportes', 'informes', 'centro'],
         searchType: 'report',
       }),
       item('nav-indicadores', '/compras/ops/ejecutivo', 'Indicadores', '📊', {
@@ -124,9 +124,9 @@ export const ENTERPRISE_NAV_CATEGORIES: NavCategory[] = [
         keywords: ['indicadores', 'métricas', 'compras'],
         searchType: 'report',
       }),
-      item('nav-bi', '/bi', 'BI', '📈', {
+      item('nav-bi', '/bi/dashboards', 'BI', '📈', {
         permission: 'analytics:read',
-        keywords: ['bi', 'analítica', 'inteligencia'],
+        keywords: ['bi', 'analítica', 'tableros'],
         searchType: 'report',
       }),
     ],
@@ -137,6 +137,11 @@ export const ENTERPRISE_NAV_CATEGORIES: NavCategory[] = [
     icon: '⚙',
     defaultCollapsed: true,
     items: [
+      item('nav-cfg-hub', '/configuracion', 'Resumen', '◫', {
+        exact: true,
+        keywords: ['configuración', 'setup', 'centro'],
+        searchType: 'config',
+      }),
       item('nav-cfg-empresa', '/implementacion/configuracion', 'Empresa', '🏢', {
         keywords: ['configuración', 'empresa', 'setup'],
         searchType: 'config',

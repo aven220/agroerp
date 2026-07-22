@@ -284,16 +284,16 @@ export function ProducersPage() {
   return (
     <>
       <PageHeader
-        title="Productores"
-        subtitle="Registre y administre los productores de su organización"
+        title="Listado de productores"
+        subtitle="Directorio operativo · volver al Centro de Productores"
         showExperience={false}
         actions={
           <PageActions>
+            <Link to="/productores" className="btn btn-ghost">
+              Centro
+            </Link>
             <Link to="/productores/dashboard" className="btn">
               Indicadores
-            </Link>
-            <Link to="/productores/mapa" className="btn">
-              Mapa
             </Link>
             {canCreate ? (
               <button
@@ -308,15 +308,6 @@ export function ProducersPage() {
         }
       />
       <PageLayout>
-        {dashboard ? (
-          <PageSummary>
-            <MetricCard label="Total" value={dashboard.kpis.total} />
-            <MetricCard label="Activos" value={dashboard.kpis.active} tone="green" />
-            <MetricCard label="Pendientes de aprobación" value={dashboard.kpis.pendingApproval} tone="coffee" />
-            <MetricCard label="Índice de calidad" value={dashboard.kpis.avgQualityScore} tone="teal" />
-          </PageSummary>
-        ) : null}
-
         {error ? <PageState variant="error" message={error} onRetry={loadList} /> : null}
 
         {!loading && items.length === 0 && !error ? (

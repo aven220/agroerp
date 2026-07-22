@@ -38,6 +38,7 @@ const COOP_EXTRA_PREFIXES = [
   '/gerencia',
   '/ayuda',
   '/notificaciones',
+  '/configuracion',
 ];
 
 function coopAllowedPrefixes(): string[] {
