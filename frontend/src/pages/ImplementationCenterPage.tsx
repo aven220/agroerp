@@ -47,7 +47,7 @@ function EicShell({ title, subtitle, children }: { title: string; subtitle?: str
   const packageLabel = 'Cooperativa cafetera — Colombia';
 
   return (
-    <>
+    <ImplementationEngineProvider>
       <Header
         title={title}
         subtitle={subtitle ?? `Centro de Implementación · ${packageLabel}`}
@@ -72,7 +72,7 @@ function EicShell({ title, subtitle, children }: { title: string; subtitle?: str
       >
         {children}
       </PageLayout>
-    </>
+    </ImplementationEngineProvider>
   );
 }
 
@@ -256,14 +256,18 @@ function DomainSpotlight({ domainId }: { domainId: ImplementationDomain['id'] })
 }
 
 export function ImplementationCenterLayout() {
-  return (
-    <ImplementationEngineProvider>
-      <Outlet />
-    </ImplementationEngineProvider>
-  );
+  return <Outlet />;
 }
 
 export function ImplementationSummaryPage() {
+  return (
+    <EicShell title="Centro de implementación">
+      <ImplementationSummaryBody />
+    </EicShell>
+  );
+}
+
+function ImplementationSummaryBody() {
   const snap = useImplementationEngine();
   const { loaded, chain, supporting, consultant, certified, signals } = snap;
 
@@ -285,15 +289,11 @@ export function ImplementationSummaryPage() {
   }, [chain, consultant]);
 
   if (!loaded) {
-    return (
-      <EicShell title="Centro de implementación">
-        <LoadingState variant="page" message="Calculando checklist vivo de la empresa…" />
-      </EicShell>
-    );
+    return <LoadingState variant="page" message="Calculando checklist vivo de la empresa…" />;
   }
 
   return (
-    <EicShell title="Centro de implementación">
+    <>
       <PageSection title="Respuestas del consultor">
         <ul className="eic-answer-list">
           <li>
@@ -344,7 +344,7 @@ export function ImplementationSummaryPage() {
           ))}
         </div>
       </PageSection>
-    </EicShell>
+    </>
   );
 }
 
@@ -414,6 +414,14 @@ function GuideStep({
 }
 
 export function ImplementationEmpresaPage() {
+  return (
+    <EicShell title="Empresa">
+      <ImplementationEmpresaBody />
+    </EicShell>
+  );
+}
+
+function ImplementationEmpresaBody() {
   const { refresh, signals, loaded } = useImplementationEngine();
   const [form, setForm] = useState<CompanyProfile>({ ...EMPTY_COMPANY_PROFILE });
   const [saving, setSaving] = useState(false);
@@ -453,7 +461,7 @@ export function ImplementationEmpresaPage() {
   };
 
   return (
-    <EicShell title="Empresa">
+    <>
       <DomainSpotlight domainId="empresa" />
       <PageSection title="Ficha empresarial">
         {!loaded ? <LoadingState variant="card" message="Cargando ficha…" /> : null}
@@ -542,11 +550,19 @@ export function ImplementationEmpresaPage() {
           </div>
         </form>
       </PageSection>
-    </EicShell>
+    </>
   );
 }
 
 export function ImplementationConfigPage() {
+  return (
+    <EicShell title="Configuración guiada">
+      <ImplementationConfigBody />
+    </EicShell>
+  );
+}
+
+function ImplementationConfigBody() {
   const { signals, loaded, refresh } = useImplementationEngine();
   const [seedMsg, setSeedMsg] = useState('');
   const [seedErr, setSeedErr] = useState('');
@@ -574,15 +590,11 @@ export function ImplementationConfigPage() {
   };
 
   if (!loaded) {
-    return (
-      <EicShell title="Configuración guiada">
-        <LoadingState variant="page" message="Evaluando qué falta…" />
-      </EicShell>
-    );
+    return <LoadingState variant="page" message="Evaluando qué falta…" />;
   }
 
   return (
-    <EicShell title="Configuración guiada">
+    <>
       <DomainSpotlight domainId="configuracion" />
       {seedErr ? <div className="alert alert-error">{seedErr}</div> : null}
       {seedMsg ? <div className="alert alert-success">{seedMsg}</div> : null}
@@ -684,14 +696,22 @@ export function ImplementationConfigPage() {
           Ir a productores
         </Link>
       </PageSection>
-    </EicShell>
+    </>
   );
 }
 
 export function ImplementationUsuariosPage() {
-  const { signals, loaded } = useImplementationEngine();
   return (
     <EicShell title="Usuarios">
+      <ImplementationUsuariosBody />
+    </EicShell>
+  );
+}
+
+function ImplementationUsuariosBody() {
+  const { signals, loaded } = useImplementationEngine();
+  return (
+    <>
       <DomainSpotlight domainId="usuarios" />
       <PageSection title="Roles mínimos del paquete">
         {!loaded ? (
@@ -720,7 +740,7 @@ export function ImplementationUsuariosPage() {
       <PageSection title="Gestión de usuarios">
         <AdminPage defaultTab="users" basePath="/implementacion" embedded />
       </PageSection>
-    </EicShell>
+    </>
   );
 }
 
@@ -760,9 +780,17 @@ export function ImplementationModulosPage() {
 }
 
 export function ImplementationProcesosPage() {
-  const { signals } = useImplementationEngine();
   return (
     <EicShell title="Procesos">
+      <ImplementationProcesosBody />
+    </EicShell>
+  );
+}
+
+function ImplementationProcesosBody() {
+  const { signals } = useImplementationEngine();
+  return (
+    <>
       <DomainSpotlight domainId="workflow" />
       <PageSection title="Asistente de workflow">
         <GuideStep
@@ -784,7 +812,7 @@ export function ImplementationProcesosPage() {
           </Link>
         </div>
       </PageSection>
-    </EicShell>
+    </>
   );
 }
 
@@ -829,9 +857,17 @@ export function ImplementationDocumentosPage() {
 }
 
 export function ImplementationIntegracionesPage() {
-  const { signals } = useImplementationEngine();
   return (
     <EicShell title="Integraciones">
+      <ImplementationIntegracionesBody />
+    </EicShell>
+  );
+}
+
+function ImplementationIntegracionesBody() {
+  const { signals } = useImplementationEngine();
+  return (
+    <>
       <DomainSpotlight domainId="integraciones" />
       <PageSection title="Conectividad operativa">
         <GuideStep
@@ -850,23 +886,27 @@ export function ImplementationIntegracionesPage() {
           de perímetro). No se ofrecen enlaces a módulos bloqueados.
         </p>
       </PageSection>
-    </EicShell>
+    </>
   );
 }
 
 export function ImplementationEstadoPage() {
+  return (
+    <EicShell title="Estado de implementación">
+      <ImplementationEstadoBody />
+    </EicShell>
+  );
+}
+
+function ImplementationEstadoBody() {
   const { loaded, chain, supporting, consultant, signals } = useImplementationEngine();
 
   if (!loaded) {
-    return (
-      <EicShell title="Estado de implementación">
-        <LoadingState variant="page" message="Calculando semáforos…" />
-      </EicShell>
-    );
+    return <LoadingState variant="page" message="Calculando semáforos…" />;
   }
 
   return (
-    <EicShell title="Estado de implementación">
+    <>
       <PageSummary>
         <MetricCard label="Completas" value={consultant.completeCount} tone="green" />
         <MetricCard label="En progreso / pendientes" value={consultant.pendingCount} />
@@ -902,11 +942,19 @@ export function ImplementationEstadoPage() {
       </PageSection>
 
       <DependencyChain chain={chain} />
-    </EicShell>
+    </>
   );
 }
 
 export function ImplementationGoLivePage() {
+  return (
+    <EicShell title="Go Live — Certificación">
+      <ImplementationGoLiveBody />
+    </EicShell>
+  );
+}
+
+function ImplementationGoLiveBody() {
   const snap = useImplementationEngine();
   const { loaded, chain, consultant, certified, certifiedAt, signals, refresh } = snap;
   const [note, setNote] = useState('');
@@ -936,15 +984,11 @@ export function ImplementationGoLivePage() {
   };
 
   if (!loaded) {
-    return (
-      <EicShell title="Go Live">
-        <LoadingState variant="page" message="Verificando prerrequisitos…" />
-      </EicShell>
-    );
+    return <LoadingState variant="page" message="Verificando prerrequisitos…" />;
   }
 
   return (
-    <EicShell title="Go Live — Certificación">
+    <>
       {certified ? (
         <PageSection title="Empresa lista para operar">
           <div className="eic-certified">
@@ -1076,6 +1120,6 @@ export function ImplementationGoLivePage() {
       </PageSection>
 
       <DependencyChain chain={chain} />
-    </EicShell>
+    </>
   );
 }
