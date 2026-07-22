@@ -25,7 +25,8 @@ import { useAuth } from './AuthContext';
 import { useNavigation } from './NavigationContext';
 import { useGuidedWorkspaceOptional } from './GuidedWorkspaceContext';
 import { useOnEntityUpdated } from '../lib/entitySync';
-import { getCoopPackageNavItems } from '../config/experienceCenters';
+import { getEnterpriseNavItems } from '../config/enterpriseNavigation';
+import { filterNavItemsForPalette } from '../config/navProgression';
 
 interface CommandContextValue {
   mode: CommandPaletteMode;
@@ -51,8 +52,11 @@ export function CommandProvider({ children }: { children: ReactNode }) {
   const gw = useGuidedWorkspaceOptional();
   const userId = user?.id;
 
-  /** PM-32: perímetro del paquete piloto (unión de centros), no el monorepo completo. */
-  const packageNavItems = useMemo(() => getCoopPackageNavItems(), []);
+  /** PM-43: solo menú enterprise + entidades de negocio (sin módulos internos). */
+  const packageNavItems = useMemo(
+    () => filterNavItemsForPalette(getEnterpriseNavItems()),
+    [],
+  );
 
   const [mode, setMode] = useState<CommandPaletteMode>('launcher');
   const [query, setQuery] = useState('');

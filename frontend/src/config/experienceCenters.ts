@@ -5,6 +5,7 @@
  */
 
 import type { NavCategory, NavItem } from './navigation';
+import { ENTERPRISE_NAV_CATEGORIES, getEnterpriseNavItems } from './enterpriseNavigation';
 
 export type ExperienceCenterId = 'operation' | 'management' | 'implementation';
 
@@ -359,34 +360,34 @@ const COOP_IMPLEMENTATION: NavCategory[] = [
   },
 ];
 
-/** Ítems de navegación del paquete cooperativa (unión de los 3 centros). */
+/** Ítems de navegación del paquete cooperativa (menú PM-42 + legado para perímetro). */
 export function getCoopPackageNavItems(): NavItem[] {
   const seen = new Set<string>();
   const items: NavItem[] = [];
-  for (const cats of [COOP_OPERATION, COOP_MANAGEMENT, COOP_IMPLEMENTATION]) {
-    for (const cat of cats) {
-      for (const navItem of cat.items) {
-        if (seen.has(navItem.id)) continue;
-        seen.add(navItem.id);
-        items.push(navItem);
-      }
-    }
+  for (const navItem of [
+    ...getEnterpriseNavItems(),
+    ...COOP_OPERATION.flatMap((c) => c.items),
+    ...COOP_MANAGEMENT.flatMap((c) => c.items),
+    ...COOP_IMPLEMENTATION.flatMap((c) => c.items),
+  ]) {
+    if (seen.has(navItem.id)) continue;
+    seen.add(navItem.id);
+    items.push(navItem);
   }
   return items;
 }
 
 /**
- * Navegación por centro. El paquete piloto certificado es cooperativa;
- * `full-platform` no expande menú (evita bypass de licencia en UI).
+ * PM-42 — Menú unificado por experiencia (mismo árbol en todos los centros).
+ * Los centros siguen existiendo para home/contexto; el sidebar ya no cambia por centro.
  */
 export function getExperienceNav(
   center: ExperienceCenterId,
   packageId: IndustryPackageId,
 ): NavCategory[] {
+  void center;
   void packageId;
-  if (center === 'operation') return COOP_OPERATION;
-  if (center === 'management') return COOP_MANAGEMENT;
-  return COOP_IMPLEMENTATION;
+  return ENTERPRISE_NAV_CATEGORIES;
 }
 
 export function getCenterMeta(id: ExperienceCenterId): ExperienceCenterMeta {
@@ -395,13 +396,14 @@ export function getCenterMeta(id: ExperienceCenterId): ExperienceCenterMeta {
 
 export function resolveDefaultCenter(roles: string[]): ExperienceCenterId {
   const lower = roles.map((r) => r.toLowerCase());
-  // Consultores / implementadores entran al centro de puesta en marcha
   if (lower.some((r) => r.includes('implement') || r.includes('consultant') || r.includes('consultor'))) {
     return 'implementation';
   }
-  if (lower.some((r) => r.includes('gerencia') || r.includes('manager') || r.includes('executive'))) {
+  if (
+    lower.some((r) => r.includes('gerencia') || r.includes('manager') || r.includes('executive')) ||
+    lower.some((r) => r.includes('consulta') || r.includes('viewer') || r.includes('lectura'))
+  ) {
     return 'management';
   }
-  // Admin y operación diaria empiezan en Mi día (flujo claro)
   return 'operation';
 }

@@ -3,9 +3,15 @@
  * Presentación por procesos de negocio; rutas y permisos internos sin cambios.
  */
 
+import { ENTERPRISE_NAV_CATEGORIES, getEnterpriseNavItems } from './enterpriseNavigation';
+
 export type NavCategoryId =
   | 'home'
   | 'favorites'
+  | 'company'
+  | 'operation'
+  | 'analytics'
+  | 'configuration'
   | 'agriculture'
   | 'masters'
   | 'forms'
@@ -591,14 +597,17 @@ export const EXTRA_SEARCH_ITEMS: NavItem[] = [
 ];
 
 export const ALL_NAV_ITEMS: NavItem[] = [
+  ...getEnterpriseNavItems(),
   ...NAV_CATEGORIES.flatMap((c) => c.items),
   ...EXTRA_SEARCH_ITEMS,
 ];
 
 const CATEGORY_BY_ITEM_ID = new Map<string, NavCategory>();
-for (const cat of NAV_CATEGORIES) {
+for (const cat of [...ENTERPRISE_NAV_CATEGORIES, ...NAV_CATEGORIES]) {
   for (const navItem of cat.items) {
-    CATEGORY_BY_ITEM_ID.set(navItem.id, cat);
+    if (!CATEGORY_BY_ITEM_ID.has(navItem.id)) {
+      CATEGORY_BY_ITEM_ID.set(navItem.id, cat);
+    }
   }
 }
 
@@ -744,30 +753,35 @@ function humanizeSegment(segment: string): string {
 }
 
 export function buildBreadcrumbs(pathname: string): { label: string; to?: string }[] {
-  const crumbs: { label: string; to?: string }[] = [{ label: 'Inicio', to: '/' }];
-  if (pathname === '/') return crumbs;
+  const crumbs: { label: string; to?: string }[] = [];
+  if (pathname === '/' || pathname === '/operacion') {
+    return [{ label: 'Inicio' }];
+  }
 
   const detailLabel = resolveDetailLabel(pathname);
   const navMatch = findNavItemByPath(pathname);
   const category = findCategoryByPath(pathname);
 
+  // PM-43: raíz = pilar de experiencia (no router abstracto)
   if (category && category.id !== 'home' && category.id !== 'favorites') {
-    const catCrumb = { label: category.label, to: category.items[0]?.to };
-    if (!crumbs.some((c) => c.label === catCrumb.label)) {
-      crumbs.push(catCrumb);
-    }
+    crumbs.push({
+      label: category.label,
+      to: category.items[0]?.to,
+    });
+  } else {
+    crumbs.push({ label: 'Inicio', to: '/operacion' });
   }
 
   if (navMatch && navMatch.to !== '/' && navMatch.to !== pathname) {
     const navLabel = navMatch.breadcrumbLabel ?? navMatch.label;
-    if (!crumbs.some((c) => c.to === navMatch.to)) {
+    if (!crumbs.some((c) => c.to === navMatch.to || c.label === navLabel)) {
       crumbs.push({ label: navLabel, to: navMatch.to });
     }
   }
 
   if (detailLabel) {
     crumbs.push({ label: detailLabel });
-    return crumbs;
+    return crumbs.slice(0, 4);
   }
 
   const segments = pathname.split('/').filter(Boolean);
@@ -793,7 +807,7 @@ export function buildBreadcrumbs(pathname: string): { label: string; to?: string
     crumbs[crumbs.length - 1] = { label: crumbs[crumbs.length - 1].label };
   }
 
-  return crumbs;
+  return crumbs.slice(0, 4);
 }
 
 export type DashboardRole =
@@ -834,11 +848,8 @@ export function resolveDashboardRole(roles: string[]): DashboardRole {
   return 'default';
 }
 
-/** Categorías expandidas por defecto en primer ingreso (cooperativa: flujo + inventario) */
+/** Categorías expandidas por defecto en primer ingreso (PM-42: Operación) */
 export const DEFAULT_EXPANDED_CATEGORIES: NavCategoryId[] = [
   'home',
-  'favorites',
-  'purchases',
-  'inventory',
-  'masters',
+  'operation',
 ];

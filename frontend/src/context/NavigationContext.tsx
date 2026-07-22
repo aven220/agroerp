@@ -20,8 +20,7 @@ import {
 import type { DashboardRole } from '../config/navigation';
 import { DEFAULT_WIDGET_ORDER } from '../config/dashboardWidgets';
 import { resolveDashboardRole } from '../config/navigation';
-import { canAccessPath } from '../config/routePermissions';
-import { isPathAllowedForPackage } from '../config/packageAccess';
+import { filterNavByProgression, markOpsActivity, resolveNavProgression } from '../config/navProgression';
 import { parseEntityFromPath, recordWorkEntityVisit } from '../lib/workEntityHistory';
 import { useAuth } from './AuthContext';
 import { useExperienceCenterOptional } from './ExperienceCenterContext';
@@ -59,6 +58,9 @@ interface NavigationContextValue {
   toggleWidget: (id: string) => void;
   resetWidgetLayout: (role: DashboardRole) => void;
   dashboardRole: DashboardRole;
+  sidebarScroll: number;
+  setSidebarScroll: (top: number) => void;
+  lastMenuPath: string;
 }
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
@@ -75,9 +77,25 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
     try {
-      return JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v3')) ?? '{}');
+      return JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v4')) ?? '{}');
     } catch {
       return {};
+    }
+  });
+
+  const [sidebarScroll, setSidebarScroll] = useState<number>(() => {
+    try {
+      return Number(localStorage.getItem(storageKey(userId, 'nav_sidebar_scroll_v1')) || '0') || 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  const [lastMenuPath, setLastMenuPath] = useState<string>(() => {
+    try {
+      return localStorage.getItem(storageKey(userId, 'nav_last_menu_v1')) ?? '';
+    } catch {
+      return '';
     }
   });
 
@@ -125,9 +143,19 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      setCollapsedGroups(JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v3')) ?? '{}'));
+      setCollapsedGroups(JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v4')) ?? '{}'));
     } catch {
       setCollapsedGroups({});
+    }
+    try {
+      setSidebarScroll(Number(localStorage.getItem(storageKey(userId, 'nav_sidebar_scroll_v1')) || '0') || 0);
+    } catch {
+      setSidebarScroll(0);
+    }
+    try {
+      setLastMenuPath(localStorage.getItem(storageKey(userId, 'nav_last_menu_v1')) ?? '');
+    } catch {
+      setLastMenuPath('');
     }
     try {
       setFavorites(JSON.parse(localStorage.getItem(storageKey(userId, 'favorites')) ?? '[]'));
@@ -156,8 +184,18 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (prefsUserId !== userId) return;
-    localStorage.setItem(storageKey(userId, 'nav_collapsed_v3'), JSON.stringify(collapsedGroups));
+    localStorage.setItem(storageKey(userId, 'nav_collapsed_v4'), JSON.stringify(collapsedGroups));
   }, [collapsedGroups, userId, prefsUserId]);
+
+  useEffect(() => {
+    if (prefsUserId !== userId) return;
+    localStorage.setItem(storageKey(userId, 'nav_sidebar_scroll_v1'), String(sidebarScroll));
+  }, [sidebarScroll, userId, prefsUserId]);
+
+  useEffect(() => {
+    if (prefsUserId !== userId) return;
+    localStorage.setItem(storageKey(userId, 'nav_last_menu_v1'), lastMenuPath);
+  }, [lastMenuPath, userId, prefsUserId]);
 
   useEffect(() => {
     if (prefsUserId !== userId) return;
@@ -189,39 +227,61 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const baseCategories = experience?.experienceNav ?? NAV_CATEGORIES;
 
-  const visibleCategories = useMemo(() => {
-    return baseCategories.map((cat) => {
-      if (cat.id === 'favorites') {
-        const favItems: NavItem[] = favorites
-          .filter((f) => canAccessPath(f.to, hasPermission))
-          .filter((f) =>
-            !experience || isPathAllowedForPackage(f.to, experience.packageId),
-          )
-          .sort((a, b) => a.order - b.order)
-          .map((f) => ({ id: f.id, to: f.to, label: f.label, icon: f.icon }));
-        return { ...cat, items: favItems };
-      }
-      const items = cat.items.filter(filterNavItem);
-      if (items.length === 0 && cat.id !== 'home') return null;
-      return { ...cat, items };
-    }).filter(Boolean) as NavCategory[];
-  }, [baseCategories, favorites, filterNavItem, hasPermission, experience]);
+  const [opsTick, setOpsTick] = useState(0);
 
+  const progression = useMemo(
+    () =>
+      resolveNavProgression({
+        navHistoryLength: navHistory.length,
+        roles: user?.roles ?? [],
+      }),
+    [navHistory.length, user?.roles, opsTick],
+  );
+
+  const visibleCategories = useMemo(() => {
+    const permitted = baseCategories
+      .map((cat) => {
+        const items = cat.items.filter(filterNavItem);
+        if (items.length === 0 && cat.id !== 'home') return null;
+        return { ...cat, items };
+      })
+      .filter(Boolean) as NavCategory[];
+    return filterNavByProgression(permitted, progression);
+  }, [baseCategories, filterNavItem, progression]);
+
+  /** PM-42: acordeón — solo un grupo abierto a la vez */
   const toggleGroup = useCallback((id: NavCategoryId) => {
     setCollapsedGroups((prev) => {
       const cat = baseCategories.find((c) => c.id === id) ?? NAV_CATEGORIES.find((c) => c.id === id);
       const defaultCollapsed = cat?.defaultCollapsed ?? !DEFAULT_EXPANDED_CATEGORIES.includes(id);
       const currentlyCollapsed = prev[id] ?? defaultCollapsed;
-      return { ...prev, [id]: !currentlyCollapsed };
+      const willOpen = currentlyCollapsed;
+      const next: Record<string, boolean> = {};
+      for (const c of baseCategories) {
+        if (c.id === 'home') {
+          next[c.id] = false;
+          continue;
+        }
+        next[c.id] = willOpen ? c.id !== id : true;
+      }
+      return next;
     });
   }, [baseCategories]);
 
   const expandGroup = useCallback((id: NavCategoryId) => {
-    setCollapsedGroups((prev) => {
-      if (prev[id] === false) return prev;
-      return { ...prev, [id]: false };
+    if (id === 'home' || id === 'favorites') return;
+    setCollapsedGroups(() => {
+      const next: Record<string, boolean> = {};
+      for (const c of baseCategories) {
+        if (c.id === 'home') {
+          next[c.id] = false;
+          continue;
+        }
+        next[c.id] = c.id !== id;
+      }
+      return next;
     });
-  }, []);
+  }, [baseCategories]);
 
   const addFavorite = useCallback((item: NavItem) => {
     setFavorites((prev) => {
@@ -268,21 +328,28 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     recordVisit(location.pathname);
+    setLastMenuPath(location.pathname);
+    if (
+      location.pathname.startsWith('/compras') ||
+      location.pathname.startsWith('/inventario') ||
+      location.pathname.startsWith('/productores')
+    ) {
+      markOpsActivity();
+      setOpsTick((t) => t + 1);
+    }
     const entity = parseEntityFromPath(location.pathname);
     if (entity) recordWorkEntityVisit(userId, entity);
     const match = findNavItemByPath(location.pathname);
     if (match) {
-      if (favorites.some((f) => f.id === match.id)) {
-        expandGroup('favorites');
-      }
       for (const cat of baseCategories) {
+        if (cat.id === 'home') continue;
         if (cat.items.some((i) => i.id === match.id)) {
           expandGroup(cat.id);
           break;
         }
       }
     }
-  }, [location.pathname, recordVisit, expandGroup, favorites, userId, baseCategories]);
+  }, [location.pathname, recordVisit, expandGroup, userId, baseCategories]);
 
   const setWidgetOrder = useCallback((order: string[]) => {
     setWidgetLayout((prev) => ({ ...prev, order }));
@@ -325,12 +392,16 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       toggleWidget,
       resetWidgetLayout,
       dashboardRole,
+      sidebarScroll,
+      setSidebarScroll,
+      lastMenuPath,
     }),
     [
       collapsedGroups, toggleGroup, expandGroup, favorites, addFavorite, removeFavorite,
       reorderFavorites, isFavorite, recentSearches, addRecentSearch, clearRecentSearches,
       navHistory, recordVisit, sidebarOpen, searchOpen, filterNavItem, visibleCategories,
       widgetLayout, setWidgetOrder, toggleWidget, resetWidgetLayout, dashboardRole,
+      sidebarScroll, lastMenuPath,
     ],
   );
 

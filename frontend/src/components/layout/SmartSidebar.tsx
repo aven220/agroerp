@@ -1,4 +1,5 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useExperienceCenterOptional } from '../../context/ExperienceCenterContext';
@@ -8,13 +9,31 @@ import {
   type NavCategoryId,
   type NavItem,
 } from '../../config/navigation';
-import { FavoritesPanel } from './FavoritesPanel';
 
 function NavLinkItem({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const { addFavorite, removeFavorite, isFavorite } = useNavigation();
+  const navigate = useNavigate();
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const fav = isFavorite(item.id);
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenu(null);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [menu]);
 
   return (
-    <div className="nav-item-row">
+    <div
+      className="nav-item-row"
+      onContextMenu={(e) => {
+        e.preventDefault();
+        setMenu({ x: e.clientX, y: e.clientY });
+      }}
+    >
       <NavLink
         to={item.to}
         end={item.exact ?? item.to === '/'}
@@ -24,21 +43,68 @@ function NavLinkItem({ item, onNavigate }: { item: NavItem; onNavigate?: () => v
         <span className="nav-icon" aria-hidden>{item.icon}</span>
         <span className="nav-label">{item.label}</span>
       </NavLink>
-      {item.id !== 'home-dashboard' ? (
+      {item.id !== 'nav-inicio' ? (
         <button
           type="button"
-          className={`nav-fav-btn${isFavorite(item.id) ? ' active' : ''}`}
-          title={isFavorite(item.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-          aria-label={isFavorite(item.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+          className={`nav-fav-btn${fav ? ' active' : ''}`}
+          title={fav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+          aria-label={fav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (isFavorite(item.id)) removeFavorite(item.id);
+            if (fav) removeFavorite(item.id);
             else addFavorite(item);
           }}
         >
-          {isFavorite(item.id) ? '★' : '☆'}
+          {fav ? '★' : '☆'}
         </button>
+      ) : null}
+
+      {menu ? (
+        <div
+          ref={menuRef}
+          className="nav-context-menu"
+          role="menu"
+          style={{ top: menu.y, left: menu.x }}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="nav-context-item"
+            onClick={() => {
+              navigate(item.to);
+              setMenu(null);
+              onNavigate?.();
+            }}
+          >
+            Abrir
+          </button>
+          {item.id !== 'nav-inicio' ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="nav-context-item"
+              onClick={() => {
+                if (fav) removeFavorite(item.id);
+                else addFavorite(item);
+                setMenu(null);
+              }}
+            >
+              {fav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            role="menuitem"
+            className="nav-context-item"
+            onClick={() => {
+              void navigator.clipboard?.writeText(window.location.origin + item.to);
+              setMenu(null);
+            }}
+          >
+            Copiar enlace
+          </button>
+        </div>
       ) : null}
     </div>
   );
@@ -54,24 +120,41 @@ export function SmartSidebar() {
     toggleGroup,
     sidebarOpen,
     setSidebarOpen,
+    sidebarScroll,
+    setSidebarScroll,
   } = useNavigation();
+  const navRef = useRef<HTMLElement>(null);
 
   const closeMobile = () => setSidebarOpen(false);
 
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    el.scrollTop = sidebarScroll;
+  }, [sidebarScroll]);
+
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const onScroll = () => setSidebarScroll(el.scrollTop);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [setSidebarScroll]);
+
   const isGroupActive = (categoryId: NavCategoryId, items: NavItem[]) => {
     if (categoryId === 'home') {
-      const homePaths = ['/', '/operacion', '/gerencia', '/implementacion'];
-      return homePaths.includes(location.pathname);
-    }
-    if (categoryId === 'favorites') {
-      return items.some((item) => {
-        const match = findNavItemByPath(location.pathname);
-        return match?.id === item.id || location.pathname === item.to;
-      });
+      return location.pathname === '/operacion' || location.pathname === '/';
     }
     return items.some((item) => {
       const match = findNavItemByPath(location.pathname);
-      return match?.id === item.id || location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+      if (item.exact) {
+        return location.pathname === item.to || match?.id === item.id;
+      }
+      return (
+        match?.id === item.id ||
+        location.pathname === item.to ||
+        location.pathname.startsWith(`${item.to}/`)
+      );
     });
   };
 
@@ -104,9 +187,6 @@ export function SmartSidebar() {
           <div className="sidebar-brand-text">
             <strong className="sidebar-brand-name">AGROERP</strong>
             <span className="sidebar-brand-sub">{packageLabel}</span>
-            {experience ? (
-              <span className="sidebar-center-badge">{experience.centerMeta.shortLabel}</span>
-            ) : null}
           </div>
           <button
             type="button"
@@ -118,7 +198,7 @@ export function SmartSidebar() {
           </button>
         </div>
 
-        <nav className="sidebar-nav" aria-label="Menú por áreas">
+        <nav ref={navRef} className="sidebar-nav" aria-label="Menú por experiencias">
           {visibleCategories.map((category) => {
             const defaultCollapsed =
               category.defaultCollapsed ?? !DEFAULT_EXPANDED_CATEGORIES.includes(category.id);
@@ -137,11 +217,11 @@ export function SmartSidebar() {
             return (
               <div
                 key={category.id}
-                className={`nav-category${active ? ' has-active' : ''}${category.id === 'advanced' ? ' nav-category-advanced' : ''}`}
+                className={`nav-category${active ? ' has-active' : ''}${collapsed ? '' : ' is-open'}`}
               >
                 <button
                   type="button"
-                  className={`nav-category-header${collapsed ? ' collapsed' : ''}`}
+                  className={`nav-category-header${collapsed ? ' collapsed' : ''}${active ? ' active' : ''}`}
                   aria-expanded={!collapsed}
                   onClick={() => toggleGroup(category.id)}
                 >
@@ -153,13 +233,9 @@ export function SmartSidebar() {
                   <span className="nav-category-chevron" aria-hidden>{collapsed ? '▸' : '▾'}</span>
                 </button>
                 <div className={`nav-category-items${collapsed ? ' collapsed' : ''}`}>
-                  {category.id === 'favorites' ? (
-                    <FavoritesPanel onNavigate={closeMobile} />
-                  ) : (
-                    category.items.map((item) => (
-                      <NavLinkItem key={item.id} item={item} onNavigate={closeMobile} />
-                    ))
-                  )}
+                  {category.items.map((item) => (
+                    <NavLinkItem key={item.id} item={item} onNavigate={closeMobile} />
+                  ))}
                 </div>
               </div>
             );
