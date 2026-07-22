@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../ui/Button';
+import { ModuleIcons } from './icons';
 
 interface EmptyStateAction {
   label: string;
@@ -21,14 +22,14 @@ interface EmptyStateProps {
 }
 
 const ILLUSTRATIONS: Record<string, string> = {
-  inbox: '📥',
-  search: '🔍',
-  data: '📊',
-  folder: '📁',
-  error: '⚠️',
-  permissions: '🔒',
-  offline: '📡',
-  records: '📋',
+  inbox: ModuleIcons.work,
+  search: ModuleIcons.search,
+  data: ModuleIcons.intelligence,
+  folder: ModuleIcons.documents,
+  error: ModuleIcons.warning,
+  permissions: ModuleIcons.admin,
+  offline: ModuleIcons.iot,
+  records: ModuleIcons.work,
 };
 
 export function EmptyState({
@@ -41,7 +42,7 @@ export function EmptyState({
   secondaryAction,
   children,
 }: EmptyStateProps) {
-  const displayIcon = icon ?? ILLUSTRATIONS[illustration] ?? '📭';
+  const displayIcon = icon ?? ILLUSTRATIONS[illustration] ?? ModuleIcons.work;
 
   return (
     <div className="empty-state ds-empty-state ds-empty-state-polished" role="status">

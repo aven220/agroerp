@@ -10,6 +10,3 @@ export { DetailPanel } from './DetailPanel';
 export { FilterPanel } from './FilterPanel';
 export { ColumnManager } from './ColumnManager';
 export { SavedViewsMenu } from './SavedViewsMenu';
-export { QuickGrid } from './QuickGrid';
-export type { QuickGridColumn } from './QuickGrid';
-export { LegacyTable } from './LegacyTable';

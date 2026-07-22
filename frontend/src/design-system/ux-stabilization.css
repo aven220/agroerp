@@ -1,5 +1,7 @@
 /* UX Stabilization Phase 2 — Enterprise consistency layer
-   Visual polish only. No brand color changes. */
+   Visual polish only. No brand color changes.
+   PM-49: empty/KPI/toolbar/alert SUPERSEDIDOS por enterprise-visual-pm49.css.
+   Conservar solo preferencias de densidad / tokens locales no cubiertos. */
 
 :root {
   --spacing-xs: var(--ds-space-1);

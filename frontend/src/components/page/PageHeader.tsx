@@ -57,9 +57,13 @@ export function PageHeader({
   const desc = description ?? auto?.description;
   const helpText = help ?? auto?.help;
   const step = nextStep ?? auto?.nextStep;
+  const why = auto?.why;
+  const when = auto?.when;
+  const after = auto?.after;
   const displayTitle = humanizeCopy(title);
   const displaySubtitle = subtitle ? humanizeCopy(subtitle) : undefined;
   const [mountedAt] = useState(() => new Date());
+  const [helpOpen, setHelpOpen] = useState(false);
   const [orgName, setOrgName] = useState(
     () => readCachedCompanyProfile()?.legalName || user?.organization?.name || 'Empresa',
   );
@@ -109,19 +113,54 @@ export function PageHeader({
       <div className="page-topbar-main">
         <h1>{displayTitle}</h1>
         {displaySubtitle ? <p className="topbar-sub">{displaySubtitle}</p> : null}
-        {showExperience && (desc || helpText) ? (
+        {showExperience && (desc || helpText || why) ? (
           <div className="page-header-experience">
-            {desc ? <p className="page-header-desc">{humanizeCopy(desc)}</p> : null}
+            {desc ? (
+              <p className="page-header-desc">
+                <span className="page-experience-q">¿Qué hago aquí?</span> {humanizeCopy(desc)}
+              </p>
+            ) : null}
+            {step ? (
+              <p className="page-header-next">
+                <span className="page-experience-q">¿Qué sigue?</span>{' '}
+                <Link to={step.to}>{humanizeCopy(step.label)}</Link>
+              </p>
+            ) : null}
             {helpText ? (
               <p className="page-header-help">
                 <span aria-hidden>💡</span> {humanizeCopy(helpText)}
               </p>
             ) : null}
-            {step ? (
-              <p className="page-header-next">
-                Siguiente paso:{' '}
-                <Link to={step.to}>{humanizeCopy(step.label)}</Link>
-              </p>
+            {(why || when || after) ? (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm page-header-help-toggle"
+                  aria-expanded={helpOpen}
+                  onClick={() => setHelpOpen((v) => !v)}
+                >
+                  {helpOpen ? 'Ocultar ayuda' : 'Más ayuda'}
+                </button>
+                {helpOpen ? (
+                  <div className="page-header-help-detail">
+                    {why ? (
+                      <p>
+                        <span className="page-experience-q">¿Por qué?</span> {humanizeCopy(why)}
+                      </p>
+                    ) : null}
+                    {when ? (
+                      <p>
+                        <span className="page-experience-q">¿Cuándo?</span> {humanizeCopy(when)}
+                      </p>
+                    ) : null}
+                    {after ? (
+                      <p>
+                        <span className="page-experience-q">¿Qué ocurre después?</span> {humanizeCopy(after)}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </>
             ) : null}
           </div>
         ) : null}

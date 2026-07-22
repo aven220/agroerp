@@ -1,4 +1,6 @@
-/* AGROERP — UX Polish (microinteractions, loading, empty states, prefs) */
+/* AGROERP — UX Polish (microinteractions, loading, empty states, prefs)
+   PM-49: reglas de empty/KPI/toolbar/alert están SUPERSEDIDAS por
+   enterprise-visual-pm49.css (capa final). No ampliar este archivo. */
 
 /* ─── Density & font scale ─── */
 [data-density='compact'] {

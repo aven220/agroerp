@@ -9,18 +9,18 @@ function BarList({ rows, labelKey = 'label', valueKey = 'count' }: {
 }) {
   const max = Math.max(1, ...rows.map((r) => Number(r[valueKey] ?? 0)));
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+    <div className="chart-bar-list">
       {rows.slice(0, 8).map((r, i) => {
         const value = Number(r[valueKey] ?? 0);
         const pct = Math.round((value / max) * 100);
         return (
           <div key={i}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+            <div className="chart-bar-meta">
               <span>{String(r[labelKey] ?? r.key ?? '')}</span>
               <span>{value}</span>
             </div>
-            <div style={{ background: '#e5e7eb', borderRadius: 4, height: 8 }}>
-              <div style={{ width: `${pct}%`, background: '#2563eb', height: 8, borderRadius: 4 }} />
+            <div className="chart-bar-track">
+              <div className="chart-bar-fill" style={{ width: `${pct}%` }} />
             </div>
           </div>
         );
@@ -32,14 +32,14 @@ function BarList({ rows, labelKey = 'label', valueKey = 'count' }: {
 function LineChart({ rows, valueKey }: { rows: Array<Record<string, unknown>>; valueKey: string }) {
   const max = Math.max(1, ...rows.map((r) => Number(r[valueKey] ?? 0)));
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 120 }}>
+    <div className="chart-cols">
       {rows.map((r, i) => {
         const value = Number(r[valueKey] ?? 0);
         const h = Math.max(4, Math.round((value / max) * 100));
         return (
-          <div key={i} title={`${String(r.month)}: ${value}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
-            <div style={{ width: '100%', height: h, background: '#0f766e', borderRadius: 2 }} />
-            <span style={{ fontSize: '0.65rem' }}>{String(r.month).slice(5)}</span>
+          <div key={i} title={`${String(r.month)}: ${value}`} className="chart-col">
+            <div className="chart-col-fill" style={{ height: h }} />
+            <span className="chart-col-label">{String(r.month).slice(5)}</span>
           </div>
         );
       })}

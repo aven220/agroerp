@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { Role, SystemUser } from '../../types';
 import { FlowProgress } from '../flow/FlowProgress';
+import { PageSummary, MetricCard } from '../page';
 
 interface AdminHubProps {
   roles: Role[];
@@ -28,30 +29,16 @@ export function AdminHub({
   return (
     <section className="admin-hub">
       <FlowProgress flowId="administration" compact showTitle={false} className="admin-hub-flow" />
-      <div className="kpi-grid admin-hub-kpis">
-        <div className="kpi-card kpi-card-primary">
-          <span className="kpi-label">Usuarios</span>
-          <span className="kpi-value">{users.length}</span>
-          <span className="kpi-hint">{activeUsers} activos</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Roles</span>
-          <span className="kpi-value">{roles.length}</span>
-          <span className="kpi-hint">{systemRoles} del sistema</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Cuentas bloqueadas</span>
-          <span className="kpi-value">{lockedUsers}</span>
-          <span className="kpi-hint">Requieren revisión</span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Permisos asignados</span>
-          <span className="kpi-value">
-            {roles.reduce((acc, r) => acc + (r.rolePermissions?.length ?? 0), 0)}
-          </span>
-          <span className="kpi-hint">En todos los roles</span>
-        </div>
-      </div>
+      <PageSummary className="admin-hub-kpis">
+        <MetricCard label="Usuarios" value={users.length} hint={`${activeUsers} activos`} tone="blue" />
+        <MetricCard label="Roles" value={roles.length} hint={`${systemRoles} del sistema`} />
+        <MetricCard label="Cuentas bloqueadas" value={lockedUsers} hint="Requieren revisión" />
+        <MetricCard
+          label="Permisos asignados"
+          value={roles.reduce((acc, r) => acc + (r.rolePermissions?.length ?? 0), 0)}
+          hint="En todos los roles"
+        />
+      </PageSummary>
 
       <div className="admin-hub-actions">
         <article className={`admin-hub-card${activeTab === 'users' ? ' admin-hub-card-active' : ''}`}>

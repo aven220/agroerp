@@ -57,7 +57,7 @@ const ACTION_COMMANDS: Array<{
   keywords?: string[];
 }> = [
   { id: 'action-mi-dia', label: 'Abrir Mi día', icon: '◫', to: '/operacion', keywords: ['inicio', 'pendientes', 'cola'] },
-  { id: 'action-gerencia', label: 'Dashboard ejecutivo', icon: '📈', to: '/gerencia', keywords: ['ejecutivo', 'kpis', 'gerencia'] },
+  { id: 'action-gerencia', label: 'Reportes gerenciales', icon: '📈', to: '/gerencia', keywords: ['ejecutivo', 'kpis', 'gerencia'] },
   { id: 'action-create-producer', label: 'Crear productor', icon: '➕', to: '/productores/nuevo', permission: 'producer:create', keywords: ['nuevo', 'registrar', 'persona'] },
   { id: 'action-create-farm', label: 'Crear finca', icon: '➕', to: '/fincas/nueva', permission: 'farm:create', keywords: ['nuevo', 'registrar'] },
   { id: 'action-create-lot', label: 'Crear lote', icon: '➕', to: '/lotes/nuevo', permission: 'lot:create', keywords: ['nuevo', 'parcela'] },

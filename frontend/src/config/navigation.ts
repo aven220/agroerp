@@ -11,6 +11,7 @@ export type NavCategoryId =
   | 'company'
   | 'operation'
   | 'analytics'
+  | 'reports'
   | 'configuration'
   | 'agriculture'
   | 'masters'
@@ -19,7 +20,6 @@ export type NavCategoryId =
   | 'inventory'
   | 'purchases'
   | 'logistics'
-  | 'reports'
   | 'admin'
   | 'advanced'
   | 'help';
@@ -635,26 +635,26 @@ const PATH_SEGMENT_LABELS: Record<string, string> = {
   inventario: 'Inventario',
   compras: 'Compras',
   comercial: 'Ventas y comercial',
-  administracion: 'Administración',
-  iam: 'Usuarios y accesos',
-  bi: 'Inteligencia de negocio',
-  ia: 'Asistente inteligente',
-  rrhh: 'Recursos humanos',
+  administracion: 'Usuarios y roles',
+  iam: 'Accesos',
+  bi: 'BI',
+  ia: 'Asistente',
+  rrhh: 'Personas',
   finanzas: 'Finanzas',
-  manufactura: 'Manufactura',
+  manufactura: 'Producción',
   gis: 'Mapas',
-  portal: 'Portal del empleado',
+  portal: 'Portal',
   notificaciones: 'Notificaciones',
-  tareas: 'Tareas programadas',
+  tareas: 'Tareas',
   documentos: 'Documentos',
   integraciones: 'Integraciones',
   plugins: 'Extensiones',
-  reglas: 'Reglas de negocio',
-  bpms: 'Procesos automatizados',
-  operaciones: 'Centro de operaciones',
-  operacion: 'Centro de Operación',
-  gerencia: 'Centro de Gerencia',
-  implementacion: 'Centro de Implementación',
+  reglas: 'Reglas',
+  bpms: 'Procesos',
+  operaciones: 'Monitoreo',
+  operacion: 'Operación',
+  gerencia: 'Reportes gerenciales',
+  implementacion: 'Configuración',
   empresa: 'Empresa',
   configuracion: 'Configuración',
   modulos: 'Paquete',
@@ -669,7 +669,7 @@ const PATH_SEGMENT_LABELS: Record<string, string> = {
   indicadores: 'Indicadores',
   reportes: 'Reportes',
   ops: 'Operación',
-  ejecutivo: 'Ejecutivo',
+  ejecutivo: 'Gerenciales',
   analitica: 'Analítica',
   kpis: 'Indicadores',
   config: 'Configuración',
@@ -686,7 +686,7 @@ const PATH_SEGMENT_LABELS: Record<string, string> = {
   dashboards: 'Tableros',
   disenar: 'Diseñar',
   usuarios: 'Usuarios',
-  estado: 'Estado',
+  estado: 'Preparación',
   'go-live': 'Go Live',
   dia: 'Día',
   simple: 'Simplificado',
@@ -699,8 +699,8 @@ const PATH_SEGMENT_LABELS: Record<string, string> = {
   editar: 'Editar',
   ejecutar: 'Ejecutar',
   bandeja: 'Bandeja',
-  instancias: 'Solicitudes en curso',
-  politicas: 'Políticas de seguridad',
+  instancias: 'Solicitudes',
+  politicas: 'Políticas',
   auditoria: 'Auditoría',
   permisos: 'Permisos',
   plantillas: 'Plantillas',
@@ -708,15 +708,24 @@ const PATH_SEGMENT_LABELS: Record<string, string> = {
   recoleccion: 'Recolección',
   dashboard: 'Indicadores',
   mapa: 'Mapa',
-  wizard: 'Asistente de registro',
-  'record-explorer': 'Expediente 360°',
+  wizard: 'Asistente',
+  'record-explorer': 'Expediente',
   'cadena-suministro': 'Cadena de suministro',
-  'gestion-activos': 'Gestión de activos',
-  'plataforma-agritech': 'Plataforma agrícola',
-  'plataforma-empresarial': 'Plataforma empresarial',
+  'gestion-activos': 'Activos',
+  'plataforma-agritech': 'Campo',
+  'plataforma-empresarial': 'Empresa',
   rendimiento: 'Rendimiento',
-  apis: 'Gestión de APIs',
-  iot: 'Dispositivos e IoT',
+  apis: 'Conexiones',
+  iot: 'Dispositivos',
+  workspace: 'Inicio',
+  'inicio-workspace': 'Inicio',
+  management: 'Gerenciales',
+  administration: 'Configuración',
+  system: 'Preparación',
+  platform: 'Empresa',
+  enterprise: 'Empresa',
+  master: 'Maestros',
+  masters: 'Maestros',
 };
 
 const DETAIL_ROUTE_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
@@ -754,7 +763,7 @@ function humanizeSegment(segment: string): string {
 
 export function buildBreadcrumbs(pathname: string): { label: string; to?: string }[] {
   const crumbs: { label: string; to?: string }[] = [];
-  if (pathname === '/' || pathname === '/operacion') {
+  if (pathname === '/' || pathname === '/operacion' || pathname === '/inicio-workspace') {
     return [{ label: 'Inicio' }];
   }
 
@@ -762,14 +771,26 @@ export function buildBreadcrumbs(pathname: string): { label: string; to?: string
   const navMatch = findNavItemByPath(pathname);
   const category = findCategoryByPath(pathname);
 
-  // PM-43: raíz = pilar de experiencia (no router abstracto)
+  // PM-46: raíz siempre = pilar (Inicio | Operación | Reportes | Configuración | Ayuda)
+  const pillarHomes: Record<string, string> = {
+    home: '/operacion',
+    operation: '/compras',
+    reports: '/bi',
+    analytics: '/bi',
+    configuration: '/configuracion',
+    company: '/configuracion',
+    help: '/ayuda',
+  };
+
   if (category && category.id !== 'home' && category.id !== 'favorites') {
     crumbs.push({
       label: category.label,
-      to: category.items[0]?.to,
+      to: pillarHomes[category.id] ?? category.items[0]?.to,
     });
   } else {
-    crumbs.push({ label: 'Inicio', to: '/operacion' });
+    // Inferir pilar por prefijo de ruta cuando no hay match de menú
+    const pillar = inferPillarFromPath(pathname);
+    crumbs.push({ label: pillar.label, to: pillar.to });
   }
 
   if (navMatch && navMatch.to !== '/' && navMatch.to !== pathname) {
@@ -798,6 +819,8 @@ export function buildBreadcrumbs(pathname: string): { label: string; to?: string
     const isLast = i === segments.length - 1;
     const label = humanizeSegment(segments[i]);
     if (isUuidLike(segments[i])) continue;
+    // Omitir segmentos técnicos / puente
+    if (['ops', 'workspace', 'iam', 'eims', 'cpep', 'admin'].includes(segments[i])) continue;
     if (!crumbs.some((c) => c.label === label && (isLast || c.to === acc))) {
       crumbs.push({ label, to: isLast ? undefined : acc });
     }
@@ -807,7 +830,38 @@ export function buildBreadcrumbs(pathname: string): { label: string; to?: string
     crumbs[crumbs.length - 1] = { label: crumbs[crumbs.length - 1].label };
   }
 
+  // Deduplicar Inicio duplicado al inicio
+  if (crumbs.length >= 2 && crumbs[0].label === crumbs[1].label) {
+    crumbs.splice(1, 1);
+  }
+
   return crumbs.slice(0, 4);
+}
+
+function inferPillarFromPath(pathname: string): { label: string; to: string } {
+  if (
+    pathname.startsWith('/configuracion') ||
+    pathname.startsWith('/implementacion') ||
+    pathname.startsWith('/administracion') ||
+    pathname.startsWith('/compras/config') ||
+    pathname.startsWith('/inventario/parametros') ||
+    pathname.startsWith('/inventario/catalogos')
+  ) {
+    return { label: 'Configuración', to: '/configuracion' };
+  }
+  if (
+    pathname.startsWith('/bi') ||
+    pathname.startsWith('/gerencia') ||
+    pathname.startsWith('/compras/ops') ||
+    pathname.startsWith('/inventario/ops') ||
+    pathname.startsWith('/iam/auditoria')
+  ) {
+    return { label: 'Reportes', to: '/bi' };
+  }
+  if (pathname.startsWith('/ayuda') || pathname.startsWith('/notificaciones')) {
+    return { label: 'Ayuda', to: '/ayuda' };
+  }
+  return { label: 'Operación', to: '/compras' };
 }
 
 export type DashboardRole =
@@ -848,8 +902,5 @@ export function resolveDashboardRole(roles: string[]): DashboardRole {
   return 'default';
 }
 
-/** Categorías expandidas por defecto en primer ingreso (PM-42: Operación) */
-export const DEFAULT_EXPANDED_CATEGORIES: NavCategoryId[] = [
-  'home',
-  'operation',
-];
+/** Categorías expandidas por defecto en primer ingreso (PM-46: ninguna — acordeón cerrado) */
+export const DEFAULT_EXPANDED_CATEGORIES: NavCategoryId[] = [];

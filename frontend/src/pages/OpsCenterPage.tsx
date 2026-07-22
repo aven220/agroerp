@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { PageLayout } from '../components/layout/PageLayout';
+import { HubToolbar } from '../components/layout/HubToolbar';
+import { PageSummary, MetricCard } from '../components/page';
 import { getEopCenter, type EopDashboard } from '../api/observability';
 import { LoadingState } from '../components/ux/LoadingState';
 
@@ -12,28 +14,33 @@ export function OpsCenterPage() {
   return (
     <>
       <Header
-        title="Monitoreo de operaciones"
-        subtitle="Estado de servicios, incidentes y salud de la plataforma"
-        actions={
-          <div className="row-actions">
-            <Link to="/operaciones/infraestructura" className="btn">Infraestructura</Link>
-            <Link to="/operaciones/servicios" className="btn">Servicios</Link>
-            <Link to="/operaciones/dependencias" className="btn">Dependencias</Link>
-            <Link to="/operaciones/incidentes" className="btn">Incidentes</Link>
-            <Link to="/operaciones/timeline" className="btn">Timeline</Link>
-          </div>
-        }
+        title="Monitoreo técnico"
+        subtitle="Estado de servicios, incidentes y salud"
       />
-      <div className="kpi-grid kpi-grid-lg">
-        <div className="kpi-card kpi-card-primary"><span className="kpi-label">Salud</span><span className="kpi-value">{dash.health}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Logs 24h</span><span className="kpi-value">{dash.logs24h}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Errores 24h</span><span className="kpi-value">{dash.errors24h}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Alertas abiertas</span><span className="kpi-value">{dash.openAlerts}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Incidentes</span><span className="kpi-value">{dash.openIncidents}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Traces 24h</span><span className="kpi-value">{dash.traces24h}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Nodos mapa</span><span className="kpi-value">{dash.serviceMap.nodes}</span></div>
-        <div className="kpi-card"><span className="kpi-label">IA requests</span><span className="kpi-value">{dash.ai.requests}</span></div>
-      </div>
+      <PageLayout
+        toolbar={
+          <HubToolbar
+            primaryAction={{ label: 'Incidentes', to: '/operaciones/incidentes' }}
+            moreActions={[
+              { label: 'Infraestructura', to: '/operaciones/infraestructura' },
+              { label: 'Servicios', to: '/operaciones/servicios' },
+              { label: 'Dependencias', to: '/operaciones/dependencias' },
+              { label: 'Timeline', to: '/operaciones/timeline' },
+            ]}
+          />
+        }
+      >
+        <PageSummary className="kpi-grid-lg">
+          <MetricCard label="Salud" value={dash.health} tone="green" />
+          <MetricCard label="Logs 24h" value={dash.logs24h} />
+          <MetricCard label="Errores 24h" value={dash.errors24h} />
+          <MetricCard label="Alertas abiertas" value={dash.openAlerts} />
+          <MetricCard label="Incidentes" value={dash.openIncidents} />
+          <MetricCard label="Traces 24h" value={dash.traces24h} />
+          <MetricCard label="Nodos mapa" value={dash.serviceMap.nodes} />
+          <MetricCard label="IA requests" value={dash.ai.requests} />
+        </PageSummary>
+      </PageLayout>
     </>
   );
 }

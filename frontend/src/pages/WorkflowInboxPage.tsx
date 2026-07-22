@@ -125,7 +125,7 @@ export function WorkflowInboxPage() {
   }
 
   return (
-    <PageLayout>
+    <>
       <PageHeader
         title="Bandeja de tareas"
         subtitle="Revise y responda las aprobaciones y tareas que requieren su intervención"
@@ -137,7 +137,7 @@ export function WorkflowInboxPage() {
           </PageActions>
         }
       />
-
+      <PageLayout>
       <FlowProgress flowId="workflow" currentStepId={items.length > 0 ? 'action' : 'inbox'} />
 
       {lastCompleted ? (
@@ -269,5 +269,6 @@ export function WorkflowInboxPage() {
         </div>
       )}
     </PageLayout>
+    </>
   );
 }

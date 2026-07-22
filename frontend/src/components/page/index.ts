@@ -33,3 +33,5 @@ export {
 } from './forms/FormFields';
 
 export { PageLayout } from '../layout/PageLayout';
+export { HubToolbar, type HubMoreAction } from '../layout/HubToolbar';
+export { EnterpriseDataGrid } from '../data-workspace/EnterpriseDataGrid';

@@ -644,3 +644,97 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* PM-44 — Smart Dashboard */
+.sd-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.sd-welcome {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sd-welcome-hello {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--ds-text);
+}
+
+.sd-welcome-meta {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.sd-edit-hint {
+  margin: 0 0 var(--ds-space-2);
+  font-size: 0.875rem;
+}
+
+.sd-widget {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  overflow: hidden;
+}
+
+.sd-widget.is-editing {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--ds-primary) 40%, var(--ds-border));
+}
+
+.sd-widget-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--ds-border);
+  background: var(--ds-surface-sunken, color-mix(in srgb, var(--ds-surface) 92%, var(--ds-border)));
+}
+
+.sd-widget.is-collapsed .sd-widget-head {
+  border-bottom: none;
+}
+
+.sd-widget-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ds-text);
+  cursor: pointer;
+  padding: 0;
+}
+
+.sd-widget-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sd-widget-body {
+  padding: 1rem;
+}
+
+.sd-widget-body .eoc-list a {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.sd-widget-body .eoc-list a:hover strong {
+  color: var(--ds-primary);
+}
+
+.sd-widget-body .eoc-list small {
+  display: block;
+}

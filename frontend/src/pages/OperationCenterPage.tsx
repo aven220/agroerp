@@ -1,9 +1,8 @@
 /**
- * PM-42 — Enterprise Workspace por rol.
- * Reemplaza el Mi día genérico: cada rol ve solo lo necesario para hoy.
+ * PM-44 — Inicio / Mi Día: Dashboard Inteligente por rol.
  */
-import { EnterpriseWorkspace } from '../components/workspace/EnterpriseWorkspace';
+import { SmartDashboard } from '../components/dashboard/SmartDashboard';
 
 export function OperationCenterPage() {
-  return <EnterpriseWorkspace />;
+  return <SmartDashboard />;
 }

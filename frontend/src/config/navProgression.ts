@@ -11,7 +11,7 @@ const STORAGE_COMPANY = 'agroerp_company_profile_cache';
 const STORAGE_OPS = 'agroerp_ops_activity_v1';
 
 export interface NavProgression {
-  /** Menú inicial: Inicio, Operación, Empresa, Ayuda */
+  /** Menú inicial: Inicio, Operación, Ayuda */
   isFirstExperience: boolean;
   showAnalytics: boolean;
   showConfiguration: boolean;
@@ -105,15 +105,15 @@ const ADVANCED_CONFIG_IDS = new Set([
   'nav-cfg-workflow',
 ]);
 
-const ANALYTICS_ITEM_IDS = new Set([
-  'nav-exec-dash',
-  'nav-reportes',
-  'nav-indicadores',
-  'nav-bi',
+const REPORTS_ITEM_IDS = new Set([
+  'nav-rep-ops',
+  'nav-rep-mgr',
+  'nav-rep-audit',
+  'nav-rep-bi',
 ]);
 
 /**
- * Filtra el árbol PM-42 según progresión (sin quitar permisos).
+ * Filtra el árbol PM-46 según progresión (sin quitar permisos).
  */
 export function filterNavByProgression(
   categories: NavCategory[],
@@ -121,8 +121,9 @@ export function filterNavByProgression(
 ): NavCategory[] {
   return categories
     .map((cat) => {
-      if (cat.id === 'analytics' && !progression.showAnalytics) return null;
+      if ((cat.id === 'reports' || cat.id === 'analytics') && !progression.showAnalytics) return null;
       if (cat.id === 'configuration' && !progression.showConfiguration) return null;
+      if (cat.id === 'company' && progression.isFirstExperience) return null;
 
       if (cat.id === 'configuration') {
         const items = cat.items.filter((item) => {
@@ -134,13 +135,12 @@ export function filterNavByProgression(
         return { ...cat, items };
       }
 
-      if (cat.id === 'analytics' && !progression.showAdvancedConfig) {
-        // BI / Reportes profundos solo con criterios; dashboard e indicadores si hay analítica
+      if (cat.id === 'reports' || cat.id === 'analytics') {
         const items = cat.items.filter((item) => {
-          if (item.id === 'nav-bi' || item.id === 'nav-reportes') {
+          if (item.id === 'nav-rep-bi') {
             return progression.certified || progression.hasOpsActivity;
           }
-          return ANALYTICS_ITEM_IDS.has(item.id) ? progression.showAnalytics : true;
+          return REPORTS_ITEM_IDS.has(item.id) ? progression.showAnalytics : true;
         });
         if (items.length === 0) return null;
         return { ...cat, items };
@@ -154,6 +154,7 @@ export function filterNavByProgression(
 /** Ítems permitidos en Command Palette (nunca módulos internos). */
 export function isPaletteAllowedPath(to: string): boolean {
   const path = to.split('?')[0];
+  if (path === '/iam/auditoria' || path.startsWith('/iam/auditoria/')) return true;
   const blocked = [
     '/iam',
     '/bpms',
@@ -170,6 +171,8 @@ export function isPaletteAllowedPath(to: string): boolean {
     '/apis',
     '/bre',
     '/iot',
+    '/operaciones',
+    '/inicio-workspace',
   ];
   return !blocked.some((b) => path === b || path.startsWith(`${b}/`) || path.startsWith(b));
 }

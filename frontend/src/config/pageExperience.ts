@@ -21,12 +21,23 @@ const RULES: RouteRule[] = [
   {
     pattern: /^\/operacion(\/|$)/,
     experience: {
-      description: 'Su día de trabajo: pendientes, atrasos, aprobaciones y alertas.',
-      help: 'Empiece por la acción recomendada. No navegue por módulos: atienda el trabajo listado.',
-      why: 'Prioriza el trabajo operativo del día en un solo lugar.',
-      when: 'Al iniciar la jornada o cuando necesite saber qué sigue.',
-      after: 'Continúe a pesaje, calidad, liquidación o la bandeja según lo indicado.',
-      nextStep: { label: 'Ver Mi día', to: '/operacion' },
+      description: 'Su trabajo del día según su rol: pendientes, riesgos y siguiente acción.',
+      help: 'Empiece por el botón principal o la cola «Qué hacer ahora».',
+      why: 'Evita el dashboard genérico: cada rol ve solo lo relevante.',
+      when: 'Al iniciar la jornada o al volver de una tarea.',
+      after: 'Ejecute la acción recomendada (cola, pesaje, calidad, movimientos o reportes).',
+      nextStep: { label: 'Abrir compras', to: '/compras' },
+    },
+  },
+  {
+    pattern: /^\/compras\/cola(\/|$)/,
+    experience: {
+      description: 'Llame turnos y priorice la fila de espera de recepciones.',
+      help: 'Use «Llamar siguiente» cuando el puesto esté libre.',
+      why: 'Ordena la atención y reduce tiempos de espera.',
+      when: 'Durante la jornada de compras, con productores en patio.',
+      after: 'El ticket avanza a pesaje o atención.',
+      nextStep: { label: 'Ir a pesaje', to: '/compras/pesaje' },
     },
   },
   {

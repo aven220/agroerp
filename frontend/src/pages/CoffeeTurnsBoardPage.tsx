@@ -23,19 +23,19 @@ export function CoffeeTurnsBoardPage() {
   const waiting = (board?.waiting as Array<Record<string, unknown>>) ?? [];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#fff', padding: 32, fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: 42, marginBottom: 24 }}>Turnos — Recepción de café</h1>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-        <div style={{ background: '#14532d', borderRadius: 16, padding: 24 }}>
+    <div className="kiosk-board">
+      <h1>Turnos — Recepción de café</h1>
+      <div className="kiosk-board-grid">
+        <div className="kiosk-panel">
           <h2>Atendiendo</h2>
-          <div style={{ fontSize: 72, fontWeight: 700 }}>{String(current?.displayLabel ?? '—')}</div>
-          <div style={{ fontSize: 28 }}>{String(current?.producerName ?? 'Sin llamado')}</div>
+          <div className="kiosk-turn">{String(current?.displayLabel ?? '—')}</div>
+          <div className="kiosk-name">{String(current?.producerName ?? 'Sin llamado')}</div>
         </div>
-        <div style={{ background: '#1e293b', borderRadius: 16, padding: 24 }}>
+        <div className="kiosk-panel kiosk-panel-muted">
           <h2>En espera</h2>
-          <ul style={{ fontSize: 28, listStyle: 'none', padding: 0 }}>
+          <ul className="kiosk-list">
             {waiting.map((w, i) => (
-              <li key={i} style={{ marginBottom: 8 }}>
+              <li key={i}>
                 {String(w.displayLabel)} — {String(w.producerName)}
                 {w.isPreferential ? ' ★' : ''}
               </li>
@@ -43,7 +43,7 @@ export function CoffeeTurnsBoardPage() {
           </ul>
         </div>
       </div>
-      <p style={{ marginTop: 24, opacity: 0.7 }}>Actualizado: {String(board?.updatedAt ?? '')}</p>
+      <p className="kiosk-meta">Actualizado: {String(board?.updatedAt ?? '')}</p>
     </div>
   );
 }

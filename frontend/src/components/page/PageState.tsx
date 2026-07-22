@@ -37,6 +37,11 @@ const DEFAULTS: Record<PageStateVariant, { title: string; illustration: 'data' |
   'no-results': { title: 'Sin resultados para su búsqueda', illustration: 'search' },
 };
 
+const EMPTY_HINTS: Partial<Record<PageStateVariant, string>> = {
+  empty: 'Cuando existan registros, aparecerán aquí. Use la acción recomendada para crear el primero.',
+  'no-results': 'Pruebe limpiar filtros o ampliar el criterio de búsqueda.',
+};
+
 export function PageState({
   variant,
   title,
@@ -61,8 +66,13 @@ export function PageState({
     <EmptyState
       illustration={defaults.illustration}
       title={title ?? defaults.title}
-      description={message}
-      hint={hint}
+      description={
+        message ??
+        (variant === 'empty'
+          ? 'Esta lista está vacía porque aún no se ha registrado información en esta área.'
+          : undefined)
+      }
+      hint={hint ?? EMPTY_HINTS[variant]}
       action={resolvedAction}
     >
       {children}

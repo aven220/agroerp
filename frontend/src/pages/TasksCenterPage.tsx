@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { PageLayout } from '../components/layout/PageLayout';
+import { HubToolbar } from '../components/layout/HubToolbar';
+import { PageSummary, MetricCard, PageSection } from '../components/page';
 import { getEsdjeCenter, type EsdjeCenter } from '../api/scheduler';
 import { LoadingState } from '../components/ux/LoadingState';
 
@@ -15,75 +17,77 @@ export function TasksCenterPage() {
       <Header
         title="Tareas programadas"
         subtitle="Procesos automáticos, colas de trabajo e historial de ejecución"
-        actions={
-          <div className="row-actions">
-            <Link to="/tareas/catalogo" className="btn">Catálogo</Link>
-            <Link to="/tareas/colas" className="btn">Colas</Link>
-            <Link to="/tareas/calendario" className="btn">Calendario</Link>
-            <Link to="/tareas/workers" className="btn">Workers</Link>
-            <Link to="/tareas/historial" className="btn">Historial</Link>
-          </div>
-        }
       />
-      <div className="kpi-grid kpi-grid-lg">
-        <div className="kpi-card kpi-card-primary"><span className="kpi-label">Tareas totales</span><span className="kpi-value">{d.totalJobs}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Activas</span><span className="kpi-value">{d.activeJobs}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Ejecuciones 24h</span><span className="kpi-value">{d.runs24h}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Fallos 24h</span><span className="kpi-value">{d.failures24h}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Éxito</span><span className="kpi-value">{d.successRatePct}%</span></div>
-        <div className="kpi-card"><span className="kpi-label">En cola</span><span className="kpi-value">{d.queuedRuns}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Ejecutando</span><span className="kpi-value">{d.runningRuns}</span></div>
-        <div className="kpi-card"><span className="kpi-label">DLQ</span><span className="kpi-value">{d.deadLetters}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Workers online</span><span className="kpi-value">{d.onlineWorkers}</span></div>
-        <div className="kpi-card"><span className="kpi-label">Latencia prom.</span><span className="kpi-value">{d.avgDurationMs}ms</span></div>
-      </div>
-      {center.suggestions.length > 0 && (
-        <section className="panel">
-          <h3>Sugerencias IA</h3>
-          <table className="data-table data-table-compact">
-            <thead><tr><th>Tipo</th><th>Recomendación</th></tr></thead>
-            <tbody>
-              {center.suggestions.map((s, i) => (
-                <tr key={i}>
-                  <td>{String((s as { type?: string }).type ?? '')}</td>
-                  <td>{String((s as { recommendation?: string }).recommendation ?? JSON.stringify(s))}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
-      {d.topJobs.length > 0 && (
-        <section className="panel">
-          <h3>Tareas más ejecutadas (24h)</h3>
-          <table className="data-table data-table-compact">
-            <thead><tr><th>Tarea</th><th>Ejecuciones</th></tr></thead>
-            <tbody>
-              {d.topJobs.map((j) => (
-                <tr key={j.jobKey}><td>{j.jobKey}</td><td>{j.count}</td></tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
-      {d.queues.length > 0 && (
-        <section className="panel">
-          <h3>Colas por módulo</h3>
-          <table className="data-table data-table-compact">
-            <thead><tr><th>Cola</th><th>Prioridad</th><th>Tareas</th><th>Concurrencia</th></tr></thead>
-            <tbody>
-              {d.queues.map((q) => (
-                <tr key={q.queueKey}>
-                  <td>{q.name}</td>
-                  <td>{q.priority}</td>
-                  <td>{q.jobCount}</td>
-                  <td>{q.maxConcurrency}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
+      <PageLayout
+        toolbar={
+          <HubToolbar
+            primaryAction={{ label: 'Catálogo', to: '/tareas/catalogo' }}
+            moreActions={[
+              { label: 'Colas', to: '/tareas/colas' },
+              { label: 'Calendario', to: '/tareas/calendario' },
+              { label: 'Workers', to: '/tareas/workers' },
+              { label: 'Historial', to: '/tareas/historial' },
+            ]}
+          />
+        }
+      >
+        <PageSummary className="kpi-grid-lg">
+          <MetricCard label="Tareas totales" value={d.totalJobs} tone="blue" />
+          <MetricCard label="Activas" value={d.activeJobs} tone="green" />
+          <MetricCard label="Ejecuciones 24h" value={d.runs24h} />
+          <MetricCard label="Fallos 24h" value={d.failures24h} />
+          <MetricCard label="Éxito" value={`${d.successRatePct}%`} tone="green" />
+          <MetricCard label="En cola" value={d.queuedRuns} />
+          <MetricCard label="Ejecutando" value={d.runningRuns} />
+          <MetricCard label="DLQ" value={d.deadLetters} />
+          <MetricCard label="Workers online" value={d.onlineWorkers} />
+          <MetricCard label="Latencia prom." value={`${d.avgDurationMs}ms`} />
+        </PageSummary>
+        {center.suggestions.length > 0 ? (
+          <PageSection title="Sugerencias IA">
+            <table className="data-table data-table-compact">
+              <thead><tr><th>Tipo</th><th>Recomendación</th></tr></thead>
+              <tbody>
+                {center.suggestions.map((s, i) => (
+                  <tr key={i}>
+                    <td>{String((s as { type?: string }).type ?? '')}</td>
+                    <td>{String((s as { recommendation?: string }).recommendation ?? JSON.stringify(s))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </PageSection>
+        ) : null}
+        {d.topJobs.length > 0 ? (
+          <PageSection title="Tareas más ejecutadas (24h)">
+            <table className="data-table data-table-compact">
+              <thead><tr><th>Tarea</th><th>Ejecuciones</th></tr></thead>
+              <tbody>
+                {d.topJobs.map((j) => (
+                  <tr key={j.jobKey}><td>{j.jobKey}</td><td>{j.count}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </PageSection>
+        ) : null}
+        {d.queues.length > 0 ? (
+          <PageSection title="Colas por módulo">
+            <table className="data-table data-table-compact">
+              <thead><tr><th>Cola</th><th>Prioridad</th><th>Tareas</th><th>Concurrencia</th></tr></thead>
+              <tbody>
+                {d.queues.map((q) => (
+                  <tr key={q.queueKey}>
+                    <td>{q.name}</td>
+                    <td>{q.priority}</td>
+                    <td>{q.jobCount}</td>
+                    <td>{q.maxConcurrency}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </PageSection>
+        ) : null}
+      </PageLayout>
     </>
   );
 }

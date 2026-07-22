@@ -173,11 +173,12 @@ export function LotsPage() {
   ], []);
 
   return (
-    <PageLayout>
+    <>
       <PageHeader
         title="Lotes"
         subtitle="Gestione lotes productivos, cultivos y rendimiento por parcela"
-        showExperience={false}
+        showExperience
+        lastUpdated={dashboard ? new Date().toISOString() : undefined}
         actions={
           <PageActions>
             <Link to="/lotes/dashboard" className="btn">
@@ -203,7 +204,7 @@ export function LotsPage() {
           </PageActions>
         }
       />
-
+      <PageLayout>
       {dashboard && (
         <PageSummary>
           <MetricCard label="Total" value={dashboard.kpis.total} />
@@ -276,5 +277,6 @@ export function LotsPage() {
       />
       )}
     </PageLayout>
+    </>
   );
 }

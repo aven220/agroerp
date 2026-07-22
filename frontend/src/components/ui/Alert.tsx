@@ -23,7 +23,7 @@ export function Alert({ variant = 'info', title, className = '', children, ...pr
       {...props}
     >
       <div>
-        {title ? <strong style={{ display: 'block', marginBottom: '0.25rem' }}>{title}</strong> : null}
+        {title ? <strong className="ds-alert-title">{title}</strong> : null}
         {children}
       </div>
     </div>

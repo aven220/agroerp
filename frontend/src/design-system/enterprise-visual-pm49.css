@@ -1,0 +1,560 @@
+/* =========================================================
+   PM-49 — Enterprise Visual Consistency (capa final)
+   Alias de patrones legacy → estándar DS único.
+   Cargar ÚLTIMO. Sin lógica de negocio.
+   Canónicos: PageLayout · PageHeader · PageToolbar · PageSection
+   MetricCard · EnterpriseDataGrid · FieldGroup · FormActions
+   EmptyPanel · PageState · HubToolbar
+   ========================================================= */
+
+:root {
+  --pm49-radius: var(--ds-radius-md);
+  --pm49-shadow: var(--ds-shadow-xs);
+  --pm49-pad: var(--ds-space-4);
+  --pm49-gap: var(--ds-space-4);
+  --pm49-control-h: 36px;
+  --pm49-toolbar-h: 48px;
+}
+
+/* ─── Toolbars unificados (Hub / Page / EDW / WS / admin) ─── */
+.hub-toolbar,
+.ds-toolbar,
+.edw-toolbar,
+.ws-toolbar,
+.table-toolbar,
+.page-toolbar,
+.page-layout > .page-toolbar,
+.admin-perm-cards-toolbar,
+.perm-matrix-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-3);
+  min-height: var(--pm49-toolbar-h);
+  padding: var(--ds-space-2) var(--pm49-pad);
+  margin-bottom: var(--pm49-gap);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--pm49-radius);
+  background: var(--ds-surface);
+  box-shadow: var(--pm49-shadow);
+}
+
+.page-topbar .row-actions,
+.topbar-right .row-actions,
+.page-actions .row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  min-height: 0;
+}
+
+/* ─── Cards / panels / sections ─── */
+.card,
+.panel,
+.page-section,
+.ews-card,
+.iam-hub-card,
+.eic-card,
+.admin-hub-card,
+.inbox-card,
+.sd-widget,
+.edl-module-card {
+  border: 1px solid var(--ds-border) !important;
+  border-radius: var(--pm49-radius) !important;
+  box-shadow: var(--pm49-shadow) !important;
+  background: var(--ds-surface);
+}
+
+.panel,
+.page-section {
+  padding: var(--pm49-pad);
+  margin-bottom: var(--pm49-gap);
+}
+
+.panel > h3,
+.page-section-title {
+  margin: 0 0 var(--ds-space-3);
+  font-size: var(--ds-text-sm);
+  font-weight: 700;
+  color: var(--ds-text);
+  letter-spacing: 0.01em;
+}
+
+/* ─── MetricCard / KPI ─── */
+.kpi-grid,
+.page-summary,
+.kpi-grid-lg,
+.admin-hub-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--pm49-gap);
+  margin-bottom: var(--pm49-gap);
+}
+
+.kpi-card,
+.ews-kpi {
+  min-height: 88px;
+  padding: var(--pm49-pad) !important;
+  border: 1px solid var(--ds-border) !important;
+  border-radius: var(--pm49-radius) !important;
+  box-shadow: var(--pm49-shadow) !important;
+  background: var(--ds-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.kpi-label,
+.ews-kpi-label {
+  font-size: var(--ds-text-xs);
+  font-weight: 600;
+  color: var(--ds-text-muted);
+  text-transform: none;
+}
+
+.kpi-value,
+.ews-kpi-value {
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  font-weight: 700;
+  color: var(--ds-text);
+  line-height: 1.2;
+}
+
+.kpi-hint {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+
+.kpi-card-primary .kpi-value,
+.kpi-green .kpi-value,
+.ews-kpi-ok .ews-kpi-value { color: var(--ds-success); }
+.kpi-teal .kpi-value,
+.ews-kpi-teal .ews-kpi-value { color: var(--ds-secondary); }
+.kpi-coffee .kpi-value,
+.ews-kpi-coffee .ews-kpi-value { color: var(--ds-warning); }
+.kpi-blue .kpi-value { color: var(--ds-info); }
+.ews-kpi-warn .ews-kpi-value { color: var(--ds-warning); }
+
+/* ─── Badges / chips unificados ─── */
+.badge,
+.ds-badge,
+.chip,
+.score-chip,
+.edw-sticky-chip,
+.form-avail-badge,
+.metadata-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 22px;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--ds-radius-full);
+  font-size: var(--ds-text-xs);
+  font-weight: 600;
+  line-height: 1.2;
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text-secondary);
+}
+
+.badge-success,
+.badge-active,
+.badge-ok,
+.ds-badge-success { background: var(--ds-success-subtle); color: var(--ds-success); border-color: var(--ds-success-border); }
+.badge-warn,
+.badge-warning,
+.badge-pending,
+.ds-badge-warning { background: var(--ds-warning-subtle); color: var(--ds-warning); border-color: var(--ds-warning-border); }
+.badge-error,
+.badge-danger,
+.badge-failed,
+.ds-badge-error { background: var(--ds-error-subtle); color: var(--ds-error); border-color: var(--ds-error-border); }
+.badge-info,
+.badge-primary,
+.ds-badge-info { background: var(--ds-info-subtle); color: var(--ds-info); border-color: var(--ds-info-border); }
+
+/* ─── Tabs unificados ─── */
+.tabs,
+.ds-tabs,
+.tab-nav,
+.entity-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-1);
+  border-bottom: 1px solid var(--ds-border);
+  margin-bottom: var(--pm49-gap);
+  padding: 0;
+}
+
+.tab,
+.ds-tab,
+.tab-btn,
+.form-layout-tab-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-sm);
+  font-weight: 600;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-bottom: 2px solid transparent;
+  border-radius: var(--ds-radius-sm) var(--ds-radius-sm) 0 0;
+  cursor: pointer;
+  min-height: 36px;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.tab:hover,
+.ds-tab:hover,
+.tab-btn:hover,
+.form-layout-tab-btn:hover {
+  color: var(--ds-text);
+  background: var(--ds-surface-sunken);
+}
+
+.tab.active,
+.ds-tab[aria-selected='true'],
+.tab-btn.active,
+.tab-btn[aria-selected='true'],
+.form-layout-tab-btn.active {
+  color: var(--ds-primary);
+  border-bottom-color: var(--ds-primary);
+}
+
+/* ─── Alerts unificados ─── */
+.alert,
+.ds-alert {
+  display: flex;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--pm49-pad);
+  border-radius: var(--pm49-radius);
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text);
+  font-size: var(--ds-text-sm);
+  margin-bottom: var(--pm49-gap);
+}
+
+.alert-success,
+.ds-alert-success { background: var(--ds-success-subtle); border-color: var(--ds-success-border); color: var(--ds-success); }
+.alert-error,
+.ds-alert-error { background: var(--ds-error-subtle); border-color: var(--ds-error-border); color: var(--ds-error); }
+.alert-warn,
+.alert-warning,
+.ds-alert-warning { background: var(--ds-warning-subtle); border-color: var(--ds-warning-border); color: var(--ds-warning); }
+.alert-info,
+.ds-alert-info { background: var(--ds-info-subtle); border-color: var(--ds-info-border); color: var(--ds-info); }
+
+.ds-alert-title {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 700;
+}
+
+/* ─── Empty / loading unificados ─── */
+.empty-state,
+.ds-empty-state,
+.ds-empty-state-polished,
+.page-state-empty,
+.empty-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-8) var(--pm49-pad);
+  border: 1px dashed var(--ds-border);
+  border-radius: var(--pm49-radius);
+  background: var(--ds-surface);
+  color: var(--ds-text-muted);
+}
+
+.ds-empty-state-icon,
+.ds-empty-illustration {
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--ds-text-muted);
+}
+
+.ds-empty-state-title,
+.empty-state h3,
+.page-state-title {
+  margin: 0;
+  font-size: var(--ds-text-base);
+  font-weight: 700;
+  color: var(--ds-text);
+}
+
+.ds-empty-state-desc,
+.ds-empty-state-hint,
+.page-state-desc {
+  margin: 0;
+  max-width: 28rem;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+/* ─── Tablas: mismo look que EnterpriseDataGrid ─── */
+.erp-content table,
+.erp-content .data-table,
+.erp-content .table,
+.edw-grid table,
+.simple-records-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text);
+}
+
+.erp-content table thead th,
+.erp-content .data-table thead th {
+  height: 40px;
+  padding: 0 var(--ds-space-3);
+  text-align: left;
+  font-size: var(--ds-text-xs);
+  font-weight: 700;
+  color: var(--ds-text-secondary);
+  background: var(--ds-surface-sunken);
+  border-bottom: 1px solid var(--ds-border);
+  white-space: nowrap;
+}
+
+.erp-content table tbody td,
+.erp-content .data-table tbody td {
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-bottom: 1px solid var(--ds-border);
+  vertical-align: middle;
+}
+
+.erp-content table tbody tr:hover,
+.erp-content .data-table tbody tr:hover {
+  background: var(--ds-surface-sunken);
+}
+
+.table-wrap,
+.table-scroll,
+.edw-grid-wrap,
+.ds-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--pm49-radius);
+  background: var(--ds-surface);
+  box-shadow: var(--pm49-shadow);
+}
+
+/* ─── Modales / overlays / drawers ─── */
+.modal-overlay,
+.ds-confirm-overlay,
+.ds-drawer-overlay {
+  background: var(--ds-overlay) !important;
+}
+
+.modal,
+.ds-confirm-dialog,
+.ds-drawer-panel {
+  border: 1px solid var(--ds-border) !important;
+  border-radius: var(--ds-radius-lg) !important;
+  box-shadow: var(--ds-shadow-lg, var(--pm49-shadow)) !important;
+  background: var(--ds-surface) !important;
+  color: var(--ds-text);
+}
+
+/* ─── Breadcrumbs ─── */
+.breadcrumbs,
+.page-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-1);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+  margin-bottom: var(--ds-space-2);
+}
+
+.breadcrumbs a {
+  color: var(--ds-text-muted);
+}
+
+.breadcrumbs a:hover {
+  color: var(--ds-primary);
+}
+
+/* ─── Charts sin hex hardcodeado ─── */
+.chart-bar-track {
+  background: var(--ds-border);
+  border-radius: var(--ds-radius-xs);
+  height: 8px;
+  overflow: hidden;
+}
+
+.chart-bar-fill {
+  height: 100%;
+  border-radius: var(--ds-radius-xs);
+  background: var(--ds-info);
+  transition: width 160ms ease;
+}
+
+.chart-col-fill {
+  width: 100%;
+  border-radius: var(--ds-radius-xs);
+  background: var(--ds-secondary);
+  min-height: 4px;
+}
+
+.chart-bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.chart-bar-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-secondary);
+}
+
+.chart-cols {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 120px;
+}
+
+.chart-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  gap: 2px;
+}
+
+.chart-col-label {
+  font-size: 0.65rem;
+  color: var(--ds-text-muted);
+}
+
+/* ─── Kiosk / public board (tokens) ─── */
+.kiosk-board {
+  min-height: 100dvh;
+  padding: var(--ds-space-8);
+  background: var(--ds-sidebar-bg);
+  color: var(--ds-text-inverse);
+  font-family: var(--ds-font-sans);
+}
+
+.kiosk-board h1 {
+  font-size: clamp(1.75rem, 4vw, 2.625rem);
+  margin: 0 0 var(--ds-space-6);
+  font-weight: 700;
+}
+
+.kiosk-board-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ds-space-6);
+}
+
+.kiosk-panel {
+  border-radius: var(--ds-radius-2xl);
+  padding: var(--ds-space-6);
+  background: var(--ds-secondary);
+}
+
+.kiosk-panel-muted {
+  background: color-mix(in srgb, var(--ds-sidebar-bg) 70%, var(--ds-surface) 30%);
+}
+
+.kiosk-turn {
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.kiosk-name {
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+}
+
+.kiosk-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+}
+
+.kiosk-list li {
+  margin-bottom: var(--ds-space-2);
+}
+
+.kiosk-meta {
+  margin-top: var(--ds-space-6);
+  opacity: 0.7;
+  font-size: var(--ds-text-sm);
+}
+
+@media (max-width: 768px) {
+  .kiosk-board-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-grid,
+  .page-summary,
+  .kpi-grid-lg {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Forms FieldGroup / FormActions ─── */
+.field-group,
+.ds-field,
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.form-actions,
+.ds-form-actions,
+.edw-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+  margin-top: var(--pm49-gap);
+  padding-top: var(--pm49-gap);
+  border-top: 1px solid var(--ds-border);
+}
+
+/* ─── Split layouts ─── */
+.split-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--pm49-gap);
+  margin-bottom: var(--pm49-gap);
+}
+
+/* ─── Dark: forzar superficies tokenizadas ─── */
+[data-theme='dark'] .kpi-card,
+[data-theme='dark'] .panel,
+[data-theme='dark'] .card,
+[data-theme='dark'] .hub-toolbar,
+[data-theme='dark'] .page-toolbar,
+[data-theme='dark'] .admin-hub-card {
+  background: var(--ds-surface);
+  border-color: var(--ds-border);
+}
+
+[data-theme='dark'] .badge,
+[data-theme='dark'] .chip {
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text-secondary);
+}

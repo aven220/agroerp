@@ -1,13 +1,4 @@
-import { DashboardWelcome } from './DashboardWelcome';
-import { WorkspaceToolbar } from './WorkspaceToolbar';
-import { DashboardGrid } from './DashboardGrid';
-
-export function DashboardWorkspace() {
-  return (
-    <div className="ws-workspace">
-      <DashboardWelcome />
-      <WorkspaceToolbar />
-      <DashboardGrid />
-    </div>
-  );
-}
+/**
+ * PM-44 — El dashboard clásico se reemplaza por el Dashboard Inteligente.
+ */
+export { SmartDashboard as DashboardWorkspace, SmartDashboard } from './SmartDashboard';

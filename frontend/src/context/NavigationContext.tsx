@@ -56,6 +56,7 @@ interface NavigationContextValue {
   widgetLayout: { order: string[]; hidden: string[] };
   setWidgetOrder: (order: string[]) => void;
   toggleWidget: (id: string) => void;
+  replaceWidgetLayout: (layout: { order: string[]; hidden: string[] }) => void;
   resetWidgetLayout: (role: DashboardRole) => void;
   dashboardRole: DashboardRole;
   sidebarScroll: number;
@@ -77,7 +78,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
     try {
-      return JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v4')) ?? '{}');
+      return JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v5')) ?? '{}');
     } catch {
       return {};
     }
@@ -143,7 +144,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      setCollapsedGroups(JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v4')) ?? '{}'));
+      setCollapsedGroups(JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v5')) ?? '{}'));
     } catch {
       setCollapsedGroups({});
     }
@@ -184,7 +185,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (prefsUserId !== userId) return;
-    localStorage.setItem(storageKey(userId, 'nav_collapsed_v4'), JSON.stringify(collapsedGroups));
+    localStorage.setItem(storageKey(userId, 'nav_collapsed_v5'), JSON.stringify(collapsedGroups));
   }, [collapsedGroups, userId, prefsUserId]);
 
   useEffect(() => {
@@ -362,6 +363,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const replaceWidgetLayout = useCallback((layout: { order: string[]; hidden: string[] }) => {
+    setWidgetLayout({ order: layout.order, hidden: layout.hidden });
+  }, []);
+
   const resetWidgetLayout = useCallback((role: DashboardRole) => {
     setWidgetLayout({ order: DEFAULT_WIDGET_ORDER[role], hidden: [] });
   }, []);
@@ -390,6 +395,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       widgetLayout,
       setWidgetOrder,
       toggleWidget,
+      replaceWidgetLayout,
       resetWidgetLayout,
       dashboardRole,
       sidebarScroll,
@@ -400,7 +406,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       collapsedGroups, toggleGroup, expandGroup, favorites, addFavorite, removeFavorite,
       reorderFavorites, isFavorite, recentSearches, addRecentSearch, clearRecentSearches,
       navHistory, recordVisit, sidebarOpen, searchOpen, filterNavItem, visibleCategories,
-      widgetLayout, setWidgetOrder, toggleWidget, resetWidgetLayout, dashboardRole,
+      widgetLayout, setWidgetOrder, toggleWidget, replaceWidgetLayout, resetWidgetLayout, dashboardRole,
       sidebarScroll, lastMenuPath,
     ],
   );

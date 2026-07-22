@@ -78,7 +78,7 @@ export function IamUsersPage() {
   }, []);
 
   return (
-    <PageLayout>
+    <>
       <PageHeader
         title="Consulta de usuarios"
         subtitle="Vista de solo lectura para auditoría de accesos. Para crear o editar, use Administración."
@@ -93,7 +93,7 @@ export function IamUsersPage() {
           </PageActions>
         }
       />
-
+      <PageLayout>
       <PageSection title="Información">
         <p className="page-help">
           Esta pantalla es informativa. Para altas, cambios de rol o desactivación use{' '}
@@ -124,5 +124,6 @@ export function IamUsersPage() {
         </PageSection>
       )}
     </PageLayout>
+    </>
   );
 }

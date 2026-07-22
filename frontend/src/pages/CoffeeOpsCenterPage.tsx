@@ -77,8 +77,8 @@ export function CoffeeOpsCenterPage() {
       }
     >
       <PageHeader
-        title="Centro de operaciones — Compras de café"
-        subtitle="Monitoreo en tiempo real"
+        title="Operación de compras"
+        subtitle="Volumen, cola y alertas del día"
       />
 
       <PageSummary>

@@ -2,13 +2,11 @@ import { Navigate } from 'react-router-dom';
 import { useMobileOptional } from '../context/MobileContext';
 import { useExperienceCenterOptional } from '../context/ExperienceCenterContext';
 import { MobileHome } from '../components/mobile/MobileHome';
-import { Header } from '../components/layout/Header';
-import { PageLayout, PageHeader } from '../components/page';
-import { DashboardWorkspace } from '../components/dashboard/DashboardWorkspace';
+import { SmartDashboard } from '../components/dashboard/SmartDashboard';
 
 /**
- * PM-25 — Inicio redirige al home del centro activo.
- * El workspace clásico permanece accesible en /inicio-workspace.
+ * PM-46 — Inicio redirige al home del centro activo.
+ * Sin workspace legado ni dashboards puente.
  */
 export function DashboardPage() {
   const mobile = useMobileOptional();
@@ -22,20 +20,10 @@ export function DashboardPage() {
     return <Navigate to={experience.centerMeta.homePath} replace />;
   }
 
-  return (
-    <>
-      <Header title="Inicio" subtitle="Centro de trabajo" />
-      <DashboardWorkspace />
-    </>
-  );
+  return <SmartDashboard />;
 }
 
-/** Workspace clásico (widgets) — acceso directo si se necesita */
+/** PM-46 — Pantalla puente eliminada: redirige a Inicio */
 export function WorkspaceHomePage() {
-  return (
-    <PageLayout>
-      <PageHeader title="Inicio" subtitle="Centro de trabajo" />
-      <DashboardWorkspace />
-    </PageLayout>
-  );
+  return <Navigate to="/operacion" replace />;
 }

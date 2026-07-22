@@ -1,6 +1,7 @@
 /**
- * PM-42 — Navegación enterprise por experiencia (no por módulos técnicos).
- * Solo reorganiza el menú lateral; rutas y permisos existentes se reutilizan.
+ * PM-46 — Navegación enterprise unificada (un solo ERP).
+ * Pilares: Inicio · Operación · Reportes · Configuración · Ayuda
+ * Sin módulos técnicos visibles (IAM, EIMS, CPEP, Ops Center, etc.).
  */
 
 import type { NavCategory, NavItem } from './navigation';
@@ -14,8 +15,8 @@ const item = (
 ): NavItem => ({ id, to, label, icon, ...opts });
 
 /**
- * Árbol definitivo del sidebar (PM-42).
- * Inicio es enlace único; el resto son grupos acordeón (uno abierto a la vez).
+ * Árbol definitivo del sidebar (PM-46).
+ * Inicio = enlace único; el resto son grupos acordeón (colapsados por defecto).
  */
 export const ENTERPRISE_NAV_CATEGORIES: NavCategory[] = [
   {
@@ -27,37 +28,7 @@ export const ENTERPRISE_NAV_CATEGORIES: NavCategory[] = [
     items: [
       item('nav-inicio', '/operacion', 'Inicio', '🏠', {
         exact: true,
-        keywords: ['inicio', 'home', 'jornada', 'mi día'],
-      }),
-    ],
-  },
-  {
-    id: 'company',
-    label: 'Empresa',
-    icon: '🏢',
-    defaultCollapsed: true,
-    items: [
-      item('nav-org', '/implementacion/empresa', 'Organización', '🏛', {
-        keywords: ['organización', 'empresa', 'nit', 'fiscal'],
-        searchType: 'config',
-      }),
-      item('nav-users', '/implementacion/usuarios', 'Usuarios', '👥', {
-        keywords: ['usuarios', 'accesos', 'cuentas'],
-        searchType: 'config',
-      }),
-      item('nav-roles', '/implementacion/roles', 'Roles', '🔐', {
-        keywords: ['roles', 'permisos', 'perfiles'],
-        searchType: 'config',
-      }),
-      item('nav-branches', '/inventario/bodegas', 'Sucursales', '🏬', {
-        permission: 'inventory:read',
-        keywords: ['sucursales', 'bodegas', 'sedes', 'ubicaciones'],
-        breadcrumbLabel: 'Sucursales',
-      }),
-      item('nav-op-centers', '/compras/config/centros', 'Centros de operación', '📍', {
-        permission: 'coffee:read',
-        keywords: ['centros', 'acopio', 'compra', 'balanzas'],
-        searchType: 'config',
+        keywords: ['inicio', 'home', 'jornada', 'mi día', 'dashboard'],
       }),
     ],
   },
@@ -65,25 +36,12 @@ export const ENTERPRISE_NAV_CATEGORIES: NavCategory[] = [
     id: 'operation',
     label: 'Operación',
     icon: '🚜',
-    defaultCollapsed: false,
+    defaultCollapsed: true,
     items: [
-      item('nav-mi-dia', '/operacion', 'Mi Día', '◫', {
-        exact: true,
-        keywords: ['mi día', 'pendientes', 'cola', 'trabajo'],
-      }),
       item('nav-compras', '/compras', 'Compras', '🛒', {
         permission: 'coffee:read',
-        keywords: ['compras', 'café', 'recepción', 'pesaje'],
+        keywords: ['compras', 'café', 'recepción', 'pesaje', 'liquidación'],
         searchType: 'process',
-      }),
-      item('nav-calidad', '/compras/calidad', 'Calidad', '✓', {
-        permission: 'coffee:read',
-        keywords: ['calidad', 'muestra', 'catación'],
-        searchType: 'process',
-      }),
-      item('nav-inventario', '/inventario', 'Inventario', '📦', {
-        permission: 'inventory:read',
-        keywords: ['inventario', 'stock', 'bodega'],
       }),
       item('nav-productores', '/productores', 'Productores', '👤', {
         permission: 'producer:read',
@@ -97,36 +55,51 @@ export const ENTERPRISE_NAV_CATEGORIES: NavCategory[] = [
         permission: 'lot:read',
         keywords: ['lotes', 'parcelas'],
       }),
+      item('nav-calidad', '/compras/calidad', 'Calidad', '✓', {
+        permission: 'coffee:read',
+        keywords: ['calidad', 'muestra', 'catación'],
+        searchType: 'process',
+      }),
+      item('nav-inventario', '/inventario', 'Inventario', '📦', {
+        permission: 'inventory:read',
+        keywords: ['inventario', 'stock', 'bodega'],
+      }),
       item('nav-docs', '/documentos', 'Documentos', '📄', {
         permission: 'document:read',
         keywords: ['documentos', 'archivos', 'evidencia'],
       }),
+      item('nav-procesos', '/procesos/bandeja', 'Procesos', '🔄', {
+        permission: 'workflow:read',
+        keywords: ['procesos', 'aprobaciones', 'bandeja', 'workflow'],
+        searchType: 'process',
+        breadcrumbLabel: 'Procesos',
+      }),
     ],
   },
   {
-    id: 'analytics',
-    label: 'Analítica',
-    icon: '📈',
+    id: 'reports',
+    label: 'Reportes',
+    icon: '📊',
     defaultCollapsed: true,
     items: [
-      item('nav-exec-dash', '/gerencia', 'Dashboard Ejecutivo', '◈', {
-        exact: true,
-        keywords: ['dashboard', 'ejecutivo', 'gerencia', 'kpis'],
-        searchType: 'report',
-      }),
-      item('nav-reportes', '/bi', 'Reportes', '📋', {
-        permission: 'analytics:read',
-        keywords: ['reportes', 'informes', 'centro'],
-        searchType: 'report',
-      }),
-      item('nav-indicadores', '/compras/ops/ejecutivo', 'Indicadores', '📊', {
+      item('nav-rep-ops', '/compras/ops/reportes', 'Operativos', '📋', {
         permission: 'coffee:read',
-        keywords: ['indicadores', 'métricas', 'compras'],
+        keywords: ['reportes', 'operativos', 'compras', 'día'],
         searchType: 'report',
       }),
-      item('nav-bi', '/bi/dashboards', 'BI', '📈', {
+      item('nav-rep-mgr', '/gerencia', 'Gerenciales', '◈', {
+        exact: true,
+        keywords: ['gerencia', 'ejecutivo', 'kpis', 'indicadores'],
+        searchType: 'report',
+      }),
+      item('nav-rep-audit', '/iam/auditoria', 'Auditoría', '🔍', {
+        permission: 'iam:read',
+        keywords: ['auditoría', 'trazas', 'seguridad', 'accesos'],
+        searchType: 'report',
+      }),
+      item('nav-rep-bi', '/bi', 'BI', '📈', {
         permission: 'analytics:read',
-        keywords: ['bi', 'analítica', 'tableros'],
+        keywords: ['bi', 'analítica', 'tableros', 'inteligencia'],
         searchType: 'report',
       }),
     ],
@@ -137,35 +110,48 @@ export const ENTERPRISE_NAV_CATEGORIES: NavCategory[] = [
     icon: '⚙',
     defaultCollapsed: true,
     items: [
-      item('nav-cfg-hub', '/configuracion', 'Resumen', '◫', {
-        exact: true,
-        keywords: ['configuración', 'setup', 'centro'],
+      item('nav-cfg-empresa', '/implementacion/empresa', 'Empresa', '🏢', {
+        keywords: ['empresa', 'organización', 'nit', 'fiscal'],
         searchType: 'config',
       }),
-      item('nav-cfg-empresa', '/implementacion/configuracion', 'Empresa', '🏢', {
-        keywords: ['configuración', 'empresa', 'setup'],
+      item('nav-cfg-usuarios', '/implementacion/usuarios', 'Usuarios', '👥', {
+        keywords: ['usuarios', 'accesos', 'cuentas'],
         searchType: 'config',
       }),
-      item('nav-cfg-procesos', '/implementacion/procesos', 'Procesos', '⚡', {
-        keywords: ['procesos', 'flujos', 'aprobaciones'],
+      item('nav-cfg-roles', '/implementacion/roles', 'Roles', '🔐', {
+        keywords: ['roles', 'permisos', 'perfiles'],
+        searchType: 'config',
+      }),
+      item('nav-cfg-numeracion', '/implementacion/documentos', 'Numeraciones', '🔢', {
+        keywords: ['numeración', 'series', 'consecutivos'],
+        searchType: 'config',
+      }),
+      item('nav-cfg-compras', '/compras/config', 'Compras', '🛒', {
+        permission: 'coffee:read',
+        keywords: ['configuración compras', 'parámetros', 'precios', 'centros'],
+        searchType: 'config',
+      }),
+      item('nav-cfg-inventario', '/inventario/parametros', 'Inventario', '📦', {
+        permission: 'inventory:read',
+        keywords: ['configuración inventario', 'parámetros', 'bodegas'],
         searchType: 'config',
       }),
       item('nav-cfg-workflow', '/procesos', 'Workflow', '🔄', {
         permission: 'workflow:read',
-        keywords: ['workflow', 'flujos', 'definiciones'],
+        keywords: ['workflow', 'flujos', 'definiciones', 'aprobaciones'],
         searchType: 'config',
       }),
-      item('nav-cfg-numeracion', '/implementacion/documentos', 'Numeración', '🔢', {
-        keywords: ['numeración', 'documentos', 'series'],
-        searchType: 'config',
-      }),
-      item('nav-cfg-params', '/compras/config/parametros', 'Parámetros', '🎛', {
-        permission: 'coffee:read',
-        keywords: ['parámetros', 'reglas', 'compras'],
+      item('nav-cfg-documentos', '/implementacion/documentos', 'Documentos', '📄', {
+        keywords: ['documentos', 'plantillas', 'evidencias'],
         searchType: 'config',
       }),
       item('nav-cfg-integ', '/implementacion/integraciones', 'Integraciones', '🔗', {
         keywords: ['integraciones', 'balanzas', 'conexiones'],
+        searchType: 'config',
+      }),
+      item('nav-cfg-prefs', '/configuracion', 'Preferencias', '◫', {
+        exact: true,
+        keywords: ['preferencias', 'configuración', 'resumen'],
         searchType: 'config',
       }),
     ],
@@ -180,12 +166,8 @@ export const ENTERPRISE_NAV_CATEGORIES: NavCategory[] = [
         keywords: ['ayuda', 'soporte', 'guía'],
         searchType: 'screen',
       }),
-      item('nav-help-manual', '/ayuda', 'Manual', '📖', {
-        keywords: ['manual', 'documentación', 'cómo'],
-        searchType: 'screen',
-      }),
-      item('nav-help-status', '/implementacion/estado', 'Estado del sistema', '📡', {
-        keywords: ['estado', 'sistema', 'preparación', 'salud'],
+      item('nav-help-prep', '/implementacion/estado', 'Preparación', '📡', {
+        keywords: ['preparación', 'estado', 'go live', 'checklist'],
         searchType: 'config',
       }),
     ],
@@ -206,4 +188,7 @@ export function getEnterpriseNavItems(): NavItem[] {
   return items;
 }
 
-export const ENTERPRISE_DEFAULT_OPEN: NavCategory['id'] = 'operation';
+export const ENTERPRISE_DEFAULT_OPEN: NavCategory['id'] = 'home';
+
+/** Pilares visibles del producto (breadcrumbs / IA). */
+export const ENTERPRISE_PILLARS = ['Inicio', 'Operación', 'Reportes', 'Configuración', 'Ayuda'] as const;

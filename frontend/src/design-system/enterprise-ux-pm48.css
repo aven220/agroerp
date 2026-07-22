@@ -1,0 +1,609 @@
+/* =========================================================
+   PM-48 — Enterprise UX Polish (final visual layer)
+   Unifica: motion · cards · botones · forms · tablas ·
+   empty/loading/error · focus/hover · scroll · dark mode
+   Cargar ÚLTIMO en index.css. Sin lógica de negocio.
+   ========================================================= */
+
+:root {
+  --pm48-motion: 160ms;
+  --pm48-motion-max: 180ms;
+  --pm48-btn-h: 36px;
+  --pm48-btn-h-sm: 30px;
+  --pm48-btn-h-lg: 44px;
+  --pm48-control-h: 36px;
+  --pm48-card-radius: var(--ws-card-radius, var(--ds-radius-md));
+  --pm48-card-pad: var(--ws-card-pad, var(--ds-space-4));
+  --pm48-card-shadow: var(--ds-shadow-xs);
+  --pm48-gap: var(--ws-space-16, var(--ds-space-4));
+  --pm48-gap-lg: var(--ws-space-24, var(--ds-space-6));
+
+  /* Cap motion (FASE 15: máx 180ms) */
+  --ds-duration-fast: 120ms;
+  --ds-duration-normal: 180ms;
+  --ds-duration-slow: 180ms;
+  --ux-anim-fast: 160ms;
+  --ux-btn-h: var(--pm48-btn-h);
+  --ux-control-h: var(--pm48-control-h);
+  --ux-card-pad: var(--pm48-card-pad);
+
+  /* Dark-safe card shadow */
+  --ws-card-shadow: var(--ds-shadow-xs);
+}
+
+/* ─── FASE 7: Scroll único (sin doble scroll) ─── */
+.erp-shell {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.erp-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.erp-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.page-layout,
+.page-body,
+.erp-content-inner {
+  min-height: 0;
+  overflow: visible;
+}
+
+/* ─── FASE 2: Header más compacto ─── */
+.page-topbar,
+.topbar.page-topbar {
+  padding-top: var(--ws-space-12, 12px);
+  padding-bottom: var(--ws-space-12, 12px);
+  gap: var(--ws-space-12, 12px);
+}
+
+.page-chrome-bar {
+  gap: var(--ws-space-8, 8px);
+  margin-bottom: var(--ws-space-8, 8px);
+}
+
+.page-topbar h1,
+.topbar h1 {
+  font-size: clamp(1.15rem, 1.5vw, 1.35rem);
+  line-height: 1.25;
+  margin: 0;
+  font-weight: 700;
+  color: var(--ds-text);
+}
+
+.topbar-sub {
+  margin: 0.25rem 0 0;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-text-muted);
+}
+
+.page-header-experience {
+  margin-top: var(--ws-space-8, 8px);
+  max-width: 52rem;
+}
+
+/* ─── FASE 3: Botones unificados ─── */
+.btn,
+a.btn,
+button.btn,
+.erp-content .btn {
+  min-height: var(--pm48-btn-h);
+  padding: 0 var(--ws-space-16, 16px);
+  border-radius: var(--ds-radius-md);
+  font-size: var(--ds-text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  transition:
+    background var(--pm48-motion) var(--ds-ease, ease),
+    color var(--pm48-motion) var(--ds-ease, ease),
+    border-color var(--pm48-motion) var(--ds-ease, ease),
+    box-shadow var(--pm48-motion) var(--ds-ease, ease),
+    opacity var(--pm48-motion) var(--ds-ease, ease);
+}
+
+.btn-sm,
+.erp-content .btn-sm {
+  min-height: var(--pm48-btn-h-sm);
+  padding: 0 var(--ws-space-12, 12px);
+  font-size: var(--ds-text-xs);
+}
+
+.btn-lg,
+.erp-content .btn-lg {
+  min-height: var(--pm48-btn-h-lg);
+  padding: 0 var(--ws-space-24, 24px);
+}
+
+/* Evitar botones gigantes en headers / toolbars */
+.page-topbar .btn-lg,
+.hub-toolbar .btn-lg,
+.topbar-right .btn-lg,
+.page-actions .btn-lg {
+  min-height: var(--pm48-btn-h);
+  padding: 0 var(--ws-space-16, 16px);
+  font-size: var(--ds-text-sm);
+}
+
+.page-topbar .btn,
+.hub-toolbar .btn,
+.topbar-right .btn,
+.form-actions .btn,
+.page-actions .btn {
+  min-height: var(--pm48-btn-h);
+}
+
+/* ─── FASE 4: Cards unificadas ─── */
+.card,
+.panel,
+.page-section,
+.page-section.card,
+.ews-card,
+.iam-hub-card,
+.eic-card,
+.kpi-card,
+.sd-widget,
+.edl-module-card,
+.inbox-card,
+.hub-toolbar,
+.ds-toolbar,
+.edw-toolbar,
+.table-toolbar,
+.table-wrap,
+.table-scroll,
+.edw-grid-wrap,
+.ds-table-wrap {
+  border: 1px solid var(--ds-border) !important;
+  border-radius: var(--pm48-card-radius) !important;
+  box-shadow: var(--pm48-card-shadow) !important;
+  background: var(--ds-surface);
+}
+
+.card,
+.page-section.card {
+  padding: 0 !important;
+}
+
+.card-header {
+  padding: var(--ws-space-12, 12px) var(--pm48-card-pad);
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.card-body {
+  padding: var(--pm48-card-pad);
+}
+
+.card-footer {
+  padding: var(--ws-space-12, 12px) var(--pm48-card-pad);
+  margin-top: 0;
+  border-top: 1px solid var(--ds-border);
+}
+
+.ews-card,
+.iam-hub-card,
+.eic-card,
+.inbox-card.panel,
+.panel:not(.card) {
+  padding: var(--pm48-card-pad);
+}
+
+.edl-module-card {
+  padding: var(--pm48-card-pad) !important;
+  min-height: 112px;
+  gap: var(--ws-space-8, 8px) !important;
+}
+
+.edl-module-card:hover {
+  box-shadow: var(--ds-shadow-sm) !important;
+  transform: none;
+}
+
+.kpi-card {
+  min-height: 88px;
+  padding: var(--pm48-card-pad) !important;
+}
+
+.kpi-coffee .kpi-value { color: var(--ds-warning); }
+.kpi-teal .kpi-value { color: var(--ds-secondary); }
+.kpi-green .kpi-value { color: var(--ds-success); }
+.kpi-blue .kpi-value { color: var(--ds-info); }
+
+.kpi-grid,
+.page-summary {
+  gap: var(--pm48-gap);
+  margin-bottom: 0;
+}
+
+/* ─── FASE 5: Formularios ─── */
+.form-grid {
+  display: grid;
+  gap: var(--pm48-gap);
+}
+
+.form-group,
+.ds-field,
+.field-group {
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.form-group label,
+.ds-field label,
+.field-group label,
+label.ds-label {
+  font-size: var(--ds-text-xs);
+  font-weight: 600;
+  color: var(--ds-text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.erp-content input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+.erp-content select,
+.erp-content textarea,
+.ds-input,
+.hub-toolbar-search {
+  min-height: var(--pm48-control-h);
+  border-radius: var(--ds-radius-md);
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-size: var(--ds-text-sm);
+  padding: 0.4rem 0.75rem;
+}
+
+.erp-content textarea {
+  min-height: 88px;
+  padding: 0.65rem 0.75rem;
+}
+
+.form-actions,
+.edw-form-actions,
+.ds-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ws-space-12, 12px);
+  margin-top: var(--pm48-gap);
+  padding-top: var(--pm48-gap);
+  border-top: 1px solid var(--ds-border);
+}
+
+.field-hint,
+.form-hint,
+.ds-hint {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-text-muted);
+}
+
+.field-error,
+.form-error,
+.ds-error,
+.error-text {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-error);
+}
+
+.form-layout-tab-btn.active {
+  background: var(--ds-surface) !important;
+  color: var(--ds-text) !important;
+}
+
+/* ─── FASE 6: Tablas ─── */
+.table-wrap,
+.table-scroll,
+.edw-grid-wrap,
+.ds-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  max-height: none;
+}
+
+.data-table,
+.ds-table,
+.edw-table {
+  width: 100%;
+  min-width: 100%;
+}
+
+.data-table thead th,
+.ds-table thead th,
+.edw-table thead th {
+  height: 40px;
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text-muted);
+}
+
+.data-table tbody td,
+.ds-table tbody td,
+.edw-table tbody td {
+  height: 40px;
+  color: var(--ds-text);
+}
+
+/* ─── FASE 9–12: Loading / Empty / Error / Success ─── */
+.empty-state,
+.ds-empty-state,
+.ds-empty-state-polished {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--ws-space-12, 12px);
+  min-height: 160px;
+  padding: var(--ws-space-32, 32px) var(--ws-space-24, 24px);
+  margin: 0;
+  max-width: none;
+  border: 1px dashed var(--ds-border);
+  border-radius: var(--pm48-card-radius);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  animation: pm48-fade-in var(--pm48-motion) var(--ds-ease-out, ease-out);
+}
+
+.ds-empty-state-title,
+.empty-state h3,
+.empty-state .ds-empty-title {
+  color: var(--ds-text);
+  font-size: var(--ds-text-base);
+  font-weight: 650;
+}
+
+.ds-empty-state-desc,
+.empty-state p {
+  color: var(--ds-text-muted);
+  font-size: var(--ds-text-sm);
+  max-width: 28rem;
+}
+
+.ds-loading-page,
+.ds-loading-table,
+.ds-loading-dashboard,
+.ds-loading-cards,
+.ds-loading-block,
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm48-gap);
+  padding: var(--pm48-gap);
+  background: transparent;
+}
+
+.ds-loading-card,
+.skeleton,
+.ds-skeleton {
+  background: var(--ds-surface-sunken);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--pm48-card-radius);
+}
+
+.erp-content .alert,
+.alert {
+  border-radius: var(--pm48-card-radius);
+  padding: var(--ws-space-12, 12px) var(--pm48-card-pad);
+  border: 1px solid var(--ds-border);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+}
+
+.alert-error,
+.error-panel,
+.erp-content .alert-error {
+  background: var(--ds-error-subtle) !important;
+  border-color: var(--ds-error-border) !important;
+  color: var(--ds-error) !important;
+}
+
+.alert-warn,
+.alert-warning,
+.erp-content .alert-warn {
+  background: var(--ds-warning-subtle) !important;
+  border-color: var(--ds-warning-border) !important;
+  color: var(--ds-warning) !important;
+}
+
+.alert-success,
+.erp-content .alert-success {
+  background: var(--ds-success-subtle) !important;
+  border-color: var(--ds-success-border) !important;
+  color: var(--ds-success) !important;
+}
+
+.alert-info,
+.erp-content .alert-info {
+  background: var(--ds-info-subtle) !important;
+  border-color: var(--ds-info-border) !important;
+  color: var(--ds-info) !important;
+}
+
+/* ─── FASE 13–14: Focus / Hover ─── */
+.erp-content a:focus-visible,
+.erp-content button:focus-visible,
+.erp-content .btn:focus-visible,
+.erp-content input:focus-visible,
+.erp-content select:focus-visible,
+.erp-content textarea:focus-visible,
+.nav-item:focus-visible,
+.hub-toolbar-menu-item:focus-visible {
+  outline: 2px solid var(--ds-border-focus);
+  outline-offset: 2px;
+}
+
+.btn:hover:not(:disabled),
+a.btn:hover {
+  filter: none;
+}
+
+.btn-ghost:hover:not(:disabled),
+.btn-secondary:hover:not(:disabled) {
+  background: var(--ds-surface-sunken);
+  border-color: var(--ds-border-strong);
+}
+
+.nav-item:hover {
+  background: var(--ds-sidebar-hover);
+}
+
+.data-table tbody tr:hover td,
+.ds-table tbody tr:hover td,
+.edw-table tbody tr:hover td {
+  background: var(--ds-surface-sunken);
+}
+
+/* ─── FASE 15: Animaciones ≤ 180ms ─── */
+.mi-dia-grid .page-section,
+.ds-empty-state,
+.ds-toast,
+.ds-confirm,
+.page-section,
+.sd-widget,
+.edl-module-card {
+  animation-duration: var(--pm48-motion) !important;
+  transition-duration: var(--pm48-motion) !important;
+}
+
+.admin-wizard-success-animation,
+.flow-completion-banner,
+.pm28-fade-up {
+  animation-duration: var(--pm48-motion-max) !important;
+}
+
+@keyframes pm48-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Spinners/shimmer pueden seguir infinitos; solo capamos UI chrome */
+.ds-spinner,
+.loading-spinner {
+  animation-duration: 0.7s;
+}
+
+/* ─── FASE 8: Dark mode — anular hardcodes frecuentes ─── */
+[data-theme='dark'] .kpi-coffee .kpi-value { color: var(--ds-warning); }
+[data-theme='dark'] .kpi-teal .kpi-value { color: var(--ds-secondary); }
+[data-theme='dark'] .kpi-green .kpi-value { color: var(--ds-success); }
+[data-theme='dark'] .kpi-blue .kpi-value { color: var(--ds-info); }
+
+.smart-assistant-panel,
+.smart-assistant-card,
+.guided-workspace-panel,
+.guided-workspace-card,
+.adaptive-banner,
+.adaptive-workspace-banner,
+.ws-quick-action.adaptive-highlight,
+.mobile-action-row.adaptive-top {
+  background: var(--ds-surface) !important;
+  border-color: var(--ds-border) !important;
+  color: var(--ds-text) !important;
+  background-image: none !important;
+}
+
+.admin-status-chip,
+.admin-role-chip,
+[class*='admin-'][class*='chip'] {
+  background: color-mix(in srgb, var(--ds-primary) 12%, var(--ds-surface)) !important;
+  border-color: var(--ds-border) !important;
+  color: var(--ds-text) !important;
+}
+
+/* ─── Toolbar / acciones: menos ruido ─── */
+.hub-toolbar,
+.ds-toolbar,
+.edw-toolbar,
+.table-toolbar {
+  min-height: 48px;
+  padding: var(--ws-space-12, 12px) var(--pm48-card-pad);
+  gap: var(--ws-space-12, 12px);
+}
+
+.page-toolbar {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.row-actions {
+  gap: var(--ws-space-8, 8px);
+}
+
+/* Compactar topbar actions cuando hay muchos botones */
+.page-actions,
+.topbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ws-space-8, 8px);
+  align-items: center;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 1024px) {
+  .page-topbar {
+    padding-inline: var(--ws-space-12, 12px);
+  }
+
+  .kpi-grid,
+  .page-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-shell {
+    height: 100dvh;
+  }
+
+  .kpi-grid,
+  .page-summary,
+  .edl-module-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hub-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hub-toolbar-search {
+    max-width: none;
+    width: 100%;
+  }
+
+  .page-topbar-main,
+  .topbar-right {
+    width: 100%;
+  }
+
+  .empty-state,
+  .ds-empty-state {
+    padding: var(--ws-space-24, 24px) var(--ws-space-16, 16px);
+    min-height: 140px;
+  }
+}
+
+/* Preferencias de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

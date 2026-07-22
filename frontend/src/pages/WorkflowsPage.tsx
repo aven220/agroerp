@@ -173,7 +173,7 @@ export function WorkflowsPage() {
   ];
 
   return (
-    <PageLayout>
+    <>
       <PageHeader
         title="Procesos y aprobaciones"
         subtitle="Configure solicitudes, revise la bandeja y dé seguimiento a instancias activas"
@@ -201,7 +201,7 @@ export function WorkflowsPage() {
           </PageActions>
         }
       />
-
+      <PageLayout>
       {categories.length > 0 && (
         <div className="chip-row">
           {categories.map((c) => (
@@ -223,5 +223,6 @@ export function WorkflowsPage() {
         />
       </PageSection>
     </PageLayout>
+    </>
   );
 }

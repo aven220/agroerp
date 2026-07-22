@@ -286,7 +286,8 @@ export function ProducersPage() {
       <PageHeader
         title="Listado de productores"
         subtitle="Directorio operativo · volver al Centro de Productores"
-        showExperience={false}
+        showExperience
+        lastUpdated={dashboard ? new Date().toISOString() : undefined}
         actions={
           <PageActions>
             <Link to="/productores" className="btn btn-ghost">
@@ -309,6 +310,15 @@ export function ProducersPage() {
       />
       <PageLayout>
         {error ? <PageState variant="error" message={error} onRetry={loadList} /> : null}
+
+        {dashboard ? (
+          <PageSummary>
+            <MetricCard label="Total" value={dashboard.kpis.total} />
+            <MetricCard label="Activos" value={dashboard.kpis.active} tone="green" />
+            <MetricCard label="Pendientes" value={dashboard.kpis.pendingApproval} tone="coffee" />
+            <MetricCard label="Calidad prom." value={dashboard.kpis.avgQualityScore || '—'} />
+          </PageSummary>
+        ) : null}
 
         {!loading && items.length === 0 && !error ? (
           <PageState

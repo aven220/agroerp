@@ -56,7 +56,7 @@ export function BiCenterPage() {
 
   if (error && !center) {
     return (
-      <DomainLanding title="Centro de Reportes" subtitle="Indicadores por dominio" metrics={[]} modules={[]}>
+      <DomainLanding title="Reportes" subtitle="Indicadores por dominio" metrics={[]} modules={[]}>
         <PageState variant="error" message={error} />
       </DomainLanding>
     );
@@ -66,9 +66,9 @@ export function BiCenterPage() {
 
   return (
     <DomainLanding
-      title="Centro de Reportes"
-      subtitle="Compras, inventario, productores, calidad y gerencia"
-      description="Elija un dominio para profundizar. No hay grillas en esta pantalla."
+      title="Reportes"
+      subtitle="Operativos · Gerenciales · Auditoría · BI"
+      description="Consulte indicadores e informes. La operación diaria está en Operación."
       metrics={[
         { label: 'Tickets hoy', value: coffee?.ticketsToday ?? kpis?.tickets ?? '—', tone: 'coffee' },
         { label: 'Kg hoy', value: coffee ? coffee.kgToday.toFixed(0) : '—' },
@@ -76,28 +76,26 @@ export function BiCenterPage() {
         { label: 'Tiempo real', value: realtime ? 'Activo' : '—', hint: 'Señal BI' },
       ]}
       quickActions={[
-        { label: 'Biblioteca de reportes', to: '/bi/reportes', primary: true },
-        { label: 'Dashboard ejecutivo', to: '/gerencia' },
+        { label: 'Biblioteca BI', to: '/bi/reportes', primary: true },
+        { label: 'Gerenciales', to: '/gerencia' },
       ]}
       modules={[
-        { id: 'com', title: 'Compras', description: 'Operación y volumen del día', to: '/compras/ops', icon: '🛒' },
-        { id: 'inv', title: 'Inventario', description: 'Stock y movimientos', to: '/inventario/ops', icon: '📦' },
-        { id: 'pro', title: 'Productores', description: 'Base asociada', to: '/productores/dashboard', icon: '👤' },
-        { id: 'cal', title: 'Calidad', description: 'Indicadores de muestra', to: '/compras/calidad/indicadores', icon: '✓' },
-        { id: 'ger', title: 'Gerencia', description: 'Resumen ejecutivo', to: '/gerencia', icon: '◈' },
-        { id: 'bi', title: 'BI / Tableros', description: 'Dashboards y consultas', to: '/bi/dashboards', icon: '📈' },
-        { id: 'rep', title: 'Reportes', description: 'Informes guardados', to: '/bi/reportes', icon: '📋' },
+        { id: 'ops', title: 'Operativos', description: 'Compras e inventario del día', to: '/compras/ops/reportes', icon: '📋' },
+        { id: 'ger', title: 'Gerenciales', description: 'KPIs y riesgos', to: '/gerencia', icon: '◈' },
+        { id: 'aud', title: 'Auditoría', description: 'Accesos y trazas', to: '/iam/auditoria', icon: '🔍' },
+        { id: 'bi', title: 'BI', description: 'Tableros y consultas', to: '/bi/dashboards', icon: '📈' },
       ]}
       pending={[
-        { id: 'r1', label: 'Abrir reportes de compras', to: '/compras/ops/reportes' },
-        { id: 'r2', label: 'Indicadores de calidad', to: '/compras/calidad/indicadores' },
+        { id: 'r1', label: 'Reportes de compras', to: '/compras/ops/reportes' },
+        { id: 'r2', label: 'Tableros BI', to: '/bi/dashboards' },
       ]}
       activity={[
-        { id: 'a1', label: 'KPIs ejecutivos', to: '/gerencia' },
+        { id: 'a1', label: 'Indicadores gerenciales', to: '/gerencia' },
         { id: 'a2', label: 'Consultas BI', to: '/bi/consultas' },
       ]}
       pendingTitle="Sugeridos"
       activityTitle="Accesos rápidos"
+      modulesTitle="Tipos de reporte"
     />
   );
 }

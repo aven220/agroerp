@@ -173,11 +173,12 @@ export function FarmsPage() {
   ], []);
 
   return (
-    <PageLayout>
+    <>
       <PageHeader
         title="Fincas"
         subtitle="Administre predios, ubicación y vínculos con productores"
-        showExperience={false}
+        showExperience
+        lastUpdated={dashboard ? new Date().toISOString() : undefined}
         actions={
           <PageActions>
             <Link to="/fincas/dashboard" className="btn">
@@ -198,7 +199,7 @@ export function FarmsPage() {
           </PageActions>
         }
       />
-
+      <PageLayout>
       {dashboard && (
         <PageSummary>
           <MetricCard label="Total" value={dashboard.kpis.total} />
@@ -275,5 +276,6 @@ export function FarmsPage() {
       />
       )}
     </PageLayout>
+    </>
   );
 }

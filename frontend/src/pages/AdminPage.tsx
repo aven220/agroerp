@@ -6,6 +6,7 @@ import { RoleWizard } from '../components/admin/RoleWizard';
 import { UserWizardModal, type UserWizardFormData } from '../components/admin/UserWizardModal';
 import { FlowNextActions } from '../components/flow/FlowNextActions';
 import { Header } from '../components/layout/Header';
+import { PageLayout } from '../components/page';
 import { DataTable } from '../components/ui/DataTable';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ConfirmDialog } from '../components/ui/Drawer';
@@ -301,12 +302,13 @@ export function AdminPage({
             </div>
           ) : (
             <Header
-              title="Administración"
-              subtitle="Configure su organización paso a paso — sin capacitación previa"
+              title="Usuarios y roles"
+              subtitle="Configure accesos de su organización"
               actions={headerActions}
             />
           )}
 
+          <PageLayout>
           {flowHint === 'role-created' ? (
             <FlowNextActions
               title="Rol creado — siguiente paso"
@@ -554,6 +556,7 @@ export function AdminPage({
               )}
             </>
           )}
+          </PageLayout>
         </>
       ) : null}
 

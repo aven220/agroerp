@@ -61,8 +61,8 @@ export function EimsOpsCenterPage() {
   return (
     <PageLayout>
       <PageHeader
-        title="Centro de operaciones — Inventario"
-        subtitle="Monitoreo en tiempo real, KPIs y analítica operativa"
+        title="Operación de inventario"
+        subtitle="Existencias, alertas y movimiento del día"
         actions={
           <PageActions>
             <button className="btn" onClick={() => refreshEimsOpsAlerts().then(reload).catch((e) => setError(e.message))}>

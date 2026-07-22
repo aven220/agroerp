@@ -22,23 +22,23 @@ export interface ExperienceCenterMeta {
 export const EXPERIENCE_CENTERS: ExperienceCenterMeta[] = [
   {
     id: 'operation',
-    label: 'Centro de Operación',
+    label: 'Operación',
     shortLabel: 'Operación',
-    description: 'Trabajo diario: recepción → pesaje → calidad → liquidación e inventario',
+    description: 'Trabajo diario: recepción, calidad, liquidación e inventario',
     homePath: '/operacion',
   },
   {
     id: 'management',
-    label: 'Centro de Gerencia',
+    label: 'Gerencia',
     shortLabel: 'Gerencia',
-    description: 'Indicadores, alertas y visión ejecutiva de la cooperativa',
+    description: 'Indicadores, alertas y visión ejecutiva',
     homePath: '/gerencia',
   },
   {
     id: 'implementation',
-    label: 'Centro de Implementación',
+    label: 'Implementación',
     shortLabel: 'Implementación',
-    description: 'Puesta en marcha paso a paso y certificación Go Live',
+    description: 'Puesta en marcha y certificación Go Live',
     homePath: '/implementacion',
   },
 ];

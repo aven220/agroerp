@@ -1,8 +1,8 @@
 /**
- * PM-42 — Workspace de Gerencia (solo indicadores, sin CTAs operativos).
+ * PM-44 — Gerencia: Dashboard Inteligente (indicadores / riesgos).
  */
-import { EnterpriseWorkspace } from '../components/workspace/EnterpriseWorkspace';
+import { SmartDashboard } from '../components/dashboard/SmartDashboard';
 
 export function ManagementCenterPage() {
-  return <EnterpriseWorkspace forceRole="executive" />;
+  return <SmartDashboard forceRole="executive" />;
 }

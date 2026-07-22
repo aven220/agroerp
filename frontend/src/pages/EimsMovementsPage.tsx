@@ -217,7 +217,7 @@ export function EimsMovementsPage() {
   ];
 
   return (
-    <PageLayout>
+    <>
       <PageHeader
         title="Movimientos de inventario"
         subtitle="Entradas, salidas, transferencias y ajustes de existencias"
@@ -229,6 +229,7 @@ export function EimsMovementsPage() {
           </PageActions>
         }
       />
+      <PageLayout>
       {error ? <PageState variant="error" message={error} /> : null}
 
       {monitor ? (
@@ -363,5 +364,6 @@ export function EimsMovementsPage() {
         />
       </PageSection>
     </PageLayout>
+    </>
   );
 }

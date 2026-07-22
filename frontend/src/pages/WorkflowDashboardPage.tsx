@@ -79,10 +79,12 @@ export function WorkflowDashboardPage() {
   }
   if (error || !dashboard) {
     return (
-      <PageLayout>
+      <>
         <PageHeader title="Indicadores de procesos" subtitle="KPIs · cuellos de botella · carga de trabajo" />
-        <PageState variant="error" message={error ?? 'No hay datos disponibles'} onRetry={reload} />
-      </PageLayout>
+        <PageLayout>
+          <PageState variant="error" message={error ?? 'No hay datos disponibles'} onRetry={reload} />
+        </PageLayout>
+      </>
     );
   }
 
@@ -101,7 +103,7 @@ export function WorkflowDashboardPage() {
   }));
 
   return (
-    <PageLayout>
+    <>
       <PageHeader
         title="Indicadores de procesos"
         subtitle="KPIs · cuellos de botella · carga de trabajo"
@@ -113,7 +115,7 @@ export function WorkflowDashboardPage() {
           </PageActions>
         }
       />
-
+      <PageLayout>
       <PageSummary>
         <MetricCard label="Procesos activos" value={summary.activeProcesses} tone="blue" />
         <MetricCard label="Suspendidos" value={summary.suspendedProcesses} />
@@ -157,5 +159,6 @@ export function WorkflowDashboardPage() {
         <p>El motor registra métricas de duración, transiciones y cuellos de botella para optimización automática, predicción de tiempos y recomendación de rutas.</p>
       </PageSection>
     </PageLayout>
+    </>
   );
 }

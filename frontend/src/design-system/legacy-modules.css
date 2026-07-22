@@ -1126,10 +1126,10 @@ a.ews-kpi:hover {
   color: var(--ds-text, #0f172a);
 }
 
-.ews-kpi-coffee .ews-kpi-value { color: #9a3412; }
-.ews-kpi-teal .ews-kpi-value { color: #0f766e; }
-.ews-kpi-warn .ews-kpi-value { color: #b45309; }
-.ews-kpi-ok .ews-kpi-value { color: #15803d; }
+.ews-kpi-coffee .ews-kpi-value { color: var(--ds-warning); }
+.ews-kpi-teal .ews-kpi-value { color: var(--ds-secondary); }
+.ews-kpi-warn .ews-kpi-value { color: var(--ds-warning); }
+.ews-kpi-ok .ews-kpi-value { color: var(--ds-success); }
 
 .ews-grid {
   display: grid;
