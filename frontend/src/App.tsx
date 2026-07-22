@@ -18,6 +18,7 @@ import { OperationCenterPage } from './pages/OperationCenterPage';
 import { HelpCenterPage } from './pages/HelpCenterPage';
 import { ManagementCenterPage } from './pages/ManagementCenterPage';
 import {
+  ImplementationCenterLayout,
   ImplementationSummaryPage,
   ImplementationEmpresaPage,
   ImplementationConfigPage,
@@ -651,17 +652,19 @@ export function App() {
             <Route path="/operacion" element={<OperationCenterPage />} />
             <Route path="/ayuda" element={<HelpCenterPage />} />
             <Route path="/gerencia" element={<ManagementCenterPage />} />
-            <Route path="/implementacion" element={<ImplementationSummaryPage />} />
-            <Route path="/implementacion/empresa" element={<ImplementationEmpresaPage />} />
-            <Route path="/implementacion/configuracion" element={<ImplementationConfigPage />} />
-            <Route path="/implementacion/usuarios" element={<ImplementationUsuariosPage />} />
-            <Route path="/implementacion/roles" element={<ImplementationRolesPage />} />
-            <Route path="/implementacion/modulos" element={<ImplementationModulosPage />} />
-            <Route path="/implementacion/procesos" element={<ImplementationProcesosPage />} />
-            <Route path="/implementacion/documentos" element={<ImplementationDocumentosPage />} />
-            <Route path="/implementacion/integraciones" element={<ImplementationIntegracionesPage />} />
-            <Route path="/implementacion/estado" element={<ImplementationEstadoPage />} />
-            <Route path="/implementacion/go-live" element={<ImplementationGoLivePage />} />
+            <Route path="/implementacion" element={<ImplementationCenterLayout />}>
+              <Route index element={<ImplementationSummaryPage />} />
+              <Route path="empresa" element={<ImplementationEmpresaPage />} />
+              <Route path="configuracion" element={<ImplementationConfigPage />} />
+              <Route path="usuarios" element={<ImplementationUsuariosPage />} />
+              <Route path="roles" element={<ImplementationRolesPage />} />
+              <Route path="modulos" element={<ImplementationModulosPage />} />
+              <Route path="procesos" element={<ImplementationProcesosPage />} />
+              <Route path="documentos" element={<ImplementationDocumentosPage />} />
+              <Route path="integraciones" element={<ImplementationIntegracionesPage />} />
+              <Route path="estado" element={<ImplementationEstadoPage />} />
+              <Route path="go-live" element={<ImplementationGoLivePage />} />
+            </Route>
             <Route path="/productores" element={<ProducersPage />} />
             <Route path="/productores/dashboard" element={<ProducerDashboardPage />} />
             <Route path="/productores/mapa" element={<ProducerDashboardPage />} />

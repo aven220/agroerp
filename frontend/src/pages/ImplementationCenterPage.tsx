@@ -47,7 +47,7 @@ function EicShell({ title, subtitle, children }: { title: string; subtitle?: str
   const packageLabel = 'Cooperativa cafetera — Colombia';
 
   return (
-    <ImplementationEngineProvider>
+    <>
       <Header
         title={title}
         subtitle={subtitle ?? `Centro de Implementación · ${packageLabel}`}
@@ -72,7 +72,7 @@ function EicShell({ title, subtitle, children }: { title: string; subtitle?: str
       >
         {children}
       </PageLayout>
-    </ImplementationEngineProvider>
+    </>
   );
 }
 
@@ -256,7 +256,11 @@ function DomainSpotlight({ domainId }: { domainId: ImplementationDomain['id'] })
 }
 
 export function ImplementationCenterLayout() {
-  return <Outlet />;
+  return (
+    <ImplementationEngineProvider>
+      <Outlet />
+    </ImplementationEngineProvider>
+  );
 }
 
 export function ImplementationSummaryPage() {
