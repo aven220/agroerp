@@ -27,22 +27,63 @@ const TAB_SEARCH: MobileTab = { id: 'search', label: 'Buscar', icon: '🔍', to:
 const TAB_MORE: MobileTab = { id: 'more', label: 'Más', icon: '☰', to: '#more' };
 
 export const MOBILE_TABS_BY_ROLE: Record<DashboardRole, MobileTab[]> = {
-  admin: [TAB_HOME, TAB_WORK, { ...TAB_FORMS, to: '/administracion' }, TAB_SEARCH, TAB_MORE],
-  executive: [TAB_HOME, { id: 'bi', label: 'Reportes', icon: '📊', to: '/bi' }, { id: 'sales', label: 'Ventas', icon: '💼', to: '/comercial' }, TAB_SEARCH, TAB_MORE],
+  admin: [
+    { id: 'home', label: 'Mi día', icon: '🏠', to: '/operacion', exact: true },
+    { id: 'recv', label: 'Recepción', icon: '📥', to: '/compras/recepcion', permission: 'coffee:read' },
+    { id: 'stock', label: 'Stock', icon: '📦', to: '/inventario', permission: 'inventory:read' },
+    TAB_SEARCH,
+    TAB_MORE,
+  ],
+  executive: [
+    { id: 'home', label: 'Gerencia', icon: '🏠', to: '/gerencia', exact: true },
+    { id: 'bi', label: 'Indicadores', icon: '📊', to: '/compras/ops/ejecutivo', permission: 'coffee:read' },
+    TAB_SEARCH,
+    TAB_MORE,
+  ],
   cfo: [TAB_HOME, { id: 'finance', label: 'Finanzas', icon: '💰', to: '/finanzas' }, { id: 'reports', label: 'Reportes', icon: '📈', to: '/bi/reportes' }, TAB_SEARCH, TAB_MORE],
-  purchasing: [TAB_HOME, { id: 'purchases', label: 'Compras', icon: '☕', to: '/compras' }, TAB_FORMS, TAB_SEARCH, TAB_MORE],
+  purchasing: [
+    { id: 'home', label: 'Mi día', icon: '🏠', to: '/operacion', exact: true },
+    { id: 'recv', label: 'Recepción', icon: '📥', to: '/compras/recepcion', permission: 'coffee:read' },
+    { id: 'weigh', label: 'Pesaje', icon: '⚖', to: '/compras/pesaje', permission: 'coffee:read' },
+    TAB_SEARCH,
+    TAB_MORE,
+  ],
   sales: [TAB_HOME, { id: 'crm', label: 'Clientes', icon: '🎯', to: '/comercial/crm' }, { id: 'orders', label: 'Pedidos', icon: '📦', to: '/comercial/pedidos' }, TAB_SEARCH, TAB_MORE],
   crm: [TAB_HOME, { id: 'clients', label: 'Clientes', icon: '👥', to: '/comercial/clientes' }, { id: 'pipeline', label: 'Pipeline', icon: '📊', to: '/comercial' }, TAB_SEARCH, TAB_MORE],
-  inventory: [TAB_HOME, { id: 'stock', label: 'Stock', icon: '📦', to: '/inventario' }, { id: 'movements', label: 'Movimientos', icon: '🔄', to: '/inventario/movimientos' }, TAB_SEARCH, TAB_MORE],
+  inventory: [
+    { id: 'home', label: 'Mi día', icon: '🏠', to: '/operacion', exact: true },
+    { id: 'stock', label: 'Stock', icon: '📦', to: '/inventario', permission: 'inventory:read' },
+    { id: 'movements', label: 'Movimientos', icon: '🔄', to: '/inventario/movimientos', permission: 'inventory:read' },
+    TAB_SEARCH,
+    TAB_MORE,
+  ],
   logistics: [TAB_HOME, { id: 'scm', label: 'Suministro', icon: '🔗', to: '/cadena-suministro' }, { id: 'wms', label: 'Almacén', icon: '🏭', to: '/cadena-suministro/wms' }, TAB_SEARCH, TAB_MORE],
   finance: [TAB_HOME, { id: 'accounting', label: 'Contabilidad', icon: '📒', to: '/finanzas' }, { id: 'ar', label: 'Cartera', icon: '💳', to: '/comercial/cartera' }, TAB_SEARCH, TAB_MORE],
   production: [TAB_HOME, { id: 'mfg', label: 'Producción', icon: '🏭', to: '/manufactura' }, TAB_WORK, TAB_SEARCH, TAB_MORE],
-  quality: [TAB_HOME, { id: 'qms', label: 'Calidad', icon: '✓', to: '/manufactura/calidad' }, TAB_FORMS, TAB_SEARCH, TAB_MORE],
-  agricultural: [TAB_HOME, { id: 'producers', label: 'Productores', icon: '👤', to: '/productores', permission: 'producer:read' }, { id: 'lots', label: 'Lotes', icon: '📍', to: '/lotes', permission: 'lot:read' }, TAB_FORMS, TAB_MORE],
+  quality: [
+    { id: 'home', label: 'Mi día', icon: '🏠', to: '/operacion', exact: true },
+    { id: 'q', label: 'Calidad', icon: '✓', to: '/compras/calidad', permission: 'coffee:read' },
+    TAB_WORK,
+    TAB_SEARCH,
+    TAB_MORE,
+  ],
+  agricultural: [
+    { id: 'home', label: 'Mi día', icon: '🏠', to: '/operacion', exact: true },
+    { id: 'producers', label: 'Productores', icon: '👤', to: '/productores', permission: 'producer:read' },
+    { id: 'lots', label: 'Lotes', icon: '📍', to: '/lotes', permission: 'lot:read' },
+    TAB_SEARCH,
+    TAB_MORE,
+  ],
   hr: [TAB_HOME, { id: 'portal', label: 'Mi portal', icon: '🏠', to: '/portal' }, { id: 'hr', label: 'Personal', icon: '👥', to: '/rrhh' }, TAB_SEARCH, TAB_MORE],
   maintenance: [TAB_HOME, { id: 'assets', label: 'Activos', icon: '🏗', to: '/gestion-activos' }, { id: 'workorders', label: 'Órdenes', icon: '🔧', to: '/gestion-activos/ordenes' }, TAB_SEARCH, TAB_MORE],
   audit: [TAB_HOME, { id: 'audit', label: 'Auditoría', icon: '🔍', to: '/iam/auditoria' }, { id: 'reports', label: 'Reportes', icon: '📋', to: '/bi/reportes' }, TAB_SEARCH, TAB_MORE],
-  default: [TAB_HOME, TAB_WORK, TAB_FORMS, TAB_SEARCH, TAB_MORE],
+  default: [
+    { id: 'home', label: 'Mi día', icon: '🏠', to: '/operacion', exact: true },
+    { id: 'recv', label: 'Recepción', icon: '📥', to: '/compras/recepcion', permission: 'coffee:read' },
+    TAB_WORK,
+    TAB_SEARCH,
+    TAB_MORE,
+  ],
 };
 
 export const MOBILE_QUICK_TILES: MobileQuickTile[] = [

@@ -7,6 +7,7 @@ export type NavCategoryId =
   | 'home'
   | 'favorites'
   | 'agriculture'
+  | 'masters'
   | 'forms'
   | 'processes'
   | 'inventory'
@@ -833,5 +834,11 @@ export function resolveDashboardRole(roles: string[]): DashboardRole {
   return 'default';
 }
 
-/** Categorías expandidas por defecto en primer ingreso */
-export const DEFAULT_EXPANDED_CATEGORIES: NavCategoryId[] = ['home', 'favorites', 'agriculture'];
+/** Categorías expandidas por defecto en primer ingreso (cooperativa: flujo + inventario) */
+export const DEFAULT_EXPANDED_CATEGORIES: NavCategoryId[] = [
+  'home',
+  'favorites',
+  'purchases',
+  'inventory',
+  'masters',
+];

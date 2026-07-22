@@ -75,7 +75,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
     try {
-      return JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed')) ?? '{}');
+      return JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v2')) ?? '{}');
     } catch {
       return {};
     }
@@ -125,7 +125,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      setCollapsedGroups(JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed')) ?? '{}'));
+      setCollapsedGroups(JSON.parse(localStorage.getItem(storageKey(userId, 'nav_collapsed_v2')) ?? '{}'));
     } catch {
       setCollapsedGroups({});
     }
@@ -156,7 +156,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (prefsUserId !== userId) return;
-    localStorage.setItem(storageKey(userId, 'nav_collapsed'), JSON.stringify(collapsedGroups));
+    localStorage.setItem(storageKey(userId, 'nav_collapsed_v2'), JSON.stringify(collapsedGroups));
   }, [collapsedGroups, userId, prefsUserId]);
 
   useEffect(() => {

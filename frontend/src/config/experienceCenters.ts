@@ -23,21 +23,21 @@ export const EXPERIENCE_CENTERS: ExperienceCenterMeta[] = [
     id: 'operation',
     label: 'Centro de Operación',
     shortLabel: 'Operación',
-    description: 'Trabajo del día: colas, recepción, calidad e inventario',
+    description: 'Trabajo diario: recepción → pesaje → calidad → liquidación e inventario',
     homePath: '/operacion',
   },
   {
     id: 'management',
     label: 'Centro de Gerencia',
     shortLabel: 'Gerencia',
-    description: 'Indicadores, alertas y visión ejecutiva',
+    description: 'Indicadores, alertas y visión ejecutiva de la cooperativa',
     homePath: '/gerencia',
   },
   {
     id: 'implementation',
     label: 'Centro de Implementación',
     shortLabel: 'Implementación',
-    description: 'Configuración, checklist y go-live',
+    description: 'Puesta en marcha paso a paso y certificación Go Live',
     homePath: '/implementacion',
   },
 ];
@@ -86,54 +86,55 @@ const COOP_OPERATION: NavCategory[] = [
   },
   {
     id: 'purchases',
-    label: 'Operación',
+    label: 'Flujo de compras',
     icon: '☕',
     defaultCollapsed: false,
     items: [
-      item('eoc-recepcion', '/compras/recepcion', 'Recepción', '📥', {
+      item('eoc-recepcion', '/compras/recepcion', '1. Recepción', '📥', {
         permission: 'coffee:read',
-        keywords: ['recepción', 'compra'],
+        keywords: ['recepción', 'compra', 'turno'],
         searchType: 'process',
       }),
-      item('eoc-pesaje', '/compras/pesaje', 'Pesaje', '⚖', {
+      item('eoc-pesaje', '/compras/pesaje', '2. Pesaje', '⚖', {
         permission: 'coffee:read',
         keywords: ['pesaje', 'balanza'],
         searchType: 'process',
       }),
-      item('eoc-calidad', '/compras/calidad', 'Calidad', '✓', {
+      item('eoc-calidad', '/compras/calidad', '3. Calidad', '✓', {
         permission: 'coffee:read',
-        keywords: ['calidad'],
+        keywords: ['calidad', 'muestra'],
         searchType: 'process',
       }),
-      item('eoc-liquidaciones', '/compras/liquidaciones', 'Liquidaciones', '💵', {
+      item('eoc-liquidaciones', '/compras/liquidaciones', '4. Liquidación', '💵', {
         permission: 'coffee:read',
-        keywords: ['liquidaciones'],
+        keywords: ['liquidaciones', 'pago'],
         searchType: 'process',
       }),
       item('eoc-compras', '/compras', 'Compras del día', '🛒', {
         permission: 'coffee:read',
-        keywords: ['compras', 'café'],
+        keywords: ['compras', 'café', 'resumen'],
         searchType: 'process',
       }),
-      item('eoc-productores', '/productores', 'Productores', '👤', {
-        permission: 'producer:read',
-        keywords: ['productores'],
+      item('eoc-cola', '/compras/cola', 'Cola de espera', '⏳', {
+        permission: 'coffee:read',
+        keywords: ['cola', 'turnos'],
+        searchType: 'process',
       }),
-      item('eoc-fincas', '/fincas', 'Fincas', '🌿', {
-        permission: 'farm:read',
-        keywords: ['fincas'],
-      }),
-      item('eoc-lotes', '/lotes', 'Lotes', '📍', {
-        permission: 'lot:read',
-        keywords: ['lotes'],
-      }),
-      item('eoc-inventario', '/inventario', 'Inventario', '📦', {
+    ],
+  },
+  {
+    id: 'inventory',
+    label: 'Inventario',
+    icon: '📦',
+    defaultCollapsed: false,
+    items: [
+      item('eoc-inventario', '/inventario', 'Bodegas y stock', '📦', {
         permission: 'inventory:read',
-        keywords: ['inventario', 'bodega'],
+        keywords: ['inventario', 'bodega', 'stock'],
       }),
       item('eoc-movimientos', '/inventario/movimientos', 'Movimientos', '🔄', {
         permission: 'inventory:read',
-        keywords: ['movimientos'],
+        keywords: ['movimientos', 'entrada', 'salida'],
         searchType: 'process',
       }),
       item('eoc-reservas', '/inventario/reservas', 'Reservas', '🔖', {
@@ -141,14 +142,47 @@ const COOP_OPERATION: NavCategory[] = [
         keywords: ['reservas'],
         searchType: 'process',
       }),
-      item('eoc-docs', '/documentos', 'Documentos', '📄', {
-        permission: 'document:read',
-        keywords: ['documentos', 'firma'],
+      item('eoc-compras-inv', '/compras/inventario', 'Café en bodega', '☕', {
+        permission: 'coffee:read',
+        keywords: ['inventario café', 'kardex'],
+        searchType: 'process',
       }),
+    ],
+  },
+  {
+    id: 'masters',
+    label: 'Maestros',
+    icon: '👤',
+    defaultCollapsed: false,
+    items: [
+      item('eoc-productores', '/productores', 'Productores', '👤', {
+        permission: 'producer:read',
+        keywords: ['productores', 'asociados'],
+      }),
+      item('eoc-fincas', '/fincas', 'Fincas', '🌿', {
+        permission: 'farm:read',
+        keywords: ['fincas'],
+      }),
+      item('eoc-lotes', '/lotes', 'Lotes', '📍', {
+        permission: 'lot:read',
+        keywords: ['lotes', 'parcelas'],
+      }),
+    ],
+  },
+  {
+    id: 'processes',
+    label: 'Procesos y docs',
+    icon: '📋',
+    defaultCollapsed: true,
+    items: [
       item('eoc-procesos', '/procesos/bandeja', 'Aprobaciones', '📥', {
         permission: 'workflow:read',
         keywords: ['procesos', 'aprobaciones', 'bandeja'],
         searchType: 'process',
+      }),
+      item('eoc-docs', '/documentos', 'Documentos', '📄', {
+        permission: 'document:read',
+        keywords: ['documentos', 'firma', 'evidencia'],
       }),
     ],
   },
@@ -158,32 +192,15 @@ const COOP_OPERATION: NavCategory[] = [
     icon: '📊',
     defaultCollapsed: true,
     items: [
-      item('eoc-reportes', '/bi', 'Analítica y reportes', '📊', {
-        permission: 'analytics:read',
-        keywords: ['reportes', 'analítica'],
-        searchType: 'report',
-      }),
       item('eoc-compras-ops', '/compras/ops', 'Operación de compras', '☕', {
         permission: 'coffee:read',
-        keywords: ['ops compras'],
+        keywords: ['ops compras', 'tablero'],
         searchType: 'report',
       }),
-    ],
-  },
-  {
-    id: 'admin',
-    label: 'Configuración',
-    icon: '⚙',
-    defaultCollapsed: true,
-    items: [
-      item('eoc-config', '/compras/config', 'Configuración de compras', '⚙', {
-        permission: 'coffee:read',
-        keywords: ['configuración', 'compras'],
-        searchType: 'config',
-      }),
-      item('eoc-impl', '/implementacion', 'Centro de implementación', '🧭', {
-        keywords: ['implementación', 'go live'],
-        searchType: 'config',
+      item('eoc-reportes', '/bi', 'Analítica', '📈', {
+        permission: 'analytics:read',
+        keywords: ['reportes', 'analítica', 'bi'],
+        searchType: 'report',
       }),
     ],
   },
@@ -206,7 +223,7 @@ const COOP_MANAGEMENT: NavCategory[] = [
     items: [
       item('emc-home', '/gerencia', 'Resumen ejecutivo', '◫', {
         exact: true,
-        keywords: ['gerencia', 'ejecutivo', 'kpis'],
+        keywords: ['gerencia', 'ejecutivo', 'kpis', 'inicio'],
       }),
     ],
   },
@@ -220,7 +237,7 @@ const COOP_MANAGEMENT: NavCategory[] = [
   },
   {
     id: 'reports',
-    label: 'Reportes',
+    label: 'Indicadores',
     icon: '📊',
     defaultCollapsed: false,
     items: [
@@ -229,32 +246,20 @@ const COOP_MANAGEMENT: NavCategory[] = [
         keywords: ['compras', 'ejecutivo'],
         searchType: 'report',
       }),
-      item('emc-inventario', '/inventario/ops', 'Inventario', '📦', {
-        permission: 'inventory:read',
-        keywords: ['inventario'],
-        searchType: 'report',
-      }),
-      item('emc-bi', '/bi', 'Analítica', '📈', {
-        permission: 'analytics:read',
-        keywords: ['reportes', 'bi'],
-        searchType: 'report',
-      }),
       item('emc-calidad', '/compras/calidad/indicadores', 'Calidad', '✓', {
         permission: 'coffee:read',
         keywords: ['calidad', 'indicadores'],
         searchType: 'report',
       }),
-    ],
-  },
-  {
-    id: 'admin',
-    label: 'Configuración',
-    icon: '⚙',
-    defaultCollapsed: true,
-    items: [
-      item('emc-impl', '/implementacion', 'Implementación', '🧭', {
-        keywords: ['implementación'],
-        searchType: 'config',
+      item('emc-inventario', '/inventario/ops', 'Inventario', '📦', {
+        permission: 'inventory:read',
+        keywords: ['inventario'],
+        searchType: 'report',
+      }),
+      item('emc-bi', '/bi', 'Analítica general', '📈', {
+        permission: 'analytics:read',
+        keywords: ['reportes', 'bi', 'analítica'],
+        searchType: 'report',
       }),
     ],
   },
@@ -277,7 +282,7 @@ const COOP_IMPLEMENTATION: NavCategory[] = [
     items: [
       item('eic-home', '/implementacion', 'Resumen', '◫', {
         exact: true,
-        keywords: ['implementación', 'go live', 'checklist'],
+        keywords: ['implementación', 'go live', 'checklist', 'inicio'],
       }),
     ],
   },
@@ -291,42 +296,50 @@ const COOP_IMPLEMENTATION: NavCategory[] = [
   },
   {
     id: 'admin',
-    label: 'Implementación',
+    label: 'Puesta en marcha',
     icon: '🧭',
     defaultCollapsed: false,
     items: [
-      item('eic-empresa', '/implementacion/empresa', 'Empresa', '🏢', {
-        keywords: ['empresa', 'fiscal'],
+      item('eic-empresa', '/implementacion/empresa', '1. Empresa', '🏢', {
+        keywords: ['empresa', 'fiscal', 'nit'],
         searchType: 'config',
       }),
-      item('eic-usuarios', '/implementacion/usuarios', 'Usuarios', '👥', {
+      item('eic-usuarios', '/implementacion/usuarios', '2. Usuarios', '👥', {
         keywords: ['usuarios', 'accesos'],
         searchType: 'config',
       }),
-      item('eic-roles', '/implementacion/roles', 'Roles', '🔐', {
+      item('eic-roles', '/implementacion/roles', '3. Roles', '🔐', {
         keywords: ['roles', 'permisos'],
         searchType: 'config',
       }),
-      item('eic-config', '/implementacion/configuracion', 'Configuración', '⚙', {
-        keywords: ['configuración', 'empresa', 'compras', 'inventario'],
+      item('eic-config', '/implementacion/configuracion', '4. Configuración', '⚙', {
+        keywords: ['configuración', 'compras', 'inventario', 'precios'],
         searchType: 'config',
       }),
-      item('eic-procesos', '/implementacion/procesos', 'Procesos', '⚡', {
-        keywords: ['procesos', 'aprobaciones'],
+      item('eic-procesos', '/implementacion/procesos', '5. Procesos', '⚡', {
+        keywords: ['procesos', 'aprobaciones', 'workflow'],
         searchType: 'config',
       }),
-      item('eic-docs', '/implementacion/documentos', 'Documentos', '📄', {
+      item('eic-docs', '/implementacion/documentos', '6. Documentos', '📄', {
         keywords: ['documentos', 'numeración'],
         searchType: 'config',
       }),
-      item('eic-integ', '/implementacion/integraciones', 'Integraciones', '🔗', {
+      item('eic-integ', '/implementacion/integraciones', '7. Integraciones', '🔗', {
         keywords: ['integraciones', 'balanzas'],
         searchType: 'config',
       }),
-      item('eic-modulos', '/implementacion/modulos', 'Paquete', '▦', {
+      item('eic-modulos', '/implementacion/modulos', '8. Paquete', '▦', {
         keywords: ['paquete', 'alcance', 'cooperativa'],
         searchType: 'config',
       }),
+    ],
+  },
+  {
+    id: 'reports',
+    label: 'Certificación',
+    icon: '✓',
+    defaultCollapsed: false,
+    items: [
       item('eic-estado', '/implementacion/estado', 'Estado', '📊', {
         keywords: ['estado', 'semáforo', 'preparación'],
         searchType: 'config',
@@ -382,11 +395,13 @@ export function getCenterMeta(id: ExperienceCenterId): ExperienceCenterMeta {
 
 export function resolveDefaultCenter(roles: string[]): ExperienceCenterId {
   const lower = roles.map((r) => r.toLowerCase());
-  if (lower.some((r) => r.includes('admin') || r.includes('implement'))) {
+  // Consultores / implementadores entran al centro de puesta en marcha
+  if (lower.some((r) => r.includes('implement') || r.includes('consultant') || r.includes('consultor'))) {
     return 'implementation';
   }
   if (lower.some((r) => r.includes('gerencia') || r.includes('manager') || r.includes('executive'))) {
     return 'management';
   }
+  // Admin y operación diaria empiezan en Mi día (flujo claro)
   return 'operation';
 }

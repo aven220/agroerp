@@ -31,14 +31,14 @@ import { seedEims } from '../api/eims';
 
 const EIC_SECTIONS = [
   { to: '/implementacion', label: 'Resumen', end: true },
-  { to: '/implementacion/empresa', label: 'Empresa' },
-  { to: '/implementacion/usuarios', label: 'Usuarios' },
-  { to: '/implementacion/roles', label: 'Roles' },
-  { to: '/implementacion/configuracion', label: 'Configuración' },
-  { to: '/implementacion/procesos', label: 'Procesos' },
-  { to: '/implementacion/documentos', label: 'Documentos' },
-  { to: '/implementacion/integraciones', label: 'Integraciones' },
-  { to: '/implementacion/modulos', label: 'Paquete' },
+  { to: '/implementacion/empresa', label: '1. Empresa' },
+  { to: '/implementacion/usuarios', label: '2. Usuarios' },
+  { to: '/implementacion/roles', label: '3. Roles' },
+  { to: '/implementacion/configuracion', label: '4. Configuración' },
+  { to: '/implementacion/procesos', label: '5. Procesos' },
+  { to: '/implementacion/documentos', label: '6. Documentos' },
+  { to: '/implementacion/integraciones', label: '7. Integraciones' },
+  { to: '/implementacion/modulos', label: '8. Paquete' },
   { to: '/implementacion/estado', label: 'Estado' },
   { to: '/implementacion/go-live', label: 'Go Live' },
 ];
