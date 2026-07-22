@@ -1,15 +1,34 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 
 interface TooltipProps {
   content: string;
   children: ReactNode;
 }
 
+/**
+ * Tooltip on demand — content is not in the DOM until hover/focus,
+ * so descriptions never dump into the layout when CSS fails to load.
+ */
 export function Tooltip({ content, children }: TooltipProps) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const show = () => setOpen(true);
+  const hide = () => setOpen(false);
+
   return (
-    <span className="ds-tooltip-wrap">
+    <span
+      className="ds-tooltip-wrap"
+      onMouseEnter={show}
+      onMouseLeave={hide}
+      onFocus={show}
+      onBlur={hide}
+    >
       {children}
-      <span className="ds-tooltip" role="tooltip">{content}</span>
+      {open ? (
+        <span className="ds-tooltip" role="tooltip" id={id}>
+          {content}
+        </span>
+      ) : null}
     </span>
   );
 }

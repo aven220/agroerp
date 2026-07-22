@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useCommandPaletteOptional } from '../../context/CommandProvider';
@@ -11,11 +11,10 @@ import { FocusModeToggle } from '../adaptive-workspace/AdaptiveToolbar';
 import { Breadcrumbs } from './Breadcrumbs';
 import { ThemeToggle } from './ThemeToggle';
 import { CenterSelector } from './CenterSelector';
-import { Tooltip } from '../ui/Tooltip';
 
 export function AppShellBar({ compact = false }: { compact?: boolean }) {
   const { user, logout } = useAuth();
-  const { setSearchOpen, navHistory } = useNavigation();
+  const { setSearchOpen } = useNavigation();
   const command = useCommandPaletteOptional();
   const { setHelpOpen, setPrefsOpen } = useKeyboardShortcuts();
   const gw = useGuidedWorkspaceOptional();
@@ -26,6 +25,27 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
     ? gw.pinned.length + gw.tasks.filter((t) => !t.done).length
     : 0;
 
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMoreOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [moreOpen]);
+
   return (
     <header className={`app-shell-bar${compact ? ' compact' : ''}`} role="banner">
       <div className="app-shell-bar-left">
@@ -33,6 +53,7 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
         {!compact && !focusMode ? <span className="app-shell-bar-divider" aria-hidden /> : null}
         <Breadcrumbs />
       </div>
+
       <div className="app-shell-bar-center">
         <button
           type="button"
@@ -45,64 +66,104 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
           <kbd aria-hidden>⌘K</kbd>
         </button>
       </div>
+
       <div className="app-shell-bar-right">
-        {gw && !focusMode ? (
-          <Tooltip content="Mi espacio de trabajo — fijados, pendientes y recientes">
+        {!focusMode ? (
+          <div className="app-shell-more" ref={moreRef}>
             <button
               type="button"
-              className="btn btn-ghost btn-sm gwp-shell-toggle"
-              onClick={() => gw.togglePanel()}
-              aria-pressed={gw.panelOpen}
-              aria-label="Abrir mi espacio de trabajo"
+              className="btn btn-ghost btn-sm"
+              aria-expanded={moreOpen}
+              aria-haspopup="menu"
+              aria-label="Más herramientas"
+              title="Más herramientas"
+              onClick={() => setMoreOpen((v) => !v)}
             >
-              <span aria-hidden>📋</span>
-              {!compact ? <span>Mi jornada</span> : null}
-              {workspaceBadge > 0 ? (
-                <span className="gwp-toggle-badge" aria-hidden>{workspaceBadge}</span>
-              ) : null}
+              ⋯
             </button>
-          </Tooltip>
-        ) : null}
-        {adaptive && !focusMode ? (
-          <Tooltip content="Modo concentración — oculta elementos secundarios">
-            <FocusModeToggle />
-          </Tooltip>
-        ) : adaptive && focusMode ? <FocusModeToggle /> : null}
-        {assistant && !focusMode ? (
-          <Tooltip content="Asistente de trabajo — sugerencias proactivas">
-            <SmartAssistantTrigger />
-          </Tooltip>
-        ) : null}
-        <Tooltip content="Atajos de teclado (?)">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setHelpOpen(true)} aria-label="Ayuda de atajos">
-            ?
-          </button>
-        </Tooltip>
-        <Tooltip content="Preferencias (⌘,)">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPrefsOpen(true)} aria-label="Preferencias">
-            ⚙
-          </button>
-        </Tooltip>
-        <ThemeToggle />
-        {navHistory.length > 0 && !focusMode ? (
-          <div className="recent-nav" aria-label="Navegación reciente">
-            {navHistory.slice(0, 3).map((h) => (
-              <Link key={h.id} to={h.to} className="recent-nav-chip" title={h.label}>
-                {h.icon} {h.label}
-              </Link>
-            ))}
+            {moreOpen ? (
+              <div className="app-shell-more-menu" role="menu">
+                {gw ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="app-shell-more-item"
+                    onClick={() => {
+                      gw.togglePanel();
+                      setMoreOpen(false);
+                    }}
+                  >
+                    <span aria-hidden>📋</span>
+                    Mi jornada
+                    {workspaceBadge > 0 ? (
+                      <span className="gwp-toggle-badge" aria-hidden>{workspaceBadge}</span>
+                    ) : null}
+                  </button>
+                ) : null}
+                {adaptive ? (
+                  <div
+                    className="app-shell-more-item app-shell-more-item-embed"
+                    role="none"
+                    onClick={() => setMoreOpen(false)}
+                  >
+                    <FocusModeToggle />
+                  </div>
+                ) : null}
+                {assistant ? (
+                  <div
+                    className="app-shell-more-item app-shell-more-item-embed"
+                    role="none"
+                    onClick={() => setMoreOpen(false)}
+                  >
+                    <SmartAssistantTrigger />
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="app-shell-more-item"
+                  onClick={() => {
+                    setHelpOpen(true);
+                    setMoreOpen(false);
+                  }}
+                >
+                  <span aria-hidden>?</span>
+                  Atajos de teclado
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="app-shell-more-item"
+                  onClick={() => {
+                    setPrefsOpen(true);
+                    setMoreOpen(false);
+                  }}
+                >
+                  <span aria-hidden>⚙</span>
+                  Preferencias
+                </button>
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        ) : (
+          <FocusModeToggle />
+        )}
+
+        <ThemeToggle />
+
         <div className="user-chip compact">
           <span className="avatar" aria-hidden>
             {user?.firstName?.[0]}
             {user?.lastName?.[0]}
           </span>
-          <div>
-            <strong>{user?.firstName} {user?.lastName}</strong>
-            <small>{user?.organization?.name}</small>
-          </div>
+          {!compact ? (
+            <div>
+              <strong>{user?.firstName} {user?.lastName}</strong>
+              <small>{user?.organization?.name}</small>
+            </div>
+          ) : null}
         </div>
+
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => logout()}>
           Salir
         </button>

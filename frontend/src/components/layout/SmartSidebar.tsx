@@ -101,9 +101,9 @@ export function SmartSidebar() {
       <aside className={`sidebar smart-sidebar${sidebarOpen ? ' open' : ''}`} aria-label="Navegación principal">
         <div className="sidebar-brand">
           <div className="brand-logo" aria-hidden>A</div>
-          <div>
-            <strong>AGROERP</strong>
-            <span>{packageLabel}</span>
+          <div className="sidebar-brand-text">
+            <strong className="sidebar-brand-name">AGROERP</strong>
+            <span className="sidebar-brand-sub">{packageLabel}</span>
             {experience ? (
               <span className="sidebar-center-badge">{experience.centerMeta.shortLabel}</span>
             ) : null}

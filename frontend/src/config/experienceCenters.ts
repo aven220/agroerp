@@ -81,7 +81,7 @@ const COOP_OPERATION: NavCategory[] = [
     label: 'Favoritos',
     icon: '★',
     hideCount: true,
-    defaultCollapsed: false,
+    defaultCollapsed: true,
     items: [],
   },
   {
@@ -232,7 +232,7 @@ const COOP_MANAGEMENT: NavCategory[] = [
     label: 'Favoritos',
     icon: '★',
     hideCount: true,
-    defaultCollapsed: false,
+    defaultCollapsed: true,
     items: [],
   },
   {
@@ -291,7 +291,7 @@ const COOP_IMPLEMENTATION: NavCategory[] = [
     label: 'Favoritos',
     icon: '★',
     hideCount: true,
-    defaultCollapsed: false,
+    defaultCollapsed: true,
     items: [],
   },
   {

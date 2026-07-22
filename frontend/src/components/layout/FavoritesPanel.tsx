@@ -42,7 +42,7 @@ export function FavoritesPanel({ onNavigate }: { onNavigate?: () => void }) {
   if (sorted.length === 0) {
     return (
       <p className="favorites-empty" role="status">
-        Agregue accesos frecuentes con ☆ junto a cada opción del menú.
+        Use ★ en el menú para fijar accesos.
       </p>
     );
   }
