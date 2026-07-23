@@ -5,8 +5,9 @@ import { RecommendationCenter } from '../smart-assistant/RecommendationCenter';
 import { useUserPreferencesOptional } from '../../context/UserPreferencesContext';
 
 /**
- * PM-42 — Sin AutoOnboarding forzado.
- * Asistente solo si el usuario lo activa en Preferencias.
+ * PM-43 — Sin AutoOnboarding forzado.
+ * Tutorial / asistente solo si el usuario activa "Mostrar asistente".
+ * Ayuda operativa: menú Ayuda → Centro de ayuda.
  */
 export function UxShell() {
   const prefs = useUserPreferencesOptional();

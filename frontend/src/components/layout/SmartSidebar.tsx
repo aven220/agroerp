@@ -1,5 +1,4 @@
 /**
- * @deprecated PM-42 — Usar EnterpriseSidebar.
- * Se mantiene el alias para imports legacy.
+ * PM-43 — Sin sidebar. Alias de compatibilidad → null.
  */
 export { EnterpriseSidebar as SmartSidebar } from './EnterpriseSidebar';

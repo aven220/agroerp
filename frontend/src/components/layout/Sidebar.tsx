@@ -1,2 +1,4 @@
-export { EnterpriseSidebar as Sidebar } from './EnterpriseSidebar';
-export { EnterpriseSidebar as SmartSidebar } from './EnterpriseSidebar';
+/**
+ * PM-43 — Sin sidebar. Navegación en EnterpriseHeader.
+ */
+export { EnterpriseHeader as Sidebar } from './EnterpriseHeader';

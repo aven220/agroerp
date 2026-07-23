@@ -1,5 +1,4 @@
-import { EnterpriseTopBar } from './EnterpriseTopBar';
-import { EnterpriseSidebar } from './EnterpriseSidebar';
+import { EnterpriseHeader } from './EnterpriseHeader';
 import { CommandPalette } from '../command/CommandPalette';
 import { GuidedWorkspacePanel } from '../guided-workspace/GuidedWorkspacePanel';
 import { BottomNav } from '../mobile/BottomNav';
@@ -13,8 +12,8 @@ import { useAdaptiveWorkspaceOptional } from '../../context/AdaptiveWorkspacePro
 import { useUserPreferencesOptional } from '../../context/UserPreferencesContext';
 
 /**
- * PM-42 — Shell enterprise: TopBar + Sidebar fijo + Contenido.
- * Sin hamburguesa. Sin drawer de navegación.
+ * PM-43 — Shell enterprise: Header horizontal + contenido full-width.
+ * Sin sidebar. Sin drawer. Sin hamburguesa.
  */
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const mobile = useMobileOptional();
@@ -31,22 +30,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div
-      className={`erp-shell erp-shell-pm42${isMobile ? ' erp-shell-mobile' : ''}${isTablet ? ' erp-shell-tablet' : ''}${showGuided ? ' guided-workspace-open' : ''}${focusMode ? ' erp-shell-focus' : ''}${chromeLevel === 'compact' ? ' erp-shell-compact-chrome' : ''}`}
+      className={`erp-shell erp-shell-pm43${isMobile ? ' erp-shell-mobile' : ''}${isTablet ? ' erp-shell-tablet' : ''}${showGuided ? ' guided-workspace-open' : ''}${focusMode ? ' erp-shell-focus' : ''}${chromeLevel === 'compact' ? ' erp-shell-compact-chrome' : ''}`}
     >
       <a href="#main-content" className="skip-link">
         Saltar al contenido
       </a>
-      {!focusMode ? <EnterpriseTopBar /> : null}
-      <div className="erp-body">
-        {!focusMode ? <EnterpriseSidebar /> : null}
-        <div className="erp-main">
-          <OfflineBanner />
-          <PullToRefresh>
-            <div className="erp-content" id="main-content" tabIndex={-1}>
-              {children}
-            </div>
-          </PullToRefresh>
-        </div>
+      {!focusMode ? <EnterpriseHeader /> : null}
+      <div className="erp-main erp-main-fullbleed">
+        <OfflineBanner />
+        <PullToRefresh>
+          <div className="erp-content" id="main-content" tabIndex={-1}>
+            {children}
+          </div>
+        </PullToRefresh>
       </div>
       {isMobile ? (
         <>
