@@ -10,55 +10,14 @@ import { useAdaptiveWorkspaceOptional } from '../../context/AdaptiveWorkspacePro
 import { SmartAssistantTrigger } from '../smart-assistant/RecommendationCenter';
 import { FocusModeToggle } from '../adaptive-workspace/AdaptiveToolbar';
 import { ThemeToggle } from './ThemeToggle';
+import { MoreHorizontal, Search } from 'lucide-react';
 
-function ShellPopover({
-  label,
-  icon,
-  children,
-  empty,
-}: {
-  label: string;
-  icon: string;
-  children: React.ReactNode;
-  empty?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
-
-  return (
-    <div className="app-shell-popover" ref={ref}>
-      <button
-        type="button"
-        className="btn btn-ghost btn-sm"
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-label={label}
-        title={label}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {icon}
-      </button>
-      {open ? (
-        <div className="app-shell-more-menu app-shell-nav-menu" role="menu">
-          <div className="app-shell-nav-menu-title">{label}</div>
-          {children ?? (empty ? <p className="app-shell-nav-empty">{empty}</p> : null)}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
+/**
+ * PM-43 — Topbar mínima del shell.
+ * Búsqueda y perfil viven en el sidebar; aquí solo herramientas compactas.
+ */
 export function AppShellBar({ compact = false }: { compact?: boolean }) {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const { setSearchOpen, favorites, navHistory, lastMenuPath } = useNavigation();
   const command = useCommandPaletteOptional();
   const { setHelpOpen, setPrefsOpen } = useKeyboardShortcuts();
@@ -96,68 +55,32 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
   }, [moreOpen]);
 
   return (
-    <header className={`app-shell-bar${compact ? ' compact' : ''}`} role="banner">
+    <header className={`app-shell-bar app-shell-bar-pm43${compact ? ' compact' : ''}`} role="banner">
       <div className="app-shell-bar-left">
         {resumeTarget ? (
           <button
             type="button"
             className="btn btn-ghost btn-sm app-shell-resume"
-            title={`Volver donde estaba: ${resumeLabel}`}
+            title={`Volver: ${resumeLabel}`}
             onClick={() => navigate(resumeTarget)}
           >
             ← Volver
           </button>
-        ) : null}
-      </div>
-
-      <div className="app-shell-bar-center">
-        <button
-          type="button"
-          className="global-search-trigger"
-          onClick={() => (command ? command.openPalette('launcher') : setSearchOpen(true))}
-          aria-label="Búsqueda rápida"
-        >
-          <span aria-hidden>⌕</span>
-          <span className="global-search-trigger-text">Buscar productores, compras, docs…</span>
-          <kbd aria-hidden>⌘K</kbd>
-        </button>
+        ) : (
+          <span className="app-shell-bar-spacer" aria-hidden />
+        )}
       </div>
 
       <div className="app-shell-bar-right">
-        {!focusMode ? (
-          <>
-            <ShellPopover label="Favoritos" icon="★" empty="Marque ★ en el menú para fijar accesos.">
-              {favorites.length > 0
-                ? favorites
-                    .slice()
-                    .sort((a, b) => a.order - b.order)
-                    .map((f) => (
-                      <Link
-                        key={f.id}
-                        to={f.to}
-                        role="menuitem"
-                        className="app-shell-more-item"
-                        onClick={() => undefined}
-                      >
-                        <span aria-hidden>{f.icon}</span>
-                        {f.label}
-                      </Link>
-                    ))
-                : null}
-            </ShellPopover>
-
-            <ShellPopover label="Recientes" icon="🕒" empty="Aún no hay pantallas recientes.">
-              {navHistory.length > 0
-                ? navHistory.slice(0, 8).map((h) => (
-                    <Link key={`${h.id}-${h.to}`} to={h.to} role="menuitem" className="app-shell-more-item">
-                      <span aria-hidden>{h.icon}</span>
-                      {h.label}
-                    </Link>
-                  ))
-                : null}
-            </ShellPopover>
-          </>
-        ) : null}
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm app-shell-search-btn"
+          aria-label="Búsqueda rápida"
+          title="Buscar (⌘K)"
+          onClick={() => (command ? command.openPalette('launcher') : setSearchOpen(true))}
+        >
+          <Search size={16} strokeWidth={1.75} />
+        </button>
 
         {!focusMode ? (
           <div className="app-shell-more" ref={moreRef}>
@@ -167,13 +90,33 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
               aria-expanded={moreOpen}
               aria-haspopup="menu"
               aria-label="Más herramientas"
-              title="Más herramientas"
+              title="Más"
               onClick={() => setMoreOpen((v) => !v)}
             >
-              ⋯
+              <MoreHorizontal size={16} strokeWidth={1.75} />
             </button>
             {moreOpen ? (
               <div className="app-shell-more-menu" role="menu">
+                {favorites.length > 0 ? (
+                  <>
+                    <div className="app-shell-nav-menu-title">Favoritos</div>
+                    {favorites
+                      .slice()
+                      .sort((a, b) => a.order - b.order)
+                      .slice(0, 6)
+                      .map((f) => (
+                        <Link
+                          key={f.id}
+                          to={f.to}
+                          role="menuitem"
+                          className="app-shell-more-item"
+                          onClick={() => setMoreOpen(false)}
+                        >
+                          {f.label}
+                        </Link>
+                      ))}
+                  </>
+                ) : null}
                 {gw ? (
                   <button
                     type="button"
@@ -184,10 +127,11 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
                       setMoreOpen(false);
                     }}
                   >
-                    <span aria-hidden>📋</span>
                     Mi jornada
                     {workspaceBadge > 0 ? (
-                      <span className="gwp-toggle-badge" aria-hidden>{workspaceBadge}</span>
+                      <span className="gwp-toggle-badge" aria-hidden>
+                        {workspaceBadge}
+                      </span>
                     ) : null}
                   </button>
                 ) : null}
@@ -218,7 +162,6 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
                     setMoreOpen(false);
                   }}
                 >
-                  <span aria-hidden>?</span>
                   Atajos de teclado
                 </button>
                 <button
@@ -230,8 +173,18 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
                     setMoreOpen(false);
                   }}
                 >
-                  <span aria-hidden>⚙</span>
                   Preferencias
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="app-shell-more-item"
+                  onClick={() => {
+                    void logout();
+                    setMoreOpen(false);
+                  }}
+                >
+                  Salir
                 </button>
               </div>
             ) : null}
@@ -241,23 +194,6 @@ export function AppShellBar({ compact = false }: { compact?: boolean }) {
         )}
 
         <ThemeToggle />
-
-        <div className="user-chip compact">
-          <span className="avatar" aria-hidden>
-            {user?.firstName?.[0]}
-            {user?.lastName?.[0]}
-          </span>
-          {!compact ? (
-            <div>
-              <strong>{user?.firstName} {user?.lastName}</strong>
-              <small>{user?.organization?.name}</small>
-            </div>
-          ) : null}
-        </div>
-
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => logout()}>
-          Salir
-        </button>
       </div>
     </header>
   );

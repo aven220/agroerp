@@ -9,14 +9,14 @@ const CENTER_ICONS: Record<ExperienceCenterId, string> = {
 };
 
 /**
- * PM-41B — Selector de centro (dropdown compacto bajo el logo).
+ * PM-43 — Selector de centro como tarjeta enterprise.
  */
 export function CenterSelector({ compact = false }: { compact?: boolean }) {
   const { center, setCenter, centers, centerMeta } = useExperienceCenter();
 
   if (compact) {
     return (
-      <div className="esb-center-compact" role="group" aria-label="Centro de experiencia">
+      <div className="esb-center-compact" role="group" aria-label="Centro de trabajo">
         {centers.map((c) => {
           const active = c.id === center;
           return (
@@ -40,10 +40,12 @@ export function CenterSelector({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <div className="esb-center-selector" role="group" aria-label="Centro de experiencia">
-      <span className="esb-center-label">Centro</span>
-      <div className="esb-center-control">
-        <NavIcon name={CENTER_ICONS[center]} size={16} className="esb-center-leading" />
+    <div className="esb-center-card" role="group" aria-label="Centro de trabajo">
+      <span className="esb-center-card-label">Centro de trabajo</span>
+      <div className="esb-center-card-control">
+        <span className="esb-center-card-icon" aria-hidden>
+          <NavIcon name={CENTER_ICONS[center]} size={18} />
+        </span>
         <select
           className="esb-center-select"
           value={center}
@@ -59,7 +61,7 @@ export function CenterSelector({ compact = false }: { compact?: boolean }) {
             </option>
           ))}
         </select>
-        <SidebarChromeIcons.chevronDown size={14} strokeWidth={1.75} className="esb-center-caret" />
+        <SidebarChromeIcons.chevronDown size={16} strokeWidth={1.75} className="esb-center-caret" />
       </div>
     </div>
   );

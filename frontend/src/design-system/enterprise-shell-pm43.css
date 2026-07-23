@@ -1,0 +1,487 @@
+/* =========================================================
+   PM-43 — Enterprise Shell Redesign (capa visual final)
+   Sidebar spacing · topbar mínima · tipografía · cards
+   Tokens DS únicamente. Sin lógica.
+   ========================================================= */
+
+:root {
+  --pm43-pad: 24px;
+  --pm43-group-gap: 32px;
+  --pm43-item-gap: 10px;
+  --pm43-icon-gap: 12px;
+  --pm43-title: 2rem; /* 32 */
+  --pm43-section: 1.5rem; /* 24 */
+  --pm43-card-title: 1.125rem; /* 18 */
+  --pm43-body: 0.9375rem; /* 15 */
+  --pm43-desc: 0.8125rem; /* 13 */
+  --sidebar-w: 280px;
+  --esb-pad-x: 24px;
+  --esb-item-h: 42px;
+  --esb-group-h: 36px;
+}
+
+/* ─── Sidebar PM-43 spacing ─── */
+.enterprise-sidebar.enterprise-sidebar-pm43 {
+  padding: 0;
+}
+
+.enterprise-sidebar-pm43 .esb-header {
+  padding: var(--pm43-pad) var(--pm43-pad) 16px;
+  align-items: center;
+  gap: 12px;
+  border-bottom: none;
+}
+
+.enterprise-sidebar-pm43 .esb-brand {
+  align-items: center;
+  gap: 14px;
+}
+
+.enterprise-sidebar-pm43 .esb-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--ds-radius-lg);
+  font-size: 1.05rem;
+}
+
+.enterprise-sidebar-pm43 .esb-brand-text {
+  gap: 4px;
+  padding-top: 0;
+}
+
+.enterprise-sidebar-pm43 .esb-brand-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ds-sidebar-text);
+}
+
+.enterprise-sidebar-pm43 .esb-brand-package {
+  font-size: var(--pm43-desc);
+  font-weight: 500;
+  color: var(--ds-sidebar-muted);
+}
+
+.enterprise-sidebar-pm43 .esb-brand-org {
+  display: none;
+}
+
+.enterprise-sidebar-pm43 .esb-center {
+  padding: 0 var(--pm43-pad);
+  margin-bottom: 16px;
+}
+
+/* Centro = tarjeta */
+.enterprise-sidebar-pm43 .esb-center-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--esb-border);
+  border-radius: var(--ds-radius-lg);
+  background: color-mix(in srgb, var(--ds-sidebar-text) 5%, transparent);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.enterprise-sidebar-pm43 .esb-center-card:hover {
+  background: color-mix(in srgb, var(--ds-sidebar-text) 8%, transparent);
+  border-color: color-mix(in srgb, var(--ds-sidebar-text) 18%, transparent);
+}
+
+.enterprise-sidebar-pm43 .esb-center-card-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ds-sidebar-muted);
+}
+
+.enterprise-sidebar-pm43 .esb-center-card-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.enterprise-sidebar-pm43 .esb-center-card-icon {
+  display: grid;
+  place-items: center;
+  color: var(--ds-sidebar-text);
+  flex-shrink: 0;
+}
+
+.enterprise-sidebar-pm43 .esb-center-select {
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--ds-sidebar-text);
+  font-size: var(--pm43-body);
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  padding: 0;
+}
+
+.enterprise-sidebar-pm43 .esb-center-caret {
+  color: var(--ds-sidebar-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* Buscador full-width */
+.enterprise-sidebar-pm43 .esb-search {
+  padding: 0 var(--pm43-pad) 20px;
+}
+
+.enterprise-sidebar-pm43 .esb-search-field {
+  width: 100%;
+  height: 40px;
+  gap: 10px;
+  padding: 0 14px;
+  border-radius: var(--ds-radius-md);
+  border: 1px solid var(--esb-border);
+  background: color-mix(in srgb, var(--ds-sidebar-text) 4%, transparent);
+}
+
+.enterprise-sidebar-pm43 .esb-search-field input {
+  font-size: var(--pm43-body);
+}
+
+.enterprise-sidebar-pm43 .esb-search-field input::placeholder {
+  color: var(--ds-sidebar-muted);
+  opacity: 0.85;
+}
+
+/* Nav */
+.enterprise-sidebar-pm43 .esb-nav.sidebar-nav {
+  padding: 0 var(--pm43-pad) var(--pm43-pad);
+  gap: 0;
+}
+
+.enterprise-sidebar-pm43 .esb-home {
+  margin-bottom: var(--pm43-group-gap);
+}
+
+.enterprise-sidebar-pm43 .esb-group {
+  margin-top: 0;
+  margin-bottom: var(--pm43-group-gap);
+  gap: var(--pm43-item-gap);
+}
+
+.enterprise-sidebar-pm43 .esb-group-toggle {
+  height: var(--esb-group-h);
+  min-height: var(--esb-group-h);
+  padding: 0 4px;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--ds-sidebar-muted);
+}
+
+.enterprise-sidebar-pm43 .esb-group-icon {
+  display: none;
+}
+
+.enterprise-sidebar-pm43 .esb-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm43-item-gap);
+  padding: 4px 0 0;
+}
+
+.enterprise-sidebar-pm43 .esb-item {
+  gap: var(--pm43-icon-gap);
+  height: var(--esb-item-h);
+  min-height: var(--esb-item-h);
+  padding: 0 12px;
+  border-radius: var(--ds-radius-md);
+  font-size: var(--pm43-body);
+  font-weight: 500;
+}
+
+.enterprise-sidebar-pm43 .esb-item.is-active {
+  background: var(--esb-active-bg);
+  color: var(--ds-text-on-primary, #fff);
+}
+
+.enterprise-sidebar-pm43 .esb-item.is-active::before {
+  background: color-mix(in srgb, var(--ds-sidebar-text) 55%, transparent);
+}
+
+.enterprise-sidebar-pm43 .esb-item-row {
+  display: contents;
+}
+
+.enterprise-sidebar-pm43 .esb-fav-btn {
+  display: none;
+}
+
+/* Footer usuario + salir */
+.enterprise-sidebar-pm43 .esb-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 16px var(--pm43-pad) var(--pm43-pad);
+  border-top: 1px solid var(--esb-border);
+  min-height: 0;
+}
+
+.enterprise-sidebar-pm43 .esb-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.enterprise-sidebar-pm43 .esb-avatar {
+  width: 36px;
+  height: 36px;
+  font-size: 0.75rem;
+}
+
+.enterprise-sidebar-pm43 .esb-profile {
+  gap: 2px;
+}
+
+.enterprise-sidebar-pm43 .esb-profile-name {
+  font-size: var(--pm43-body);
+}
+
+.enterprise-sidebar-pm43 .esb-profile-role {
+  font-size: var(--pm43-desc);
+  color: var(--ds-sidebar-muted);
+}
+
+.enterprise-sidebar-pm43 .esb-profile-meta,
+.enterprise-sidebar-pm43 .esb-profile-center {
+  display: none;
+}
+
+.enterprise-sidebar-pm43 .esb-logout {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  border: 1px solid var(--esb-border);
+  border-radius: var(--ds-radius-md);
+  background: transparent;
+  color: var(--ds-sidebar-muted);
+  font-size: var(--pm43-desc);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.enterprise-sidebar-pm43 .esb-logout:hover {
+  background: var(--esb-hover-bg);
+  color: var(--ds-sidebar-text);
+}
+
+.enterprise-sidebar-pm43.is-collapsed .esb-footer {
+  align-items: center;
+  padding: 12px 8px;
+}
+
+.enterprise-sidebar-pm43.is-collapsed .esb-logout {
+  width: 36px;
+  padding: 0;
+}
+
+/* ─── Topbar shell mínima ─── */
+.app-shell-bar.app-shell-bar-pm43 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  height: 48px;
+  padding: 0 var(--pm43-pad);
+  border-bottom: 1px solid var(--ds-border);
+  background: var(--ds-surface);
+  flex-shrink: 0;
+}
+
+.app-shell-bar-pm43 .app-shell-bar-center,
+.app-shell-bar-pm43 .global-search-trigger,
+.app-shell-bar-pm43 .user-chip {
+  display: none !important;
+}
+
+.app-shell-bar-pm43 .app-shell-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.app-shell-bar-pm43 .app-shell-resume {
+  font-size: var(--pm43-desc);
+  color: var(--ds-text-muted);
+}
+
+/* ─── Page header limpio ─── */
+.erp-content {
+  padding-top: 16px;
+}
+
+.page-header-pm43.page-topbar,
+.page-header-pm43.topbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0 20px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--ds-border);
+  align-items: stretch;
+}
+
+.page-header-pm43 .page-chrome-bar {
+  display: none;
+}
+
+.page-header-pm43 .page-header-breadcrumb {
+  margin: 0;
+}
+
+.page-header-pm43 .page-header-breadcrumb .breadcrumbs,
+.page-header-pm43 .breadcrumbs {
+  font-size: var(--pm43-desc);
+  color: var(--ds-text-muted);
+  margin: 0;
+}
+
+.page-header-pm43 .page-topbar-main {
+  width: 100%;
+}
+
+.page-header-pm43 .page-header-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.page-header-pm43 .page-header-titles {
+  min-width: 0;
+  flex: 1;
+}
+
+.page-header-pm43 h1 {
+  font-size: var(--pm43-title) !important;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0;
+  color: var(--ds-text);
+  letter-spacing: -0.02em;
+}
+
+.page-header-pm43 .topbar-sub,
+.page-header-pm43 .page-header-desc {
+  margin: 6px 0 0;
+  font-size: var(--pm43-desc);
+  line-height: 1.45;
+  color: var(--ds-text-muted);
+  max-width: 42rem;
+}
+
+.page-header-pm43 .page-experience-q {
+  display: none;
+}
+
+.page-header-pm43 .page-header-experience {
+  margin-top: 8px;
+}
+
+.page-header-pm43 .page-header-help {
+  display: none;
+}
+
+.page-header-pm43 .topbar-right,
+.page-header-pm43 .page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+}
+
+/* Tipografía global de contenido */
+.erp-content {
+  font-size: var(--pm43-body);
+}
+
+.erp-content h2,
+.erp-content .section-title,
+.erp-content .page-section-title {
+  font-size: var(--pm43-section);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--ds-text);
+}
+
+.erp-content .card-title,
+.erp-content .panel > h3,
+.erp-content .kpi-label {
+  font-size: var(--pm43-desc);
+}
+
+.erp-content .kpi-value {
+  font-size: var(--pm43-card-title);
+  font-weight: 700;
+}
+
+/* Cards unificadas */
+.erp-content .card,
+.erp-content .panel,
+.erp-content .page-section,
+.erp-content .kpi-card,
+.erp-content .ews-card {
+  border: 1px solid var(--ds-border) !important;
+  border-radius: var(--ds-radius-md) !important;
+  box-shadow: var(--ds-shadow-xs) !important;
+  background: var(--ds-surface);
+}
+
+.erp-content .kpi-card,
+.erp-content .panel {
+  padding: 16px;
+}
+
+/* Evitar botones “grises brillantes” / primary chillón en shell */
+.app-shell-bar-pm43 .btn-primary {
+  background: var(--ds-primary);
+}
+
+.erp-content .btn:not(.btn-primary):not(.btn-danger):not(.btn-ghost) {
+  background: var(--ds-surface);
+  border-color: var(--ds-border);
+  color: var(--ds-text);
+}
+
+/* Contenido arranca cerca del header */
+.erp-content > .page-header-pm43 + * {
+  margin-top: 0;
+}
+
+.erp-content > .page-layout {
+  margin-top: 0;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --pm43-pad: 16px;
+    --pm43-title: 1.5rem;
+  }
+
+  .app-shell-bar.app-shell-bar-pm43 {
+    padding-left: 52px;
+  }
+}

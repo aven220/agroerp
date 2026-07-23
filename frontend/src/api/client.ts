@@ -40,7 +40,22 @@ export async function apiRequest<T>(
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  } catch (err) {
+    // Safari/iOS: TypeError "Load failed" when API/proxy/DB is unreachable
+    const raw = err instanceof Error ? err.message : String(err);
+    const network =
+      /load failed|failed to fetch|networkerror|network request failed/i.test(raw) ||
+      err instanceof TypeError;
+    throw new ApiError(
+      network
+        ? 'No se pudo conectar con el servidor. Verifique que esté en la misma Wi‑Fi y que AgroERP esté encendido.'
+        : raw || 'Error de red',
+      0,
+    );
+  }
 
   if (res.status === 401) {
     setToken(null);

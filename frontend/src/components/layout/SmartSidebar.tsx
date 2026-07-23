@@ -1,5 +1,5 @@
 /**
- * PM-41B — Enterprise Sidebar (reconstrucción completa).
+ * PM-43 — Enterprise Sidebar (estructura visual limpia).
  * Solo presentación. Permisos / rutas / packageAccess intactos.
  */
 
@@ -14,6 +14,7 @@ import {
   type NavCategoryId,
   type NavItem,
 } from '../../config/navigation';
+import { LogOut } from 'lucide-react';
 import { NavIcon, SidebarChromeIcons } from './navIcons';
 import { CenterSelector } from './CenterSelector';
 
@@ -29,65 +30,49 @@ function matchItemActive(pathname: string, item: NavItem): boolean {
   );
 }
 
+function roleLabel(role?: string): string {
+  if (!role) return 'Usuario';
+  const key = role.toLowerCase();
+  const map: Record<string, string> = {
+    admin: 'Administrador',
+    administrator: 'Administrador',
+    manager: 'Gerente',
+    gerencia: 'Gerencia',
+    operator: 'Operador',
+    operador: 'Operador',
+    viewer: 'Consulta',
+    consultor: 'Consultor',
+  };
+  return map[key] ?? role.replace(/[_-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function NavItemLink({
   item,
   collapsed,
-  badge,
   onNavigate,
 }: {
   item: NavItem;
   collapsed: boolean;
-  badge?: number;
   onNavigate?: () => void;
 }) {
-  const { addFavorite, removeFavorite, isFavorite } = useNavigation();
-  const fav = isFavorite(item.id);
-
   return (
-    <div className="esb-item-row">
-      <NavLink
-        to={item.to}
-        end={item.exact ?? item.to === '/'}
-        className={({ isActive }) => `esb-item${isActive ? ' is-active' : ''}`}
-        onClick={onNavigate}
-        title={collapsed ? item.label : undefined}
-      >
-        <span className="esb-item-icon">
-          <NavIcon name={item.icon} size={18} />
-        </span>
-        {!collapsed ? (
-          <>
-            <span className="esb-item-label">{item.label}</span>
-            {badge != null && badge > 0 ? (
-              <span className="esb-badge" aria-label={`${badge} pendientes`}>
-                {badge > 99 ? '99+' : badge}
-              </span>
-            ) : null}
-          </>
-        ) : null}
-      </NavLink>
-      {!collapsed && item.id !== 'nav-inicio' ? (
-        <button
-          type="button"
-          className={`esb-fav-btn${fav ? ' is-active' : ''}`}
-          title={fav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-          aria-label={fav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (fav) removeFavorite(item.id);
-            else addFavorite(item);
-          }}
-        >
-          <SidebarChromeIcons.star size={14} strokeWidth={fav ? 2.25 : 1.75} />
-        </button>
-      ) : null}
-    </div>
+    <NavLink
+      to={item.to}
+      end={item.exact ?? item.to === '/'}
+      className={({ isActive }) => `esb-item${isActive ? ' is-active' : ''}`}
+      onClick={onNavigate}
+      title={collapsed ? item.label : undefined}
+    >
+      <span className="esb-item-icon">
+        <NavIcon name={item.icon} size={18} />
+      </span>
+      {!collapsed ? <span className="esb-item-label">{item.label}</span> : null}
+    </NavLink>
   );
 }
 
 export function SmartSidebar() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const experience = useExperienceCenterOptional();
@@ -101,8 +86,6 @@ export function SmartSidebar() {
     setSidebarCollapsed,
     sidebarScroll,
     setSidebarScroll,
-    favorites,
-    removeFavorite,
     setSearchOpen,
     addRecentSearch,
   } = useNavigation();
@@ -143,10 +126,12 @@ export function SmartSidebar() {
   const searchResults = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return searchableItems.filter((item) => {
-      const hay = [item.label, ...(item.keywords ?? [])].join(' ').toLowerCase();
-      return hay.includes(q);
-    }).slice(0, 12);
+    return searchableItems
+      .filter((item) => {
+        const hay = [item.label, ...(item.keywords ?? [])].join(' ').toLowerCase();
+        return hay.includes(q);
+      })
+      .slice(0, 12);
   }, [query, searchableItems]);
 
   const isGroupActive = (categoryId: NavCategoryId, items: NavItem[]) => {
@@ -161,20 +146,16 @@ export function SmartSidebar() {
       ? 'Cooperativa Cafetera'
       : 'Plataforma completa';
 
-  const orgLabel = user?.organization?.name ?? 'Empresa piloto';
-  const roleLabel = user?.roles?.[0] ?? 'Usuario';
   const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Usuario';
   const initials = displayName
     .split(/\s+/)
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? '')
     .join('') || 'U';
-
-  const centerLabel = experience?.centerMeta?.shortLabel ?? 'Operación';
+  const role = roleLabel(user?.roles?.[0]);
 
   const menuCategories = visibleCategories.filter((c) => c.id !== 'home' && c.id !== 'favorites');
   const homeItem = visibleCategories.find((c) => c.id === 'home')?.items[0];
-
   const rail = sidebarCollapsed;
 
   return (
@@ -201,6 +182,7 @@ export function SmartSidebar() {
         className={[
           'sidebar',
           'enterprise-sidebar',
+          'enterprise-sidebar-pm43',
           sidebarOpen ? 'is-open' : '',
           rail ? 'is-collapsed' : '',
         ]
@@ -208,7 +190,6 @@ export function SmartSidebar() {
           .join(' ')}
         aria-label="Navegación principal"
       >
-        {/* ── Cabecera ── */}
         <header className="esb-header">
           <div className="esb-brand">
             <div className="esb-logo" aria-hidden>
@@ -216,45 +197,40 @@ export function SmartSidebar() {
             </div>
             {!rail ? (
               <div className="esb-brand-text">
-                <strong className="esb-brand-name">AGROERP</strong>
+                <strong className="esb-brand-name">AgroERP</strong>
                 <span className="esb-brand-package">{packageLabel}</span>
-                <span className="esb-brand-org">{orgLabel}</span>
               </div>
             ) : null}
           </div>
-          <div className="esb-header-actions">
-            <button
-              type="button"
-              className="esb-icon-btn"
-              aria-label={rail ? 'Expandir menú' : 'Colapsar menú'}
-              title={rail ? 'Expandir' : 'Colapsar'}
-              onClick={() => setSidebarCollapsed(!rail)}
-            >
-              {rail ? (
-                <SidebarChromeIcons.panelOpen size={18} strokeWidth={1.75} />
-              ) : (
-                <SidebarChromeIcons.panelClose size={18} strokeWidth={1.75} />
-              )}
-            </button>
-            <button
-              type="button"
-              className="esb-icon-btn esb-close-mobile"
-              aria-label="Cerrar menú"
-              onClick={() => setSidebarOpen(false)}
-            >
-              ×
-            </button>
-          </div>
+          <button
+            type="button"
+            className="esb-icon-btn esb-collapse-btn"
+            aria-label={rail ? 'Expandir menú' : 'Colapsar menú'}
+            title={rail ? 'Expandir' : 'Colapsar'}
+            onClick={() => setSidebarCollapsed(!rail)}
+          >
+            {rail ? (
+              <SidebarChromeIcons.panelOpen size={18} strokeWidth={1.75} />
+            ) : (
+              <SidebarChromeIcons.panelClose size={18} strokeWidth={1.75} />
+            )}
+          </button>
+          <button
+            type="button"
+            className="esb-icon-btn esb-close-mobile"
+            aria-label="Cerrar menú"
+            onClick={() => setSidebarOpen(false)}
+          >
+            ×
+          </button>
         </header>
 
-        {/* ── Centro ── */}
         {!rail ? (
           <div className="esb-center">
             <CenterSelector />
           </div>
         ) : null}
 
-        {/* ── Buscador permanente ── */}
         <div className="esb-search">
           {rail ? (
             <button
@@ -292,10 +268,8 @@ export function SmartSidebar() {
         </div>
 
         <nav ref={navRef} className="esb-nav sidebar-nav" aria-label="Menú enterprise">
-          {/* Resultados de búsqueda */}
           {!rail && query.trim() ? (
             <div className="esb-search-results">
-              <div className="esb-section-label">Resultados</div>
               {searchResults.length === 0 ? (
                 <p className="esb-empty">Sin coincidencias</p>
               ) : (
@@ -315,54 +289,12 @@ export function SmartSidebar() {
             </div>
           ) : (
             <>
-              {/* Inicio */}
               {homeItem ? (
                 <div className="esb-home">
-                  <NavItemLink
-                    item={homeItem}
-                    collapsed={rail}
-                    onNavigate={closeMobile}
-                  />
+                  <NavItemLink item={homeItem} collapsed={rail} onNavigate={closeMobile} />
                 </div>
               ) : null}
 
-              {/* Favoritos */}
-              {favorites.length > 0 ? (
-                <section className="esb-group esb-favorites" aria-label="Favoritos">
-                  {!rail ? <div className="esb-section-label">Favoritos</div> : null}
-                  {favorites
-                    .slice()
-                    .sort((a, b) => a.order - b.order)
-                    .map((fav) => (
-                      <div key={fav.id} className="esb-item-row">
-                        <NavLink
-                          to={fav.to}
-                          className={({ isActive }) => `esb-item${isActive ? ' is-active' : ''}`}
-                          onClick={closeMobile}
-                          title={rail ? fav.label : undefined}
-                        >
-                          <span className="esb-item-icon">
-                            <NavIcon name={fav.icon || 'star'} size={18} />
-                          </span>
-                          {!rail ? <span className="esb-item-label">{fav.label}</span> : null}
-                        </NavLink>
-                        {!rail ? (
-                          <button
-                            type="button"
-                            className="esb-fav-btn is-active"
-                            aria-label="Quitar de favoritos"
-                            title="Quitar de favoritos"
-                            onClick={() => removeFavorite(fav.id)}
-                          >
-                            <SidebarChromeIcons.star size={14} strokeWidth={2.25} />
-                          </button>
-                        ) : null}
-                      </div>
-                    ))}
-                </section>
-              ) : null}
-
-              {/* Grupos */}
               {menuCategories.map((category) => {
                 const defaultCollapsed =
                   category.defaultCollapsed ??
@@ -404,9 +336,6 @@ export function SmartSidebar() {
                       aria-expanded={open}
                       onClick={() => toggleGroup(category.id)}
                     >
-                      <span className="esb-group-icon">
-                        <NavIcon name={category.icon} size={16} />
-                      </span>
                       <span className="esb-group-label">{category.label}</span>
                       <span className="esb-group-chevron" aria-hidden>
                         {open ? (
@@ -435,23 +364,30 @@ export function SmartSidebar() {
           )}
         </nav>
 
-        {/* ── Perfil inferior ── */}
         <footer className="esb-footer">
-          <div className="esb-avatar" aria-hidden>
-            {initials}
-          </div>
-          {!rail ? (
-            <div className="esb-profile">
-              <strong className="esb-profile-name">{displayName}</strong>
-              <span className="esb-profile-meta">{roleLabel}</span>
-              <span className="esb-profile-meta">{orgLabel}</span>
-              <span className="esb-profile-center">Centro · {centerLabel}</span>
+          <div className="esb-user">
+            <div className="esb-avatar" aria-hidden>
+              {initials}
             </div>
-          ) : (
-            <span className="sr-only">
-              {displayName}, {roleLabel}, {orgLabel}, Centro {centerLabel}
-            </span>
-          )}
+            {!rail ? (
+              <div className="esb-profile">
+                <strong className="esb-profile-name">{displayName}</strong>
+                <span className="esb-profile-role">{role}</span>
+              </div>
+            ) : (
+              <span className="sr-only">{displayName}, {role}</span>
+            )}
+          </div>
+          <button
+            type="button"
+            className="esb-logout"
+            title="Salir"
+            aria-label="Salir"
+            onClick={() => void logout()}
+          >
+            <LogOut size={16} strokeWidth={1.75} />
+            {!rail ? <span>Salir</span> : null}
+          </button>
         </footer>
       </aside>
     </>

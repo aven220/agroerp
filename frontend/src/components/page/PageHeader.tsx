@@ -20,7 +20,7 @@ export interface PageHeaderProps {
   showExperience?: boolean;
   /** ISO o texto libre; si omitido, usa hora de montaje de la página */
   lastUpdated?: string;
-  /** Mostrar franja empresa / centro / crumb (PM-43) */
+  /** Franja empresa/centro (oculta por defecto en PM-43) */
   showChrome?: boolean;
 }
 
@@ -38,6 +38,9 @@ function formatUpdated(value?: string, fallback?: Date): string {
   return '—';
 }
 
+/**
+ * PM-43 — Header de contenido: breadcrumb · título · descripción · acciones.
+ */
 export function PageHeader({
   title,
   subtitle,
@@ -48,7 +51,7 @@ export function PageHeader({
   breadcrumb,
   showExperience = true,
   lastUpdated,
-  showChrome = true,
+  showChrome = false,
 }: PageHeaderProps) {
   const { pathname } = useLocation();
   const { user } = useAuth();
@@ -77,7 +80,7 @@ export function PageHeader({
         if (profile.legalName.trim()) setOrgName(profile.legalName.trim());
       })
       .catch(() => {
-        /* silencioso: usamos org del usuario */
+        /* silencioso */
       });
     return () => {
       cancelled = true;
@@ -86,9 +89,10 @@ export function PageHeader({
 
   const crumbs = useMemo(() => buildBreadcrumbs(pathname), [pathname]);
   const centerLabel = experience?.centerMeta.shortLabel ?? 'Operación';
+  const crumbNode = breadcrumb ?? (crumbs.length > 0 ? <Breadcrumbs /> : null);
 
   return (
-    <header className="topbar page-topbar page-layout-header">
+    <header className="topbar page-topbar page-layout-header page-header-pm43">
       {showChrome ? (
         <div className="page-chrome-bar" aria-label="Contexto de navegación">
           <span className="page-chrome-pill" title="Empresa">
@@ -99,39 +103,32 @@ export function PageHeader({
             <span className="page-chrome-kicker">Área</span>
             {centerLabel}
           </span>
-          <span className="page-chrome-crumb">
-            {breadcrumb ?? (crumbs.length > 1 ? <Breadcrumbs /> : null)}
-          </span>
           <span className="page-chrome-updated" title="Última actualización">
             Actualizado {formatUpdated(lastUpdated, mountedAt)}
           </span>
         </div>
-      ) : breadcrumb ? (
-        <div className="breadcrumbs page-topbar-crumb">{breadcrumb}</div>
       ) : null}
 
+      {crumbNode ? <div className="page-header-breadcrumb">{crumbNode}</div> : null}
+
       <div className="page-topbar-main">
-        <h1>{displayTitle}</h1>
-        {displaySubtitle ? <p className="topbar-sub">{displaySubtitle}</p> : null}
-        {showExperience && (desc || helpText || why) ? (
+        <div className="page-header-title-row">
+          <div className="page-header-titles">
+            <h1>{displayTitle}</h1>
+            {displaySubtitle ? <p className="topbar-sub">{displaySubtitle}</p> : null}
+            {desc ? <p className="page-header-desc">{humanizeCopy(desc)}</p> : null}
+          </div>
+          {actions ? <div className="topbar-right page-actions">{actions}</div> : null}
+        </div>
+
+        {showExperience && (helpText || step || why || when || after) ? (
           <div className="page-header-experience">
-            {desc ? (
-              <p className="page-header-desc">
-                <span className="page-experience-q">¿Qué hago aquí?</span> {humanizeCopy(desc)}
-              </p>
-            ) : null}
             {step ? (
               <p className="page-header-next">
-                <span className="page-experience-q">¿Qué sigue?</span>{' '}
-                <Link to={step.to}>{humanizeCopy(step.label)}</Link>
+                Siguiente: <Link to={step.to}>{humanizeCopy(step.label)}</Link>
               </p>
             ) : null}
-            {helpText ? (
-              <p className="page-header-help">
-                <span aria-hidden>💡</span> {humanizeCopy(helpText)}
-              </p>
-            ) : null}
-            {(why || when || after) ? (
+            {(helpText || why || when || after) ? (
               <>
                 <button
                   type="button"
@@ -139,25 +136,14 @@ export function PageHeader({
                   aria-expanded={helpOpen}
                   onClick={() => setHelpOpen((v) => !v)}
                 >
-                  {helpOpen ? 'Ocultar ayuda' : 'Más ayuda'}
+                  {helpOpen ? 'Ocultar ayuda' : 'Ayuda'}
                 </button>
                 {helpOpen ? (
                   <div className="page-header-help-detail">
-                    {why ? (
-                      <p>
-                        <span className="page-experience-q">¿Por qué?</span> {humanizeCopy(why)}
-                      </p>
-                    ) : null}
-                    {when ? (
-                      <p>
-                        <span className="page-experience-q">¿Cuándo?</span> {humanizeCopy(when)}
-                      </p>
-                    ) : null}
-                    {after ? (
-                      <p>
-                        <span className="page-experience-q">¿Qué ocurre después?</span> {humanizeCopy(after)}
-                      </p>
-                    ) : null}
+                    {helpText ? <p>{humanizeCopy(helpText)}</p> : null}
+                    {why ? <p>{humanizeCopy(why)}</p> : null}
+                    {when ? <p>{humanizeCopy(when)}</p> : null}
+                    {after ? <p>{humanizeCopy(after)}</p> : null}
                   </div>
                 ) : null}
               </>
@@ -165,7 +151,6 @@ export function PageHeader({
           </div>
         ) : null}
       </div>
-      {actions ? <div className="topbar-right page-actions">{actions}</div> : null}
     </header>
   );
 }
