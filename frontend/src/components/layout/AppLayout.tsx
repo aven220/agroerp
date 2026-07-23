@@ -35,7 +35,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <a href="#main-content" className="skip-link">
         Saltar al contenido
       </a>
-      {!focusMode ? <EnterpriseHeader /> : null}
+      <EnterpriseHeader />
       <div className="erp-main erp-main-fullbleed">
         <OfflineBanner />
         <PullToRefresh>

@@ -71,7 +71,8 @@
   min-width: 0;
 }
 
-.erp-shell-pm43.erp-shell-focus .enh {
+/* Modo foco: oculta solo la fila de menú; el chrome (incl. Mi cuenta) permanece */
+.erp-shell-pm43.erp-shell-focus .enh-nav {
   display: none !important;
 }
 
@@ -90,17 +91,36 @@
   height: var(--enh-chrome-h);
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 0 20px;
+  gap: 12px;
+  padding: 0 16px 0 20px;
   border-bottom: 1px solid var(--ds-border, #e2e8f0);
+  min-width: 0;
 }
 
 .enh-chrome-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
-  flex-shrink: 1;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.enh-chrome-center {
+  flex: 0 1 420px;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  max-width: 420px;
+}
+
+.enh-chrome-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 .enh-brand {
@@ -225,15 +245,6 @@
   color: var(--ds-text-muted);
 }
 
-.enh-chrome-center {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  min-width: 0;
-  max-width: 480px;
-  margin: 0 auto;
-}
-
 .enh-search {
   appearance: none;
   width: 100%;
@@ -274,14 +285,6 @@
   font-family: inherit;
 }
 
-.enh-chrome-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
 .enh-icon-btn {
   width: 36px;
   height: 36px;
@@ -308,12 +311,14 @@
   align-items: center;
   gap: 8px;
   height: 40px;
-  padding: 0 8px 0 4px;
+  min-width: 40px;
+  padding: 0 10px 0 4px;
   border: 1px solid var(--ds-border);
   border-radius: 999px;
   background: var(--ds-surface);
   cursor: pointer;
   color: var(--ds-text);
+  flex-shrink: 0;
 }
 
 .enh-user-btn:hover {
@@ -321,15 +326,16 @@
 }
 
 .enh-avatar {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--ds-primary) 18%, transparent);
+  background: color-mix(in srgb, var(--ds-primary) 22%, transparent);
   color: var(--ds-primary);
   display: grid;
   place-items: center;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .enh-user-meta {
@@ -352,6 +358,14 @@
 .enh-user-role {
   font-size: 0.625rem;
   color: var(--ds-text-muted);
+}
+
+/* Visible cuando el nombre/rol se ocultan en pantallas estrechas */
+.enh-user-chip-label {
+  display: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .enh-user-menu {
@@ -602,6 +616,12 @@
 }
 
 /* Responsive */
+@media (max-width: 1100px) {
+  .enh-package-link {
+    display: none;
+  }
+}
+
 @media (max-width: 960px) {
   .enh-user-meta,
   .enh-search-kbd,
@@ -609,12 +629,20 @@
     display: none;
   }
 
+  .enh-user-chip-label {
+    display: inline;
+  }
+
   .enh-company {
     max-width: 110px;
   }
 
   .enh-chrome-center {
-    max-width: 200px;
+    max-width: 180px;
+  }
+
+  .enh-user-btn {
+    padding: 0 10px 0 4px;
   }
 
   .erp-shell-pm43 .erp-content {
@@ -641,6 +669,10 @@
     width: 36px;
     justify-content: center;
     padding: 0;
+  }
+
+  .enh-chrome-right {
+    gap: 4px;
   }
 
   .enh-nav {

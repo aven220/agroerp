@@ -292,6 +292,8 @@ export function EnterpriseHeader() {
             <button
               type="button"
               className="enh-user-btn"
+              aria-label="Mi cuenta"
+              title="Mi cuenta"
               aria-expanded={userOpen}
               aria-haspopup="menu"
               onClick={() => {
@@ -306,6 +308,7 @@ export function EnterpriseHeader() {
                 <strong className="enh-user-name">{displayName}</strong>
                 <span className="enh-user-role">{role}</span>
               </span>
+              <span className="enh-user-chip-label">Cuenta</span>
               <ChevronDown size={14} strokeWidth={1.75} aria-hidden />
             </button>
             {userOpen ? (
