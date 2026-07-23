@@ -1,6 +1,6 @@
 /**
- * PM-43 — Enterprise Header con navegación horizontal.
- * Sin sidebar. Menús solo por dropdown.
+ * PM-43 — Enterprise Header con navegación horizontal curada.
+ * Sin sidebar. Dropdowns amigables, sin ítems sueltos.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -13,7 +13,12 @@ import { useKeyboardShortcuts } from '../../context/KeyboardShortcutsContext';
 import { useExperienceCenterOptional } from '../../context/ExperienceCenterContext';
 import { cacheCompanyProfile, readCachedCompanyProfile } from '../../config/navProgression';
 import { loadCompanyProfile } from '../../lib/companyProfile';
-import { findNavItemByPath, type NavCategory, type NavItem } from '../../config/navigation';
+import { findNavItemByPath, type NavItem } from '../../config/navigation';
+import {
+  HEADER_MENU_PILLARS,
+  type HeaderMenuEntry,
+  type HeaderMenuPillar,
+} from '../../config/headerNavigation';
 import type { ExperienceCenterId } from '../../config/experienceCenters';
 import { NavIcon } from './navIcons';
 
@@ -38,24 +43,36 @@ function itemIsActive(pathname: string, item: NavItem): boolean {
   return match?.id === item.id || pathname === item.to || pathname.startsWith(`${item.to}/`);
 }
 
-function categoryIsActive(pathname: string, category: NavCategory): boolean {
-  return category.items.some((item) => itemIsActive(pathname, item));
+type ResolvedEntry = HeaderMenuEntry & { item: NavItem };
+
+function resolvePillar(
+  pillar: HeaderMenuPillar,
+  byId: Map<string, NavItem>,
+): { pillar: HeaderMenuPillar; entries: ResolvedEntry[] } {
+  const entries: ResolvedEntry[] = [];
+  for (const entry of pillar.entries) {
+    const item = byId.get(entry.id);
+    if (item) entries.push({ ...entry, item });
+  }
+  return { pillar, entries };
 }
 
 function NavDropdown({
-  category,
+  pillar,
+  entries,
   open,
   onOpen,
   onClose,
 }: {
-  category: NavCategory;
+  pillar: HeaderMenuPillar;
+  entries: ResolvedEntry[];
   open: boolean;
   onOpen: () => void;
   onClose: () => void;
 }) {
   const { pathname } = useLocation();
   const ref = useRef<HTMLDivElement>(null);
-  const active = categoryIsActive(pathname, category);
+  const active = entries.some((e) => itemIsActive(pathname, e.item));
 
   useEffect(() => {
     if (!open) return;
@@ -73,6 +90,8 @@ function NavDropdown({
     };
   }, [open, onClose]);
 
+  if (entries.length === 0) return null;
+
   return (
     <div className={`enh-nav-item${open ? ' is-open' : ''}${active ? ' is-active' : ''}`} ref={ref}>
       <button
@@ -82,27 +101,35 @@ function NavDropdown({
         aria-haspopup="menu"
         onClick={() => (open ? onClose() : onOpen())}
       >
-        <span>{category.label}</span>
+        <span>{pillar.label}</span>
         <ChevronDown size={14} strokeWidth={1.75} className="enh-nav-caret" aria-hidden />
       </button>
       {open ? (
-        <div className="enh-dropdown" role="menu" aria-label={category.label}>
-          <div className="enh-dropdown-title">{category.label}</div>
-          {category.items.map((item) => (
-            <NavLink
-              key={item.id}
-              to={item.to}
-              end={item.exact ?? item.to === '/'}
-              role="menuitem"
-              className={({ isActive }) => `enh-dropdown-item${isActive ? ' is-active' : ''}`}
-              onClick={onClose}
-            >
-              <span className="enh-dropdown-icon" aria-hidden>
-                <NavIcon name={item.icon} size={16} />
-              </span>
-              <span className="enh-dropdown-label">{item.label}</span>
-            </NavLink>
-          ))}
+        <div className="enh-dropdown" role="menu" aria-label={pillar.label}>
+          <div className="enh-dropdown-head">
+            <strong className="enh-dropdown-title">{pillar.label}</strong>
+            <span className="enh-dropdown-blurb">{pillar.blurb}</span>
+          </div>
+          <div className="enh-dropdown-list">
+            {entries.map((entry) => (
+              <NavLink
+                key={entry.id}
+                to={entry.item.to}
+                end={entry.item.exact ?? entry.item.to === '/'}
+                role="menuitem"
+                className={({ isActive }) => `enh-dropdown-item${isActive ? ' is-active' : ''}`}
+                onClick={onClose}
+              >
+                <span className="enh-dropdown-icon" aria-hidden>
+                  <NavIcon name={entry.item.icon} size={16} />
+                </span>
+                <span className="enh-dropdown-copy">
+                  <span className="enh-dropdown-label">{entry.label}</span>
+                  <span className="enh-dropdown-hint">{entry.hint}</span>
+                </span>
+              </NavLink>
+            ))}
+          </div>
         </div>
       ) : null}
     </div>
@@ -110,7 +137,7 @@ function NavDropdown({
 }
 
 /**
- * Header enterprise fijo — navegación horizontal por dropdowns.
+ * Header enterprise fijo — navegación horizontal por dropdowns curados.
  */
 export function EnterpriseHeader() {
   const { user, logout } = useAuth();
@@ -178,8 +205,18 @@ export function EnterpriseHeader() {
   const role = roleLabel(user?.roles?.[0]);
 
   const homeItem = visibleCategories.find((c) => c.id === 'home')?.items[0];
-  const dropdownCategories = visibleCategories.filter((c) => c.id !== 'home' && c.id !== 'favorites');
   const homeActive = pathname === '/operacion' || pathname === '/' || pathname === homeItem?.to;
+
+  /** Solo ítems visibles por permiso, y solo los curados del menú. */
+  const menuPillars = useMemo(() => {
+    const byId = new Map<string, NavItem>();
+    for (const cat of visibleCategories) {
+      for (const item of cat.items) byId.set(item.id, item);
+    }
+    return HEADER_MENU_PILLARS.map((pillar) => resolvePillar(pillar, byId)).filter(
+      (p) => p.entries.length > 0,
+    );
+  }, [visibleCategories]);
 
   const openSearch = () => {
     if (command) command.openPalette('launcher');
@@ -335,14 +372,15 @@ export function EnterpriseHeader() {
           </NavLink>
         ) : null}
 
-        {dropdownCategories.map((category) => (
+        {menuPillars.map(({ pillar, entries }) => (
           <NavDropdown
-            key={category.id}
-            category={category}
-            open={openMenu === category.id}
+            key={pillar.categoryId}
+            pillar={pillar}
+            entries={entries}
+            open={openMenu === pillar.categoryId}
             onOpen={() => {
               setUserOpen(false);
-              setOpenMenu(category.id);
+              setOpenMenu(pillar.categoryId);
             }}
             onClose={() => setOpenMenu(null)}
           />

@@ -48,13 +48,14 @@ function coopAllowedPrefixes(): string[] {
 
 /**
  * Indica si la ruta está dentro del perímetro del paquete.
- * `full-platform` no relaja el perímetro del piloto cooperativa (PM-32).
+ * `full-platform` = sin perímetro (pruebas / plataforma completa).
  */
 export function isPathAllowedForPackage(
   pathname: string,
   packageId: IndustryPackageId,
 ): boolean {
-  void packageId;
+  if (packageId === 'full-platform') return true;
+
   const path = normalizeRoutePath(pathname);
   if (ALWAYS_ALLOWED.has(path)) return true;
 

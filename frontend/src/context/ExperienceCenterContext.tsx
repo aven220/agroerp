@@ -60,7 +60,7 @@ export function ExperienceCenterProvider({ children }: { children: ReactNode }) 
   const [packageId, setPackageIdState] = useState<IndustryPackageId>(() => {
     try {
       const saved = localStorage.getItem(storageKey(userId, 'industry_package'));
-      if (saved === 'coop-cafe-co') return saved;
+      if (saved === 'coop-cafe-co' || saved === 'full-platform') return saved;
     } catch {
       /* ignore */
     }
@@ -85,7 +85,7 @@ export function ExperienceCenterProvider({ children }: { children: ReactNode }) 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey(userId, 'industry_package'));
-      if (saved === 'coop-cafe-co') {
+      if (saved === 'coop-cafe-co' || saved === 'full-platform') {
         setPackageIdState(saved);
         return;
       }
@@ -113,10 +113,10 @@ export function ExperienceCenterProvider({ children }: { children: ReactNode }) 
     [navigate],
   );
 
-  /** PM-32: el piloto certificado es cooperativa; no permitir bypass a plataforma completa. */
+  /** Permite piloto (coop) o plataforma completa (pruebas / pro). */
   const setPackageId = useCallback((id: IndustryPackageId) => {
-    if (id !== 'coop-cafe-co') return;
-    setPackageIdState('coop-cafe-co');
+    if (id !== 'coop-cafe-co' && id !== 'full-platform') return;
+    setPackageIdState(id);
   }, []);
 
   const experienceNav = useMemo(

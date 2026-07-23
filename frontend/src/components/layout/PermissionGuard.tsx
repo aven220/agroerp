@@ -17,7 +17,9 @@ export function PermissionGuard({ children }: { children: React.ReactNode }) {
           Esta función no está incluida en el paquete contratado.
         </div>
         <p className="text-muted">
-          El paquete Cooperativa cafetera no incluye esta sección. Si la necesita, contacte a su consultor.
+          Está en modo piloto (Cooperativa cafetera). Para probar todo el sistema, active{' '}
+          <strong>Plataforma completa</strong> en Preferencias (menú de usuario) o en{' '}
+          <Link to="/implementacion/modulos">Implementación → Paquete</Link>.
         </p>
         <Link to="/" className="btn">
           Volver al inicio

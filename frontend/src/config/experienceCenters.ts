@@ -45,6 +45,11 @@ export const EXPERIENCE_CENTERS: ExperienceCenterMeta[] = [
 
 export const DEFAULT_PACKAGE: IndustryPackageId = 'coop-cafe-co';
 
+export const PACKAGE_LABELS: Record<IndustryPackageId, string> = {
+  'coop-cafe-co': 'Cooperativa cafetera (piloto)',
+  'full-platform': 'Plataforma completa (pro / pruebas)',
+};
+
 const item = (
   id: string,
   to: string,

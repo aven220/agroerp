@@ -22,6 +22,7 @@ import {
   EmptyPanel,
 } from '../components/page';
 import { LoadingState } from '../components/ux/LoadingState';
+import { useExperienceCenterOptional } from '../context/ExperienceCenterContext';
 import { AdminPage } from './AdminPage';
 import {
   certifyGoLive,
@@ -775,20 +776,51 @@ export function ImplementationRolesPage() {
 }
 
 export function ImplementationModulosPage() {
+  const experience = useExperienceCenterOptional();
+  const packageId = experience?.packageId ?? 'coop-cafe-co';
+  const isFull = packageId === 'full-platform';
+
   return (
     <EicShell title="Paquete contratado">
       <PageSection title="Alcance de la implementación">
         <PageSummary>
-          <MetricCard label="Paquete activo" value="Cooperativa cafetera" tone="coffee" />
+          <MetricCard
+            label="Paquete activo"
+            value={isFull ? 'Plataforma completa' : 'Cooperativa cafetera'}
+            tone="coffee"
+          />
         </PageSummary>
         <p className="muted eic-hint">
-          El paquete define el menú y las rutas permitidas. Cooperativa cafetera no incluye verticales
-          no contratadas.
+          El paquete define el perímetro de rutas permitidas. Para pruebas de todo el sistema elija
+          plataforma completa.
         </p>
-        <ul className="eoc-list">
-          <li>Incluidos: Compras, Inventario, Productores, Fincas, Lotes, Calidad, Liquidación, Documentos, Procesos</li>
-          <li>Fuera de alcance: Hospital, Manufactura, Hotelería, Educación, IoT plataforma, etc.</li>
-        </ul>
+        <div className="eic-package-switch" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+          <button
+            type="button"
+            className={`btn${packageId === 'coop-cafe-co' ? ' btn-primary' : ''}`}
+            onClick={() => experience?.setPackageId('coop-cafe-co')}
+          >
+            Piloto cooperativa
+          </button>
+          <button
+            type="button"
+            className={`btn${isFull ? ' btn-primary' : ''}`}
+            onClick={() => experience?.setPackageId('full-platform')}
+          >
+            Plataforma completa (pro)
+          </button>
+        </div>
+        {isFull ? (
+          <ul className="eoc-list">
+            <li>Perímetro abierto: formularios, verticales y módulos avanzados accesibles por URL/permiso.</li>
+            <li>Siguen aplicando permisos IAM del usuario (admin demo tiene acceso amplio).</li>
+          </ul>
+        ) : (
+          <ul className="eoc-list">
+            <li>Incluidos: Compras, Inventario, Productores, Fincas, Lotes, Calidad, Liquidación, Documentos, Procesos</li>
+            <li>Fuera de alcance: Formularios UDFE, Hospital, Manufactura, Hotelería, Educación, IoT, etc.</li>
+          </ul>
+        )}
       </PageSection>
     </EicShell>
   );

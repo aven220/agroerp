@@ -2,12 +2,15 @@ import { Drawer } from '../ui/Drawer';
 import { useKeyboardShortcuts } from '../../context/KeyboardShortcutsContext';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useExperienceCenterOptional } from '../../context/ExperienceCenterContext';
+import { PACKAGE_LABELS, type IndustryPackageId } from '../../config/experienceCenters';
 import type { DateFormat, FontScale, LocaleCode, NumberFormat, VisualDensity } from '../../context/UserPreferencesContext';
 
 export function UserPreferencesDrawer() {
   const { prefsOpen, setPrefsOpen } = useKeyboardShortcuts();
   const prefs = useUserPreferences();
   const { mode, setMode } = useTheme();
+  const experience = useExperienceCenterOptional();
 
   return (
     <Drawer open={prefsOpen} title="Preferencias" onClose={() => setPrefsOpen(false)}>
@@ -100,6 +103,27 @@ export function UserPreferencesDrawer() {
               <option value="UTC">UTC</option>
             </select>
           </label>
+        </fieldset>
+
+        <fieldset className="ds-prefs-fieldset">
+          <legend>Producto</legend>
+          <label className="ds-prefs-label">
+            Alcance del sistema
+            <select
+              value={experience?.packageId ?? 'coop-cafe-co'}
+              onChange={(e) => {
+                experience?.setPackageId(e.target.value as IndustryPackageId);
+              }}
+              disabled={!experience}
+            >
+              <option value="coop-cafe-co">{PACKAGE_LABELS['coop-cafe-co']}</option>
+              <option value="full-platform">{PACKAGE_LABELS['full-platform']}</option>
+            </select>
+          </label>
+          <p className="ds-prefs-hint muted">
+            Use <strong>Plataforma completa</strong> para probar todo el ERP (formularios, verticales,
+            etc.). El piloto limita las rutas al paquete cooperativa.
+          </p>
         </fieldset>
 
         <fieldset className="ds-prefs-fieldset">
