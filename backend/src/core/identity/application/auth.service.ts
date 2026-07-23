@@ -336,6 +336,7 @@ export class AuthService {
         id: user.organization.id,
         name: user.organization.name,
         slug: user.organization.slug,
+        productLicense: this.parseProductLicense(user.organization.settings),
       },
       roles: user.userRoles.map((ur) => ({
         id: ur.role.id,
@@ -345,6 +346,28 @@ export class AuthService {
       lastLoginAt: user.lastLoginAt,
       createdAt: user.createdAt,
     };
+  }
+
+  private parseProductLicense(settings: unknown): {
+    packageId: 'coop-cafe-co' | 'full-platform' | 'custom';
+    enabledModules: string[];
+  } {
+    const root =
+      settings && typeof settings === 'object' && !Array.isArray(settings)
+        ? (settings as Record<string, unknown>)
+        : {};
+    const raw =
+      root.productLicense && typeof root.productLicense === 'object' && !Array.isArray(root.productLicense)
+        ? (root.productLicense as Record<string, unknown>)
+        : {};
+    const packageId =
+      raw.packageId === 'full-platform' || raw.packageId === 'custom' || raw.packageId === 'coop-cafe-co'
+        ? raw.packageId
+        : 'coop-cafe-co';
+    const enabledModules = Array.isArray(raw.enabledModules)
+      ? raw.enabledModules.filter((m): m is string => typeof m === 'string')
+      : [];
+    return { packageId, enabledModules };
   }
 
   private async buildAuthResponse(

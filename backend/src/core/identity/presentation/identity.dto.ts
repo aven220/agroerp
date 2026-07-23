@@ -119,3 +119,15 @@ export class CreateSubstitutionDto {
   @ApiProperty() @IsDateString() endsAt!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() reason?: string;
 }
+
+export class UpdateOrgProductLicenseDto {
+  @ApiProperty({ enum: ['coop-cafe-co', 'full-platform', 'custom'] })
+  @IsString()
+  packageId!: 'coop-cafe-co' | 'full-platform' | 'custom';
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  enabledModules?: string[];
+}

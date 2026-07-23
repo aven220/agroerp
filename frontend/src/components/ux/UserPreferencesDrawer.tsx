@@ -3,7 +3,6 @@ import { useKeyboardShortcuts } from '../../context/KeyboardShortcutsContext';
 import { useUserPreferences } from '../../context/UserPreferencesContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useExperienceCenterOptional } from '../../context/ExperienceCenterContext';
-import { PACKAGE_LABELS, type IndustryPackageId } from '../../config/experienceCenters';
 import type { DateFormat, FontScale, LocaleCode, NumberFormat, VisualDensity } from '../../context/UserPreferencesContext';
 
 export function UserPreferencesDrawer() {
@@ -107,22 +106,20 @@ export function UserPreferencesDrawer() {
 
         <fieldset className="ds-prefs-fieldset">
           <legend>Producto</legend>
-          <label className="ds-prefs-label">
-            Alcance del sistema
-            <select
-              value={experience?.packageId ?? 'coop-cafe-co'}
-              onChange={(e) => {
-                experience?.setPackageId(e.target.value as IndustryPackageId);
-              }}
-              disabled={!experience}
-            >
-              <option value="coop-cafe-co">{PACKAGE_LABELS['coop-cafe-co']}</option>
-              <option value="full-platform">{PACKAGE_LABELS['full-platform']}</option>
-            </select>
-          </label>
           <p className="ds-prefs-hint muted">
-            Use <strong>Plataforma completa</strong> para probar todo el ERP (formularios, verticales,
-            etc.). El piloto limita las rutas al paquete cooperativa.
+            El paquete (Piloto / Pro / Personalizado) se define por <strong>empresa</strong>, no por
+            usuario. Administre módulos en{' '}
+            <a href="/implementacion/modulos">Implementación → Paquete</a>.
+          </p>
+          <p className="ds-prefs-hint muted">
+            Paquete actual:{' '}
+            <strong>
+              {experience?.packageId === 'full-platform'
+                ? 'Plataforma completa'
+                : experience?.packageId === 'custom'
+                  ? 'Personalizado'
+                  : 'Cooperativa (piloto)'}
+            </strong>
           </p>
         </fieldset>
 

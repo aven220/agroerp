@@ -9,16 +9,17 @@ export function PermissionGuard({ children }: { children: React.ReactNode }) {
   const { hasPermission } = useAuth();
   const experience = useExperienceCenterOptional();
   const packageId = experience?.packageId ?? 'coop-cafe-co';
+  const enabledModules = experience?.enabledModules ?? [];
 
-  if (!isPathAllowedForPackage(pathname, packageId)) {
+  if (!isPathAllowedForPackage(pathname, packageId, enabledModules)) {
     return (
       <div className="page-forbidden" role="alert">
         <div className="alert alert-error">
           Esta función no está incluida en el paquete contratado.
         </div>
         <p className="text-muted">
-          Está en modo piloto (Cooperativa cafetera). Para probar todo el sistema, active{' '}
-          <strong>Plataforma completa</strong> en Preferencias (menú de usuario) o en{' '}
+          El paquete de su empresa no incluye esta sección. Un administrador puede ajustar el alcance
+          en{' '}
           <Link to="/implementacion/modulos">Implementación → Paquete</Link>.
         </p>
         <Link to="/" className="btn">

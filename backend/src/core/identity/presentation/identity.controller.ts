@@ -35,6 +35,7 @@ import {
   CreateTeamDto,
   RevokeSessionDto,
   UpdateGroupDto,
+  UpdateOrgProductLicenseDto,
   UpdateOrgUnitDto,
   UpdatePolicyDto,
   UpdateRoleDto,
@@ -48,6 +49,7 @@ import {
 import { CurrentUser } from '@/shared/presentation/decorators/current-user.decorator';
 import { AgroRequest } from '@/core/engine/middleware/request-context.middleware';
 import { PrismaService } from '@/shared/infrastructure/database/prisma.service';
+import { OrganizationProductService } from '../application/organization-product.service';
 
 @ApiTags('Identity — Policies (PBAC)')
 @ApiBearerAuth()
@@ -546,5 +548,33 @@ export class SubstitutionsController {
     @Param('id') id: string,
   ) {
     return this.substitutions.revoke(user.organizationId, id, user.id);
+  }
+}
+
+@ApiTags('Identity — Organization product')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@Controller('identity/organization/product-license')
+export class OrganizationProductController {
+  constructor(private readonly orgProduct: OrganizationProductService) {}
+
+  @Get()
+  @RequirePermissions('organization:read')
+  @ApiOperation({ summary: 'Paquete / módulos contratados de la organización' })
+  get(@CurrentUser() user: { organizationId: string }) {
+    return this.orgProduct.getLicense(user.organizationId);
+  }
+
+  @Patch()
+  @RequirePermissions('organization:update')
+  @ApiOperation({ summary: 'Actualizar paquete / módulos de la organización' })
+  update(
+    @CurrentUser() user: { organizationId: string },
+    @Body() dto: UpdateOrgProductLicenseDto,
+  ) {
+    return this.orgProduct.updateLicense(user.organizationId, {
+      packageId: dto.packageId,
+      enabledModules: dto.enabledModules ?? [],
+    });
   }
 }

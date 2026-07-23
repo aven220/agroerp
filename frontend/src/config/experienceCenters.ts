@@ -9,7 +9,7 @@ import { ENTERPRISE_NAV_CATEGORIES, getEnterpriseNavItems } from './enterpriseNa
 
 export type ExperienceCenterId = 'operation' | 'management' | 'implementation';
 
-export type IndustryPackageId = 'coop-cafe-co' | 'full-platform';
+export type IndustryPackageId = 'coop-cafe-co' | 'full-platform' | 'custom';
 
 export interface ExperienceCenterMeta {
   id: ExperienceCenterId;
@@ -47,7 +47,8 @@ export const DEFAULT_PACKAGE: IndustryPackageId = 'coop-cafe-co';
 
 export const PACKAGE_LABELS: Record<IndustryPackageId, string> = {
   'coop-cafe-co': 'Cooperativa cafetera (piloto)',
-  'full-platform': 'Plataforma completa (pro / pruebas)',
+  'full-platform': 'Plataforma completa (pro)',
+  custom: 'Personalizado',
 };
 
 const item = (

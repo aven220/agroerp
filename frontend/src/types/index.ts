@@ -12,7 +12,12 @@ export interface Organization {
   id: string;
   name: string;
   slug: string;
+  productLicense?: {
+    packageId: 'coop-cafe-co' | 'full-platform' | 'custom';
+    enabledModules: string[];
+  };
 }
+
 
 export interface UserProfile extends AuthUser {
   status: string;

@@ -23,7 +23,15 @@ import {
 } from '../components/page';
 import { LoadingState } from '../components/ux/LoadingState';
 import { useExperienceCenterOptional } from '../context/ExperienceCenterContext';
+import { useAuth } from '../context/AuthContext';
 import { AdminPage } from './AdminPage';
+import { updateOrgProductLicense } from '../api/organization';
+import {
+  PACKAGE_OPTIONS,
+  PRODUCT_MODULES,
+  defaultModulesForPackage,
+  type ProductPackageId,
+} from '../config/productModules';
 import {
   certifyGoLive,
   implementationStatusLabel,
@@ -777,50 +785,208 @@ export function ImplementationRolesPage() {
 
 export function ImplementationModulosPage() {
   const experience = useExperienceCenterOptional();
-  const packageId = experience?.packageId ?? 'coop-cafe-co';
-  const isFull = packageId === 'full-platform';
+  const { hasPermission, refreshProfile } = useAuth();
+  const canEdit = hasPermission('organization:update');
+
+  const [packageId, setPackageId] = useState<ProductPackageId>(
+    () => experience?.packageId ?? 'coop-cafe-co',
+  );
+  const [enabledModules, setEnabledModules] = useState<string[]>(
+    () => experience?.enabledModules ?? defaultModulesForPackage('coop-cafe-co'),
+  );
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!experience) return;
+    setPackageId(experience.packageId);
+    setEnabledModules(
+      experience.packageId === 'custom'
+        ? experience.enabledModules
+        : defaultModulesForPackage(experience.packageId),
+    );
+  }, [experience?.packageId, experience?.enabledModules]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleModule = (id: string) => {
+    setEnabledModules((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+
+  const onPackageChange = (next: ProductPackageId) => {
+    setPackageId(next);
+    if (next !== 'custom') {
+      setEnabledModules(defaultModulesForPackage(next));
+    }
+  };
+
+  const save = async () => {
+    setSaving(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const saved = await updateOrgProductLicense({
+        packageId,
+        enabledModules: packageId === 'custom' ? enabledModules : [],
+      });
+      experience?.applyOrgLicense({
+        packageId: saved.packageId,
+        enabledModules: saved.enabledModules,
+      });
+      await refreshProfile().catch(() => undefined);
+      setMessage('Paquete de la empresa guardado. Aplica a todos los usuarios de esta organización.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo guardar el paquete');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const activeLabel =
+    PACKAGE_OPTIONS.find((p) => p.id === packageId)?.label ?? packageId;
 
   return (
     <EicShell title="Paquete contratado">
-      <PageSection title="Alcance de la implementación">
+      <PageSection title="Licencia de la organización">
         <PageSummary>
+          <MetricCard label="Paquete activo" value={activeLabel} tone="coffee" />
           <MetricCard
-            label="Paquete activo"
-            value={isFull ? 'Plataforma completa' : 'Cooperativa cafetera'}
-            tone="coffee"
+            label="Módulos"
+            value={
+              packageId === 'full-platform'
+                ? 'Todos'
+                : String(
+                    packageId === 'custom'
+                      ? enabledModules.length
+                      : defaultModulesForPackage(packageId).length,
+                  )
+            }
           />
         </PageSummary>
         <p className="muted eic-hint">
-          El paquete define el perímetro de rutas permitidas. Para pruebas de todo el sistema elija
-          plataforma completa.
+          Este ajuste se guarda en la <strong>empresa</strong> (no en el navegador). Define a qué
+          módulos pueden entrar los usuarios de esta organización. Los permisos IAM siguen aplicando
+          encima.
         </p>
-        <div className="eic-package-switch" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-          <button
-            type="button"
-            className={`btn${packageId === 'coop-cafe-co' ? ' btn-primary' : ''}`}
-            onClick={() => experience?.setPackageId('coop-cafe-co')}
+
+        {!canEdit ? (
+          <div className="alert alert-error" role="status">
+            Solo un administrador con permiso <code>organization:update</code> puede cambiar el
+            paquete.
+          </div>
+        ) : null}
+
+        <fieldset className="ds-prefs-fieldset" style={{ marginTop: 16 }}>
+          <legend>Tipo de paquete</legend>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {PACKAGE_OPTIONS.map((opt) => (
+              <label
+                key={opt.id}
+                className="ds-prefs-label"
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  alignItems: 'flex-start',
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  border: `1px solid ${packageId === opt.id ? 'var(--ds-primary)' : 'var(--ds-border)'}`,
+                  background:
+                    packageId === opt.id
+                      ? 'color-mix(in srgb, var(--ds-primary) 8%, transparent)'
+                      : 'transparent',
+                  cursor: canEdit ? 'pointer' : 'default',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="org-package"
+                  checked={packageId === opt.id}
+                  disabled={!canEdit}
+                  onChange={() => onPackageChange(opt.id)}
+                />
+                <span>
+                  <strong style={{ display: 'block' }}>{opt.label}</strong>
+                  <span className="muted" style={{ fontSize: '0.8125rem' }}>
+                    {opt.description}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="ds-prefs-fieldset" style={{ marginTop: 20 }}>
+          <legend>Módulos incluidos</legend>
+          <p className="muted eic-hint">
+            {packageId === 'custom'
+              ? 'Marque los módulos contratados para esta empresa.'
+              : 'Vista previa según el paquete. Cambie a Personalizado para editar módulo a módulo.'}
+          </p>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+              gap: 10,
+            }}
           >
-            Piloto cooperativa
-          </button>
-          <button
-            type="button"
-            className={`btn${isFull ? ' btn-primary' : ''}`}
-            onClick={() => experience?.setPackageId('full-platform')}
-          >
-            Plataforma completa (pro)
-          </button>
-        </div>
-        {isFull ? (
-          <ul className="eoc-list">
-            <li>Perímetro abierto: formularios, verticales y módulos avanzados accesibles por URL/permiso.</li>
-            <li>Siguen aplicando permisos IAM del usuario (admin demo tiene acceso amplio).</li>
-          </ul>
-        ) : (
-          <ul className="eoc-list">
-            <li>Incluidos: Compras, Inventario, Productores, Fincas, Lotes, Calidad, Liquidación, Documentos, Procesos</li>
-            <li>Fuera de alcance: Formularios UDFE, Hospital, Manufactura, Hotelería, Educación, IoT, etc.</li>
-          </ul>
-        )}
+            {PRODUCT_MODULES.map((mod) => {
+              const checked =
+                packageId === 'full-platform'
+                  ? true
+                  : packageId === 'coop-cafe-co'
+                    ? Boolean(mod.inCoopPilot)
+                    : enabledModules.includes(mod.id);
+              const locked = packageId !== 'custom' || !canEdit;
+              return (
+                <label
+                  key={mod.id}
+                  style={{
+                    display: 'flex',
+                    gap: 10,
+                    alignItems: 'flex-start',
+                    padding: '12px',
+                    borderRadius: 10,
+                    border: '1px solid var(--ds-border)',
+                    opacity: checked ? 1 : 0.55,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={locked}
+                    onChange={() => toggleModule(mod.id)}
+                  />
+                  <span>
+                    <strong style={{ display: 'block', fontSize: '0.875rem' }}>{mod.label}</strong>
+                    <span className="muted" style={{ fontSize: '0.75rem' }}>
+                      {mod.description}
+                    </span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        {message ? (
+          <div className="alert alert-success" role="status" style={{ marginTop: 16 }}>
+            {message}
+          </div>
+        ) : null}
+        {error ? (
+          <div className="alert alert-error" role="alert" style={{ marginTop: 16 }}>
+            {error}
+          </div>
+        ) : null}
+
+        {canEdit ? (
+          <div style={{ marginTop: 20, display: 'flex', gap: 8 }}>
+            <button type="button" className="btn btn-primary" disabled={saving} onClick={() => void save()}>
+              {saving ? 'Guardando…' : 'Guardar paquete de la empresa'}
+            </button>
+          </div>
+        ) : null}
       </PageSection>
     </EicShell>
   );

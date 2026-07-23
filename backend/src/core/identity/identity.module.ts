@@ -31,9 +31,11 @@ import {
   UserScopesController,
   TeamsController,
   SubstitutionsController,
+  OrganizationProductController,
 } from './presentation/identity.controller';
 import { JwtStrategy } from './infrastructure/jwt.strategy';
 import { CoreEngineModule } from '@/core/engine/core-engine.module';
+import { OrganizationProductService } from './application/organization-product.service';
 
 @Module({
   imports: [
@@ -64,6 +66,7 @@ import { CoreEngineModule } from '@/core/engine/core-engine.module';
     UserScopesController,
     TeamsController,
     SubstitutionsController,
+    OrganizationProductController,
   ],
   providers: [
     AuthService,
@@ -81,6 +84,7 @@ import { CoreEngineModule } from '@/core/engine/core-engine.module';
     PermissionsService,
     TeamsService,
     SubstitutionsService,
+    OrganizationProductService,
     JwtStrategy,
   ],
   exports: [
@@ -93,6 +97,7 @@ import { CoreEngineModule } from '@/core/engine/core-engine.module';
     RolesService,
     PoliciesService,
     PermissionsService,
+    OrganizationProductService,
     JwtModule,
   ],
 })

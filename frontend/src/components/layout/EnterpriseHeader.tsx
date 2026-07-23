@@ -20,7 +20,6 @@ import {
   type HeaderMenuPillar,
 } from '../../config/headerNavigation';
 import type { ExperienceCenterId } from '../../config/experienceCenters';
-import { PACKAGE_LABELS } from '../../config/experienceCenters';
 import { NavIcon } from './navIcons';
 
 function roleLabel(role?: string): string {
@@ -261,22 +260,17 @@ export function EnterpriseHeader() {
                 <ChevronDown size={14} strokeWidth={1.75} className="enh-center-caret" aria-hidden />
               </label>
               <span className="enh-sep" aria-hidden />
-              <label className="enh-package" title="Alcance del producto">
-                <span className="sr-only">Paquete del producto</span>
-                <select
-                  className={`enh-package-select${experience.packageId === 'full-platform' ? ' is-pro' : ''}`}
-                  value={experience.packageId}
-                  aria-label={`Paquete: ${PACKAGE_LABELS[experience.packageId]}`}
-                  onChange={(e) => {
-                    const next = e.target.value as 'coop-cafe-co' | 'full-platform';
-                    experience.setPackageId(next);
-                  }}
-                >
-                  <option value="coop-cafe-co">Piloto</option>
-                  <option value="full-platform">Pro</option>
-                </select>
-                <ChevronDown size={14} strokeWidth={1.75} className="enh-center-caret" aria-hidden />
-              </label>
+              <Link
+                to="/implementacion/modulos"
+                className={`enh-package-link${experience.packageId === 'full-platform' ? ' is-pro' : ''}${experience.packageId === 'custom' ? ' is-custom' : ''}`}
+                title="Paquete de la empresa"
+              >
+                {experience.packageId === 'full-platform'
+                  ? 'Pro'
+                  : experience.packageId === 'custom'
+                    ? 'Custom'
+                    : 'Piloto'}
+              </Link>
             </>
           ) : null}
         </div>
