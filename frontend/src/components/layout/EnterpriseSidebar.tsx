@@ -1,6 +1,6 @@
 /**
  * PM-42 — Sidebar fijo enterprise (250–280px), colapsable.
- * Sin buscador, sin bloque de usuario. Favoritos solo si hay ítems.
+ * Jerarquía visual con bloques, separadores y submenús anidados.
  */
 
 import { useEffect, useRef } from 'react';
@@ -27,27 +27,32 @@ function matchItemActive(pathname: string, item: NavItem): boolean {
 function SideLink({
   item,
   collapsed,
+  nested,
 }: {
   item: NavItem;
   collapsed?: boolean;
+  nested?: boolean;
 }) {
   return (
     <NavLink
       to={item.to}
       end={item.exact ?? item.to === '/'}
-      className={({ isActive }) => `esb-item${isActive ? ' is-active' : ''}`}
+      className={({ isActive }) =>
+        `esb-item${nested ? ' is-nested' : ''}${isActive ? ' is-active' : ''}`
+      }
       title={collapsed ? item.label : undefined}
     >
-      <span className="esb-item-icon">
-        <NavIcon name={item.icon} size={16} />
+      <span className="esb-item-icon" aria-hidden>
+        <NavIcon name={item.icon} size={nested ? 15 : 16} />
       </span>
       {!collapsed ? <span className="esb-item-label">{item.label}</span> : null}
+      {!collapsed && nested ? <span className="esb-item-active-dot" aria-hidden /> : null}
     </NavLink>
   );
 }
 
 /**
- * Sidebar fijo izquierdo — PM-42.
+ * Sidebar fijo izquierdo — PM-42 (pulido visual).
  */
 export function EnterpriseSidebar() {
   const location = useLocation();
@@ -72,11 +77,10 @@ export function EnterpriseSidebar() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty('--sidebar-w', sidebarCollapsed ? '72px' : '264px');
-    return () => {
-      /* PM-42 mantiene el token vía CSS; no limpiar a 0 */
-    };
+    document.documentElement.style.setProperty(
+      '--sidebar-w',
+      sidebarCollapsed ? '72px' : '272px',
+    );
   }, [sidebarCollapsed]);
 
   const menuCategories = visibleCategories.filter((c) => c.id !== 'home' && c.id !== 'favorites');
@@ -110,7 +114,12 @@ export function EnterpriseSidebar() {
             <SidebarChromeIcons.panelClose size={18} strokeWidth={1.75} />
           )}
         </button>
-        {!sidebarCollapsed ? <span className="esb-toolbar-label">Menú</span> : null}
+        {!sidebarCollapsed ? (
+          <div className="esb-toolbar-copy">
+            <span className="esb-toolbar-label">Navegación</span>
+            <span className="esb-toolbar-hint">Módulos del workspace</span>
+          </div>
+        ) : null}
       </div>
 
       <nav
@@ -120,85 +129,113 @@ export function EnterpriseSidebar() {
         onScroll={(e) => setSidebarScroll((e.target as HTMLElement).scrollTop)}
       >
         {homeItem ? (
-          <div className="esb-home">
+          <div className="esb-block esb-home">
+            {!sidebarCollapsed ? <div className="esb-block-label">Inicio</div> : null}
             <SideLink item={homeItem} collapsed={sidebarCollapsed} />
           </div>
         ) : null}
 
-        {menuCategories.map((category) => {
-          const defaultCollapsed =
-            category.defaultCollapsed ?? !DEFAULT_EXPANDED_CATEGORIES.includes(category.id);
-          const collapsed = collapsedGroups[category.id] ?? defaultCollapsed;
-          const active = isGroupActive(category.id, category.items);
-          const expanded = !collapsed && !sidebarCollapsed;
+        <div className="esb-divider" aria-hidden />
 
-          return (
-            <section
-              key={category.id}
-              className={`esb-group${active ? ' has-active' : ''}${expanded ? ' is-open' : ''}`}
-            >
-              <button
-                type="button"
-                className={`esb-group-toggle${active ? ' is-active' : ''}`}
-                aria-expanded={expanded}
-                title={sidebarCollapsed ? category.label : undefined}
-                onClick={() => {
-                  if (sidebarCollapsed) setSidebarCollapsed(false);
-                  toggleGroup(category.id);
-                }}
-              >
-                <span className="esb-group-icon" aria-hidden>
-                  <NavIcon name={category.icon || category.id} size={16} />
-                </span>
-                {!sidebarCollapsed ? (
-                  <>
-                    <span className="esb-group-label">{category.label}</span>
-                    <span className="esb-group-chevron" aria-hidden>
-                      {expanded ? (
-                        <SidebarChromeIcons.chevronDown size={14} strokeWidth={1.75} />
-                      ) : (
-                        <SidebarChromeIcons.chevronRight size={14} strokeWidth={1.75} />
-                      )}
+        <div className="esb-block esb-modules">
+          {!sidebarCollapsed ? (
+            <div className="esb-block-label">
+              Módulos
+              <span className="esb-block-count">{menuCategories.length}</span>
+            </div>
+          ) : null}
+
+          <div className="esb-groups">
+            {menuCategories.map((category) => {
+              const defaultCollapsed =
+                category.defaultCollapsed ??
+                !DEFAULT_EXPANDED_CATEGORIES.includes(category.id);
+              const collapsed = collapsedGroups[category.id] ?? defaultCollapsed;
+              const active = isGroupActive(category.id, category.items);
+              const expanded = !collapsed && !sidebarCollapsed;
+              const childCount = category.items.length;
+
+              return (
+                <section
+                  key={category.id}
+                  className={`esb-group${active ? ' has-active' : ''}${expanded ? ' is-open' : ''}`}
+                >
+                  <button
+                    type="button"
+                    className={`esb-group-toggle${active ? ' is-active' : ''}`}
+                    aria-expanded={expanded}
+                    title={sidebarCollapsed ? category.label : undefined}
+                    onClick={() => {
+                      if (sidebarCollapsed) setSidebarCollapsed(false);
+                      toggleGroup(category.id);
+                    }}
+                  >
+                    <span className="esb-group-icon" aria-hidden>
+                      <NavIcon name={category.icon || category.id} size={16} />
                     </span>
-                  </>
-                ) : null}
-              </button>
-              {expanded ? (
-                <div className="esb-group-items">
-                  {category.items.map((item) => (
-                    <SideLink key={item.id} item={item} />
-                  ))}
-                </div>
-              ) : null}
-            </section>
-          );
-        })}
+                    {!sidebarCollapsed ? (
+                      <>
+                        <span className="esb-group-label">{category.label}</span>
+                        <span className="esb-group-meta">
+                          <span className="esb-group-count">{childCount}</span>
+                          <span className="esb-group-chevron" aria-hidden>
+                            {expanded ? (
+                              <SidebarChromeIcons.chevronDown size={14} strokeWidth={1.75} />
+                            ) : (
+                              <SidebarChromeIcons.chevronRight size={14} strokeWidth={1.75} />
+                            )}
+                          </span>
+                        </span>
+                      </>
+                    ) : null}
+                  </button>
+
+                  {expanded ? (
+                    <div className="esb-group-items" role="group" aria-label={category.label}>
+                      {category.items.map((item) => (
+                        <SideLink key={item.id} item={item} nested />
+                      ))}
+                    </div>
+                  ) : null}
+                </section>
+              );
+            })}
+          </div>
+        </div>
 
         {showFavorites ? (
-          <section className="esb-favorites" aria-label="Favoritos">
-            <div className="esb-section-label">Favoritos</div>
-            {favSorted.map((fav) => (
-              <div key={fav.id} className="esb-fav-row">
-                <NavLink
-                  to={fav.to}
-                  className={({ isActive }) => `esb-item${isActive ? ' is-active' : ''}`}
-                >
-                  <span className="esb-item-icon">
-                    <NavIcon name={fav.icon || 'star'} size={16} />
-                  </span>
-                  <span className="esb-item-label">{fav.label}</span>
-                </NavLink>
-                <button
-                  type="button"
-                  className="esb-fav-remove"
-                  aria-label="Quitar favorito"
-                  onClick={() => removeFavorite(fav.id)}
-                >
-                  ×
-                </button>
+          <>
+            <div className="esb-divider" aria-hidden />
+            <section className="esb-block esb-favorites" aria-label="Favoritos">
+              <div className="esb-block-label">
+                Favoritos
+                <span className="esb-block-count">{favSorted.length}</span>
               </div>
-            ))}
-          </section>
+              <div className="esb-fav-list">
+                {favSorted.map((fav) => (
+                  <div key={fav.id} className="esb-fav-row">
+                    <NavLink
+                      to={fav.to}
+                      className={({ isActive }) => `esb-item is-nested${isActive ? ' is-active' : ''}`}
+                    >
+                      <span className="esb-item-icon" aria-hidden>
+                        <NavIcon name={fav.icon || 'star'} size={15} />
+                      </span>
+                      <span className="esb-item-label">{fav.label}</span>
+                    </NavLink>
+                    <button
+                      type="button"
+                      className="esb-fav-remove"
+                      aria-label="Quitar favorito"
+                      onClick={() => removeFavorite(fav.id)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
         ) : null}
       </nav>
     </aside>
