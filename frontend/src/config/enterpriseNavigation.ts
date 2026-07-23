@@ -166,6 +166,10 @@ export const ENTERPRISE_NAV_CATEGORIES: NavCategory[] = [
         keywords: ['preferencias', 'configuración', 'resumen'],
         searchType: 'config',
       }),
+      item('nav-cfg-paquete', '/implementacion/modulos', 'Paquete / Pro', 'package', {
+        keywords: ['paquete', 'pro', 'plataforma', 'piloto', 'licencia'],
+        searchType: 'config',
+      }),
     ],
   },
   {

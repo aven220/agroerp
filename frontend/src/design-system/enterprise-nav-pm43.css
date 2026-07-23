@@ -153,7 +153,14 @@
   align-items: center;
 }
 
-.enh-center-select {
+.enh-package {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.enh-center-select,
+.enh-package-select {
   appearance: none;
   border: 1px solid var(--ds-border);
   background: var(--ds-surface-sunken, #f8fafc);
@@ -168,7 +175,14 @@
   max-width: 160px;
 }
 
-.enh-center-select:focus-visible {
+.enh-package-select.is-pro {
+  border-color: color-mix(in srgb, var(--ds-primary) 45%, var(--ds-border));
+  background: color-mix(in srgb, var(--ds-primary) 10%, var(--ds-surface));
+  color: var(--ds-primary);
+}
+
+.enh-center-select:focus-visible,
+.enh-package-select:focus-visible {
   outline: 2px solid var(--ds-primary);
   outline-offset: 1px;
 }

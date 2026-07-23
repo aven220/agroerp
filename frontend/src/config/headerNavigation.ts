@@ -68,6 +68,7 @@ export const HEADER_MENU_PILLARS: HeaderMenuPillar[] = [
       { id: 'nav-cfg-documentos', label: 'Documentos', hint: 'Plantillas y numeración' },
       { id: 'nav-cfg-inventario', label: 'Inventario', hint: 'Parámetros de bodega' },
       { id: 'nav-cfg-prefs', label: 'Preferencias', hint: 'Resumen de configuración' },
+      { id: 'nav-cfg-paquete', label: 'Paquete / Pro', hint: 'Piloto o plataforma completa' },
     ],
   },
   {
