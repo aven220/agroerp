@@ -1,9 +1,7 @@
 import { SmartSidebar } from './SmartSidebar';
-import { AppShellBar } from './AppShellBar';
 import { CommandPalette } from '../command/CommandPalette';
 import { GuidedWorkspacePanel } from '../guided-workspace/GuidedWorkspacePanel';
 import { BottomNav } from '../mobile/BottomNav';
-import { MobileFAB } from '../mobile/MobileFAB';
 import { OfflineBanner } from '../mobile/OfflineBanner';
 import { MobileMoreSheet } from '../mobile/MobileMoreSheet';
 import { SyncQueueSheet } from '../mobile/SyncQueueSheet';
@@ -12,6 +10,10 @@ import { useMobileOptional } from '../../context/MobileContext';
 import { useGuidedWorkspaceOptional } from '../../context/GuidedWorkspaceContext';
 import { useAdaptiveWorkspaceOptional } from '../../context/AdaptiveWorkspaceProvider';
 
+/**
+ * PM-45 — Shell único: Sidebar + contenido.
+ * Sin AppShellBar duplicada ni FAB flotante.
+ */
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const mobile = useMobileOptional();
   const isMobile = mobile?.isMobile ?? false;
@@ -24,12 +26,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div
-      className={`erp-shell${isMobile ? ' erp-shell-mobile' : ''}${isTablet ? ' erp-shell-tablet' : ''}${panelOpen && !isMobile && !focusMode ? ' guided-workspace-open' : ''}${focusMode ? ' erp-shell-focus' : ''}${chromeLevel === 'compact' ? ' erp-shell-compact-chrome' : ''}`}
+      className={`erp-shell erp-shell-pm45${isMobile ? ' erp-shell-mobile' : ''}${isTablet ? ' erp-shell-tablet' : ''}${panelOpen && !isMobile && !focusMode ? ' guided-workspace-open' : ''}${focusMode ? ' erp-shell-focus' : ''}${chromeLevel === 'compact' ? ' erp-shell-compact-chrome' : ''}`}
     >
       <a href="#main-content" className="skip-link">Saltar al contenido</a>
       {!focusMode ? <SmartSidebar /> : null}
       <div className="erp-main">
-        <AppShellBar compact={isMobile} />
         <OfflineBanner />
         <PullToRefresh>
           <div className="erp-content" id="main-content" tabIndex={-1}>
@@ -40,7 +41,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {isMobile ? (
         <>
           <BottomNav />
-          <MobileFAB />
           <MobileMoreSheet />
           <SyncQueueSheet />
         </>

@@ -1,5 +1,5 @@
 /**
- * PM-43 — Enterprise Sidebar (estructura visual limpia).
+ * PM-45 — Enterprise Sidebar (estructura única del shell).
  * Solo presentación. Permisos / rutas / packageAccess intactos.
  */
 
@@ -64,7 +64,7 @@ function NavItemLink({
       title={collapsed ? item.label : undefined}
     >
       <span className="esb-item-icon">
-        <NavIcon name={item.icon} size={18} />
+        <NavIcon name={item.icon} size={16} />
       </span>
       {!collapsed ? <span className="esb-item-label">{item.label}</span> : null}
     </NavLink>
@@ -86,22 +86,21 @@ export function SmartSidebar() {
     setSidebarCollapsed,
     sidebarScroll,
     setSidebarScroll,
+    favorites,
+    removeFavorite,
     setSearchOpen,
     addRecentSearch,
   } = useNavigation();
 
   const navRef = useRef<HTMLElement>(null);
   const [query, setQuery] = useState('');
-
   const closeMobile = () => setSidebarOpen(false);
 
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty('--sidebar-w', sidebarCollapsed ? '72px' : '280px');
     root.classList.toggle('esb-rail', sidebarCollapsed);
-    return () => {
-      root.classList.remove('esb-rail');
-    };
+    return () => root.classList.remove('esb-rail');
   }, [sidebarCollapsed]);
 
   useEffect(() => {
@@ -145,6 +144,7 @@ export function SmartSidebar() {
     experience?.packageId === 'coop-cafe-co'
       ? 'Cooperativa Cafetera'
       : 'Plataforma completa';
+  const companyLabel = user?.organization?.name?.trim() || 'Empresa';
 
   const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Usuario';
   const initials = displayName
@@ -157,6 +157,7 @@ export function SmartSidebar() {
   const menuCategories = visibleCategories.filter((c) => c.id !== 'home' && c.id !== 'favorites');
   const homeItem = visibleCategories.find((c) => c.id === 'home')?.items[0];
   const rail = sidebarCollapsed;
+  const favSorted = favorites.slice().sort((a, b) => a.order - b.order);
 
   return (
     <>
@@ -166,7 +167,7 @@ export function SmartSidebar() {
         aria-label="Abrir menú de navegación"
         onClick={() => setSidebarOpen(true)}
       >
-        <SidebarChromeIcons.menu size={20} strokeWidth={1.75} />
+        <SidebarChromeIcons.menu size={18} strokeWidth={1.75} />
       </button>
 
       {sidebarOpen ? (
@@ -182,7 +183,7 @@ export function SmartSidebar() {
         className={[
           'sidebar',
           'enterprise-sidebar',
-          'enterprise-sidebar-pm43',
+          'enterprise-sidebar-pm45',
           sidebarOpen ? 'is-open' : '',
           rail ? 'is-collapsed' : '',
         ]
@@ -199,6 +200,7 @@ export function SmartSidebar() {
               <div className="esb-brand-text">
                 <strong className="esb-brand-name">AgroERP</strong>
                 <span className="esb-brand-package">{packageLabel}</span>
+                <span className="esb-brand-company">{companyLabel}</span>
               </div>
             ) : null}
           </div>
@@ -210,9 +212,9 @@ export function SmartSidebar() {
             onClick={() => setSidebarCollapsed(!rail)}
           >
             {rail ? (
-              <SidebarChromeIcons.panelOpen size={18} strokeWidth={1.75} />
+              <SidebarChromeIcons.panelOpen size={16} strokeWidth={1.75} />
             ) : (
-              <SidebarChromeIcons.panelClose size={18} strokeWidth={1.75} />
+              <SidebarChromeIcons.panelClose size={16} strokeWidth={1.75} />
             )}
           </button>
           <button
@@ -243,11 +245,11 @@ export function SmartSidebar() {
                 setSearchOpen(true);
               }}
             >
-              <SidebarChromeIcons.search size={18} strokeWidth={1.75} />
+              <SidebarChromeIcons.search size={16} strokeWidth={1.75} />
             </button>
           ) : (
             <label className="esb-search-field">
-              <SidebarChromeIcons.search size={16} strokeWidth={1.75} className="esb-search-icon" />
+              <SidebarChromeIcons.search size={15} strokeWidth={1.75} className="esb-search-icon" />
               <input
                 type="search"
                 value={query}
@@ -266,6 +268,8 @@ export function SmartSidebar() {
             </label>
           )}
         </div>
+
+        <div className="esb-sep" aria-hidden />
 
         <nav ref={navRef} className="esb-nav sidebar-nav" aria-label="Menú enterprise">
           {!rail && query.trim() ? (
@@ -319,7 +323,7 @@ export function SmartSidebar() {
                           if (collapsed) toggleGroup(category.id);
                         }}
                       >
-                        <NavIcon name={category.icon} size={18} />
+                        <NavIcon name={category.icon} size={16} />
                       </button>
                     </div>
                   );
@@ -339,9 +343,9 @@ export function SmartSidebar() {
                       <span className="esb-group-label">{category.label}</span>
                       <span className="esb-group-chevron" aria-hidden>
                         {open ? (
-                          <SidebarChromeIcons.chevronDown size={16} strokeWidth={1.75} />
+                          <SidebarChromeIcons.chevronDown size={14} strokeWidth={1.75} />
                         ) : (
-                          <SidebarChromeIcons.chevronRight size={16} strokeWidth={1.75} />
+                          <SidebarChromeIcons.chevronRight size={14} strokeWidth={1.75} />
                         )}
                       </span>
                     </button>
@@ -360,9 +364,47 @@ export function SmartSidebar() {
                   </section>
                 );
               })}
+
+              {!rail ? <div className="esb-sep" aria-hidden /> : null}
+
+              <section className="esb-group esb-favorites" aria-label="Favoritos">
+                {!rail ? <div className="esb-section-label">Favoritos</div> : null}
+                {favSorted.length === 0 ? (
+                  !rail ? <p className="esb-empty-fav">Sin favoritos aún</p> : null
+                ) : (
+                  favSorted.map((fav) => (
+                    <div key={fav.id} className="esb-fav-row">
+                      <NavLink
+                        to={fav.to}
+                        className={({ isActive }) => `esb-item${isActive ? ' is-active' : ''}`}
+                        onClick={closeMobile}
+                        title={rail ? fav.label : undefined}
+                      >
+                        <span className="esb-item-icon">
+                          <NavIcon name={fav.icon || 'star'} size={16} />
+                        </span>
+                        {!rail ? <span className="esb-item-label">{fav.label}</span> : null}
+                      </NavLink>
+                      {!rail ? (
+                        <button
+                          type="button"
+                          className="esb-fav-remove"
+                          aria-label="Quitar favorito"
+                          title="Quitar"
+                          onClick={() => removeFavorite(fav.id)}
+                        >
+                          ×
+                        </button>
+                      ) : null}
+                    </div>
+                  ))
+                )}
+              </section>
             </>
           )}
         </nav>
+
+        <div className="esb-sep" aria-hidden />
 
         <footer className="esb-footer">
           <div className="esb-user">
@@ -385,7 +427,7 @@ export function SmartSidebar() {
             aria-label="Salir"
             onClick={() => void logout()}
           >
-            <LogOut size={16} strokeWidth={1.75} />
+            <LogOut size={15} strokeWidth={1.75} />
             {!rail ? <span>Salir</span> : null}
           </button>
         </footer>

@@ -1,5 +1,18 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
+import {
+  Building2,
+  CheckCircle2,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  Link2,
+  Package,
+  Settings,
+  Shield,
+  Users,
+  Workflow,
+} from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import {
   PageLayout,
@@ -30,43 +43,45 @@ import { seedCoffeeConfig } from '../api/coffee';
 import { seedEims } from '../api/eims';
 
 const EIC_SECTIONS = [
-  { to: '/implementacion', label: 'Resumen', end: true },
-  { to: '/implementacion/empresa', label: '1. Empresa' },
-  { to: '/implementacion/usuarios', label: '2. Usuarios' },
-  { to: '/implementacion/roles', label: '3. Roles' },
-  { to: '/implementacion/configuracion', label: '4. Configuración' },
-  { to: '/implementacion/procesos', label: '5. Procesos' },
-  { to: '/implementacion/documentos', label: '6. Documentos' },
-  { to: '/implementacion/integraciones', label: '7. Integraciones' },
-  { to: '/implementacion/modulos', label: '8. Paquete' },
-  { to: '/implementacion/estado', label: 'Estado' },
-  { to: '/implementacion/go-live', label: 'Go Live' },
+  { to: '/implementacion', label: 'Resumen', end: true, icon: LayoutDashboard },
+  { to: '/implementacion/empresa', label: 'Empresa', icon: Building2 },
+  { to: '/implementacion/usuarios', label: 'Usuarios', icon: Users },
+  { to: '/implementacion/roles', label: 'Roles', icon: Shield },
+  { to: '/implementacion/configuracion', label: 'Configuración', icon: Settings },
+  { to: '/implementacion/procesos', label: 'Procesos', icon: Workflow },
+  { to: '/implementacion/documentos', label: 'Documentos', icon: FileText },
+  { to: '/implementacion/integraciones', label: 'Integraciones', icon: Link2 },
+  { to: '/implementacion/modulos', label: 'Paquete', icon: Package },
+  { to: '/implementacion/estado', label: 'Estado', icon: ClipboardList },
+  { to: '/implementacion/go-live', label: 'Go Live', icon: CheckCircle2 },
 ];
 
 function EicShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
-  const packageLabel = 'Cooperativa cafetera — Colombia';
-
   return (
     <ImplementationEngineProvider>
       <Header
         title={title}
-        subtitle={subtitle ?? `Centro de Implementación · ${packageLabel}`}
-        description="Punto único para configurar, verificar y certificar que la empresa está lista para operar."
+        subtitle={subtitle ?? 'Centro de Implementación'}
+        description="Configure, verifique y certifique que la empresa está lista para operar."
         showExperience={false}
       />
       <PageLayout
         toolbar={
-          <nav className="eic-section-nav" aria-label="Secciones de implementación">
-            {EIC_SECTIONS.map((s) => (
-              <NavLink
-                key={s.to}
-                to={s.to}
-                end={s.end}
-                className={({ isActive }) => `eic-section-link${isActive ? ' active' : ''}`}
-              >
-                {s.label}
-              </NavLink>
-            ))}
+          <nav className="eic-enterprise-tabs" aria-label="Secciones de implementación">
+            {EIC_SECTIONS.map((s) => {
+              const Icon = s.icon;
+              return (
+                <NavLink
+                  key={s.to}
+                  to={s.to}
+                  end={s.end}
+                  className={({ isActive }) => `eic-tab${isActive ? ' is-active' : ''}`}
+                >
+                  <Icon size={15} strokeWidth={1.75} className="eic-tab-icon" aria-hidden />
+                  <span className="eic-tab-label">{s.label}</span>
+                </NavLink>
+              );
+            })}
           </nav>
         }
       >

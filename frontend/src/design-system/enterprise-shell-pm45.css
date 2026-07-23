@@ -1,0 +1,555 @@
+/* =========================================================
+   PM-45 — Enterprise Shell Redesign (capa visual final)
+   Una sola estructura · sin topbar duplicada · tabs · cards
+   Escala: 8 / 16 / 24 / 32 / 48. Tokens DS only.
+   ========================================================= */
+
+:root {
+  --pm45-1: 8px;
+  --pm45-2: 16px;
+  --pm45-3: 24px;
+  --pm45-4: 32px;
+  --pm45-5: 48px;
+  --pm45-h1: 1.75rem;
+  --pm45-h2: 1.25rem;
+  --pm45-h3: 1.0625rem;
+  --pm45-body: 0.9375rem;
+  --pm45-caption: 0.75rem;
+  --sidebar-w: 280px;
+  --esb-pad-x: 24px;
+  --esb-item-h: 40px;
+}
+
+/* ─── Shell: sin topbar duplicada ─── */
+.erp-shell-pm45 .app-shell-bar,
+.erp-shell-pm45 .MobileFAB,
+.erp-shell-pm45 .mobile-fab,
+.erp-shell-pm45 .sidebar-mobile-toggle:not(.esb-mobile-toggle) {
+  display: none !important;
+}
+
+.erp-shell-pm45 .erp-main {
+  margin-left: var(--sidebar-w, 280px);
+  min-height: 100dvh;
+}
+
+.erp-shell-pm45 .erp-content {
+  padding: var(--pm45-2) var(--pm45-3) var(--pm45-4);
+  max-width: 1400px;
+  font-size: var(--pm45-body);
+  line-height: 1.5;
+}
+
+.erp-shell-pm45.erp-shell-mobile .erp-main,
+.erp-shell-pm45.erp-shell-tablet .erp-main,
+.erp-shell-pm45.erp-shell-focus .erp-main {
+  margin-left: 0;
+}
+
+/* ─── Sidebar PM-45 ─── */
+.enterprise-sidebar-pm45 {
+  background: var(--ds-sidebar-bg);
+  border-right: 1px solid color-mix(in srgb, var(--ds-sidebar-text) 10%, transparent);
+}
+
+.enterprise-sidebar-pm45 .esb-header {
+  padding: var(--pm45-3) var(--pm45-3) var(--pm45-2);
+  align-items: flex-start;
+  gap: 12px;
+  border-bottom: none;
+}
+
+.enterprise-sidebar-pm45 .esb-brand {
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.enterprise-sidebar-pm45 .esb-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ds-radius-md);
+  font-size: 0.95rem;
+  margin-top: 2px;
+}
+
+.enterprise-sidebar-pm45 .esb-brand-text {
+  gap: 2px;
+}
+
+.enterprise-sidebar-pm45 .esb-brand-name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.enterprise-sidebar-pm45 .esb-brand-package,
+.enterprise-sidebar-pm45 .esb-brand-company {
+  display: block;
+  font-size: var(--pm45-caption);
+  color: var(--ds-sidebar-muted);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.enterprise-sidebar-pm45 .esb-brand-package {
+  color: color-mix(in srgb, var(--ds-sidebar-text) 75%, transparent);
+  font-weight: 500;
+}
+
+.enterprise-sidebar-pm45 .esb-center {
+  padding: 0 var(--pm45-3);
+  margin-bottom: var(--pm45-2);
+}
+
+.enterprise-sidebar-pm45 .esb-center-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--ds-sidebar-text) 12%, transparent);
+  border-radius: var(--ds-radius-md);
+  background: color-mix(in srgb, var(--ds-sidebar-text) 5%, transparent);
+}
+
+.enterprise-sidebar-pm45 .esb-center-card-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ds-sidebar-muted);
+}
+
+.enterprise-sidebar-pm45 .esb-center-card-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.enterprise-sidebar-pm45 .esb-center-select {
+  appearance: none;
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--ds-sidebar-text);
+  font-size: var(--pm45-body);
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+
+.enterprise-sidebar-pm45 .esb-search {
+  padding: 0 var(--pm45-3) var(--pm45-2);
+}
+
+.enterprise-sidebar-pm45 .esb-search-field {
+  width: 100%;
+  height: 36px;
+  gap: 10px;
+  padding: 0 12px;
+  border-radius: var(--ds-radius-md);
+  border: 1px solid color-mix(in srgb, var(--ds-sidebar-text) 12%, transparent);
+  background: color-mix(in srgb, var(--ds-sidebar-text) 4%, transparent);
+}
+
+.enterprise-sidebar-pm45 .esb-search-field input {
+  font-size: var(--pm45-caption);
+  color: var(--ds-sidebar-text);
+}
+
+.enterprise-sidebar-pm45 .esb-search-field input::placeholder {
+  color: var(--ds-sidebar-muted);
+}
+
+.enterprise-sidebar-pm45 .esb-sep {
+  height: 1px;
+  margin: 0 var(--pm45-3) var(--pm45-2);
+  background: color-mix(in srgb, var(--ds-sidebar-text) 10%, transparent);
+  flex-shrink: 0;
+}
+
+.enterprise-sidebar-pm45 .esb-nav {
+  padding: 0 var(--pm45-3);
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.enterprise-sidebar-pm45 .esb-home {
+  margin-bottom: var(--pm45-2);
+}
+
+.enterprise-sidebar-pm45 .esb-group {
+  margin-bottom: var(--pm45-3);
+  gap: 4px;
+}
+
+.enterprise-sidebar-pm45 .esb-group-toggle {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--ds-sidebar-muted);
+}
+
+.enterprise-sidebar-pm45 .esb-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0 0 4px;
+}
+
+.enterprise-sidebar-pm45 .esb-item {
+  gap: 12px;
+  height: var(--esb-item-h);
+  min-height: var(--esb-item-h);
+  padding: 0 10px;
+  border-radius: var(--ds-radius-md);
+  font-size: var(--pm45-caption);
+  font-weight: 500;
+  color: var(--ds-sidebar-muted);
+}
+
+.enterprise-sidebar-pm45 .esb-item:hover {
+  background: color-mix(in srgb, var(--ds-sidebar-text) 6%, transparent);
+  color: var(--ds-sidebar-text);
+}
+
+.enterprise-sidebar-pm45 .esb-item.is-active {
+  background: color-mix(in srgb, var(--ds-sidebar-text) 10%, transparent);
+  color: var(--ds-text-on-primary, #fff);
+  font-weight: 600;
+}
+
+.enterprise-sidebar-pm45 .esb-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ds-sidebar-text) 50%, transparent);
+}
+
+.enterprise-sidebar-pm45 .esb-section-label {
+  margin: 0 8px 8px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-sidebar-muted);
+}
+
+.enterprise-sidebar-pm45 .esb-empty-fav {
+  margin: 0 8px;
+  font-size: var(--pm45-caption);
+  color: var(--ds-sidebar-muted);
+  opacity: 0.7;
+}
+
+.enterprise-sidebar-pm45 .esb-fav-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.enterprise-sidebar-pm45 .esb-fav-row .esb-item {
+  flex: 1;
+}
+
+.enterprise-sidebar-pm45 .esb-fav-remove {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ds-sidebar-muted);
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  border-radius: var(--ds-radius-sm);
+  opacity: 0;
+}
+
+.enterprise-sidebar-pm45 .esb-fav-row:hover .esb-fav-remove {
+  opacity: 1;
+}
+
+.enterprise-sidebar-pm45 .esb-footer {
+  padding: var(--pm45-2) var(--pm45-3) var(--pm45-3);
+  border-top: none;
+  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.enterprise-sidebar-pm45 .esb-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.enterprise-sidebar-pm45 .esb-avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 0.6875rem;
+}
+
+.enterprise-sidebar-pm45 .esb-profile-name {
+  font-size: var(--pm45-caption);
+  font-weight: 600;
+}
+
+.enterprise-sidebar-pm45 .esb-profile-role {
+  font-size: 0.6875rem;
+  color: var(--ds-sidebar-muted);
+}
+
+.enterprise-sidebar-pm45 .esb-logout {
+  height: 34px;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--ds-sidebar-text) 12%, transparent);
+  border-radius: var(--ds-radius-md);
+  background: transparent;
+  color: var(--ds-sidebar-muted);
+  font-size: var(--pm45-caption);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.enterprise-sidebar-pm45 .esb-logout:hover {
+  background: color-mix(in srgb, var(--ds-sidebar-text) 6%, transparent);
+  color: var(--ds-sidebar-text);
+}
+
+/* ─── Page header único ─── */
+.erp-shell-pm45 .page-header-pm43,
+.erp-shell-pm45 .page-topbar,
+.erp-shell-pm45 .topbar.page-topbar {
+  padding: 0 0 var(--pm45-2);
+  margin-bottom: var(--pm45-2);
+  border-bottom: 1px solid var(--ds-border);
+  gap: 8px;
+}
+
+.erp-shell-pm45 .page-chrome-bar {
+  display: none !important;
+}
+
+.erp-shell-pm45 .page-topbar h1,
+.erp-shell-pm45 .page-header-pm43 h1 {
+  font-size: var(--pm45-h1) !important;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.erp-shell-pm45 .page-header-desc,
+.erp-shell-pm45 .topbar-sub {
+  font-size: var(--pm45-caption);
+  color: var(--ds-text-muted);
+  margin: 6px 0 0;
+  max-width: 40rem;
+}
+
+.erp-shell-pm45 .breadcrumbs {
+  font-size: var(--pm45-caption);
+  color: var(--ds-text-muted);
+}
+
+.erp-shell-pm45 .page-header-experience .page-experience-q,
+.erp-shell-pm45 .page-header-help {
+  display: none;
+}
+
+/* ─── Tipografía ─── */
+.erp-shell-pm45 .erp-content h2,
+.erp-shell-pm45 .section-title {
+  font-size: var(--pm45-h2);
+  font-weight: 700;
+  margin: 0 0 var(--pm45-2);
+}
+
+.erp-shell-pm45 .erp-content h3,
+.erp-shell-pm45 .panel > h3 {
+  font-size: var(--pm45-h3);
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.erp-shell-pm45 .muted,
+.erp-shell-pm45 .kpi-label,
+.erp-shell-pm45 .caption {
+  font-size: var(--pm45-caption);
+  color: var(--ds-text-muted);
+}
+
+/* ─── Cards unificadas ─── */
+.erp-shell-pm45 .card,
+.erp-shell-pm45 .panel,
+.erp-shell-pm45 .page-section,
+.erp-shell-pm45 .kpi-card,
+.erp-shell-pm45 .ews-card,
+.erp-shell-pm45 .eic-live-card,
+.erp-shell-pm45 .admin-hub-card {
+  border: 1px solid var(--ds-border) !important;
+  border-radius: var(--ds-radius-md) !important;
+  box-shadow: none !important;
+  background: var(--ds-surface);
+}
+
+.erp-shell-pm45 .kpi-card,
+.erp-shell-pm45 .panel {
+  padding: var(--pm45-2);
+}
+
+.erp-shell-pm45 .kpi-grid,
+.erp-shell-pm45 .page-summary {
+  gap: var(--pm45-2);
+  margin-bottom: var(--pm45-3);
+}
+
+.erp-shell-pm45 .page-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pm45-2);
+}
+
+.erp-shell-pm45 .page-toolbar {
+  margin-bottom: 0;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  min-height: 0;
+}
+
+/* ─── Botones: solo 3 estilos ─── */
+.erp-shell-pm45 .btn {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--ds-radius-md);
+  font-size: var(--pm45-caption);
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.erp-shell-pm45 .btn-primary {
+  background: var(--ds-primary);
+  color: var(--ds-text-on-primary);
+  border-color: var(--ds-primary);
+}
+
+.erp-shell-pm45 .btn-primary:hover {
+  background: var(--ds-primary-hover);
+}
+
+.erp-shell-pm45 .btn:not(.btn-primary):not(.btn-ghost):not(.btn-danger),
+.erp-shell-pm45 .btn-secondary {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border-color: var(--ds-border);
+}
+
+.erp-shell-pm45 .btn-ghost {
+  background: transparent;
+  color: var(--ds-text-secondary);
+  border-color: transparent;
+}
+
+.erp-shell-pm45 .btn-ghost:hover {
+  background: var(--ds-surface-sunken);
+  color: var(--ds-text);
+}
+
+/* ─── Tabs Enterprise — Implementación ─── */
+.eic-enterprise-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface-sunken);
+  margin-bottom: var(--pm45-2);
+}
+
+.eic-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--ds-radius-md);
+  border: 1px solid transparent;
+  color: var(--ds-text-muted);
+  font-size: var(--pm45-caption);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  white-space: nowrap;
+}
+
+.eic-tab:hover {
+  color: var(--ds-text);
+  background: var(--ds-surface);
+}
+
+.eic-tab.is-active {
+  color: var(--ds-text);
+  background: var(--ds-surface);
+  border-color: var(--ds-border);
+  box-shadow: var(--ds-shadow-xs);
+}
+
+.eic-tab-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.eic-tab.is-active .eic-tab-icon {
+  opacity: 1;
+  color: var(--ds-primary);
+}
+
+/* Legacy eic links → hide if any remain */
+.erp-shell-pm45 .eic-section-nav:not(.eic-enterprise-tabs) {
+  display: none;
+}
+
+/* Offline banner compact */
+.erp-shell-pm45 .offline-banner {
+  margin: 0;
+  border-radius: 0;
+}
+
+/* Grid feel */
+.erp-shell-pm45 .split-layout {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--pm45-2);
+}
+
+.erp-shell-pm45 .split-layout > * {
+  grid-column: span 6;
+}
+
+@media (max-width: 900px) {
+  .erp-shell-pm45 .split-layout > * {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 768px) {
+  .erp-shell-pm45 .erp-content {
+    padding: var(--pm45-2);
+  }
+}

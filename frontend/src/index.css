@@ -51,3 +51,5 @@ a:hover {
 @import './design-system/enterprise-sidebar.css';
 /* PM-43 — Enterprise Shell Redesign */
 @import './design-system/enterprise-shell-pm43.css';
+/* PM-45 — Enterprise Shell (única estructura, wins last) */
+@import './design-system/enterprise-shell-pm45.css';
