@@ -4,21 +4,29 @@
    ========================================================= */
 
 :root {
-  --sidebar-w: 280px;
+  --sidebar-w: 0px;
   --esb-item-h: 40px;
   --esb-group-h: 40px;
   --esb-pad-x: 12px;
   --esb-gap: 4px;
-  --esb-active-bg: color-mix(in srgb, var(--ds-sidebar-text) 10%, transparent);
   --esb-hover-bg: color-mix(in srgb, var(--ds-sidebar-text) 6%, transparent);
   --esb-border: color-mix(in srgb, var(--ds-sidebar-text) 10%, transparent);
   --esb-accent-bar: color-mix(in srgb, var(--ds-sidebar-text) 72%, transparent);
+  --esb-active-bg: color-mix(in srgb, var(--ds-sidebar-text) 10%, transparent);
 }
 
-/* Shell offset follows --sidebar-w */
+/* PM-46: sidebar fijo retirado — no reservar columna */
 .erp-main {
-  margin-left: var(--sidebar-w, 280px);
-  transition: margin-left 160ms ease;
+  margin-left: 0;
+  transition: none;
+}
+
+.sidebar.enterprise-sidebar {
+  display: none !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
 }
 
 .sidebar.enterprise-sidebar {

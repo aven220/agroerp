@@ -15,7 +15,7 @@
   --pm45-h3: 1.0625rem;
   --pm45-body: 0.9375rem;
   --pm45-caption: 0.75rem;
-  --sidebar-w: 280px;
+  --sidebar-w: 0px;
   --esb-pad-x: 24px;
   --esb-item-h: 40px;
 }
@@ -29,7 +29,7 @@
 }
 
 .erp-shell-pm45 .erp-main {
-  margin-left: var(--sidebar-w, 280px);
+  margin-left: 0;
   min-height: 100dvh;
 }
 

@@ -1,1 +1,1 @@
-export { SmartSidebar as Sidebar } from './SmartSidebar';
+export { NavigationDrawer as Sidebar, NavMenuButton } from './NavigationDrawer';

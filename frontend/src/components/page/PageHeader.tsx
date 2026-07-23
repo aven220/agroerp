@@ -8,6 +8,7 @@ import { loadCompanyProfile } from '../../lib/companyProfile';
 import { useAuth } from '../../context/AuthContext';
 import { useExperienceCenterOptional } from '../../context/ExperienceCenterContext';
 import { Breadcrumbs } from '../layout/Breadcrumbs';
+import { NavMenuButton } from '../layout/NavigationDrawer';
 
 export interface PageHeaderProps {
   title: string;
@@ -18,9 +19,7 @@ export interface PageHeaderProps {
   actions?: React.ReactNode;
   breadcrumb?: React.ReactNode;
   showExperience?: boolean;
-  /** ISO o texto libre; si omitido, usa hora de montaje de la página */
   lastUpdated?: string;
-  /** Franja empresa/centro (oculta por defecto en PM-43) */
   showChrome?: boolean;
 }
 
@@ -39,7 +38,7 @@ function formatUpdated(value?: string, fallback?: Date): string {
 }
 
 /**
- * PM-43 — Header de contenido: breadcrumb · título · descripción · acciones.
+ * PM-46 — Header full-width: breadcrumb · título · acciones · menú (derecha).
  */
 export function PageHeader({
   title,
@@ -92,7 +91,12 @@ export function PageHeader({
   const crumbNode = breadcrumb ?? (crumbs.length > 0 ? <Breadcrumbs /> : null);
 
   return (
-    <header className="topbar page-topbar page-layout-header page-header-pm43">
+    <header className="topbar page-topbar page-layout-header page-header-pm46">
+      <div className="page-header-top">
+        {crumbNode ? <div className="page-header-breadcrumb">{crumbNode}</div> : <span />}
+        <NavMenuButton />
+      </div>
+
       {showChrome ? (
         <div className="page-chrome-bar" aria-label="Contexto de navegación">
           <span className="page-chrome-pill" title="Empresa">
@@ -108,8 +112,6 @@ export function PageHeader({
           </span>
         </div>
       ) : null}
-
-      {crumbNode ? <div className="page-header-breadcrumb">{crumbNode}</div> : null}
 
       <div className="page-topbar-main">
         <div className="page-header-title-row">

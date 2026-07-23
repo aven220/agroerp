@@ -53,3 +53,5 @@ a:hover {
 @import './design-system/enterprise-shell-pm43.css';
 /* PM-45 — Enterprise Shell (única estructura, wins last) */
 @import './design-system/enterprise-shell-pm45.css';
+/* PM-46 — Navigation Drawer derecha (reemplaza sidebar fijo) */
+@import './design-system/enterprise-nav-drawer-pm46.css';
