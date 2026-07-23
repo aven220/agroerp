@@ -57,5 +57,7 @@ a:hover {
 @import './design-system/enterprise-nav-drawer-pm46.css';
 /* PM-42 — Enterprise Navigation (TopBar + Sidebar fijo) — wins last */
 @import './design-system/enterprise-nav-pm42.css';
-/* PM-43 — Enterprise Navigation Rebuild (Header horizontal) — wins last */
+/* PM-43 — Enterprise Navigation Rebuild (Header horizontal) */
 @import './design-system/enterprise-nav-pm43.css';
+/* PM-50 — Enterprise Experience Rebuild (wins last) */
+@import './design-system/enterprise-ux-pm50.css';

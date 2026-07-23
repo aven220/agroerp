@@ -12,8 +12,8 @@ import { useAdaptiveWorkspaceOptional } from '../../context/AdaptiveWorkspacePro
 import { useUserPreferencesOptional } from '../../context/UserPreferencesContext';
 
 /**
- * PM-43 — Shell enterprise: Header horizontal + contenido full-width.
- * Sin sidebar. Sin drawer. Sin hamburguesa.
+ * PM-50 — Shell enterprise: header unificado + contenido full-width.
+ * Guided workspace como overlay (nunca reduce el área de trabajo).
  */
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const mobile = useMobileOptional();
@@ -30,7 +30,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div
-      className={`erp-shell erp-shell-pm43${isMobile ? ' erp-shell-mobile' : ''}${isTablet ? ' erp-shell-tablet' : ''}${showGuided ? ' guided-workspace-open' : ''}${focusMode ? ' erp-shell-focus' : ''}${chromeLevel === 'compact' ? ' erp-shell-compact-chrome' : ''}`}
+      className={`erp-shell erp-shell-pm43 erp-shell-pm50${isMobile ? ' erp-shell-mobile' : ''}${isTablet ? ' erp-shell-tablet' : ''}${showGuided ? ' guided-workspace-open' : ''}${focusMode ? ' erp-shell-focus' : ''}${chromeLevel === 'compact' ? ' erp-shell-compact-chrome' : ''}`}
     >
       <a href="#main-content" className="skip-link">
         Saltar al contenido
@@ -51,7 +51,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <SyncQueueSheet />
         </>
       ) : null}
-      {showGuided ? <GuidedWorkspacePanel /> : null}
+      {showGuided ? (
+        <>
+          <button
+            type="button"
+            className="gwp-backdrop"
+            aria-label="Cerrar espacio de trabajo"
+            onClick={() => gw?.setPanelOpen(false)}
+          />
+          <GuidedWorkspacePanel />
+        </>
+      ) : null}
       <CommandPalette />
     </div>
   );

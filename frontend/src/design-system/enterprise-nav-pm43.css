@@ -71,10 +71,7 @@
   min-width: 0;
 }
 
-/* Modo foco: oculta solo la fila de menú; el chrome (incl. Mi cuenta) permanece */
-.erp-shell-pm43.erp-shell-focus .enh-nav {
-  display: none !important;
-}
+/* Modo foco (legacy PM-43): no oculta nav del header PM-50 unificado */
 
 /* ─── Header ─── */
 .enh {

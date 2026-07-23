@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Building2,
@@ -51,47 +51,92 @@ import {
 import { seedCoffeeConfig } from '../api/coffee';
 import { seedEims } from '../api/eims';
 
-const EIC_SECTIONS = [
-  { to: '/implementacion', label: 'Resumen', end: true, icon: LayoutDashboard },
-  { to: '/implementacion/empresa', label: 'Empresa', icon: Building2 },
-  { to: '/implementacion/usuarios', label: 'Usuarios', icon: Users },
-  { to: '/implementacion/roles', label: 'Roles', icon: Shield },
-  { to: '/implementacion/configuracion', label: 'Configuración', icon: Settings },
-  { to: '/implementacion/procesos', label: 'Procesos', icon: Workflow },
-  { to: '/implementacion/documentos', label: 'Documentos', icon: FileText },
-  { to: '/implementacion/integraciones', label: 'Integraciones', icon: Link2 },
-  { to: '/implementacion/modulos', label: 'Paquete', icon: Package },
-  { to: '/implementacion/estado', label: 'Estado', icon: ClipboardList },
-  { to: '/implementacion/go-live', label: 'Go Live', icon: CheckCircle2 },
+type EicSection = {
+  to: string;
+  label: string;
+  end?: boolean;
+  icon: typeof LayoutDashboard;
+  phase: 0 | 1 | 2 | 3;
+};
+
+const EIC_SECTIONS: EicSection[] = [
+  { to: '/implementacion', label: 'Resumen', end: true, icon: LayoutDashboard, phase: 0 },
+  { to: '/implementacion/empresa', label: 'Empresa', icon: Building2, phase: 0 },
+  { to: '/implementacion/modulos', label: 'Paquete', icon: Package, phase: 0 },
+  { to: '/implementacion/usuarios', label: 'Usuarios', icon: Users, phase: 1 },
+  { to: '/implementacion/roles', label: 'Roles', icon: Shield, phase: 1 },
+  { to: '/implementacion/configuracion', label: 'Configuración', icon: Settings, phase: 1 },
+  { to: '/implementacion/procesos', label: 'Procesos', icon: Workflow, phase: 1 },
+  { to: '/implementacion/documentos', label: 'Documentos', icon: FileText, phase: 1 },
+  { to: '/implementacion/integraciones', label: 'Integraciones', icon: Link2, phase: 1 },
+  { to: '/implementacion/estado', label: 'Estado', icon: ClipboardList, phase: 2 },
+  { to: '/implementacion/go-live', label: 'Go Live', icon: CheckCircle2, phase: 3 },
 ];
 
+const EIC_PHASES = [
+  { id: 0, label: 'Preparar', meta: 'Empresa y paquete' },
+  { id: 1, label: 'Configurar', meta: 'Usuarios y operación' },
+  { id: 2, label: 'Verificar', meta: 'Checklist de estado' },
+  { id: 3, label: 'Go Live', meta: 'Certificación' },
+] as const;
+
+function useEicActivePhase(pathname: string): number {
+  const match = EIC_SECTIONS.find((s) =>
+    s.end ? pathname === s.to : pathname === s.to || pathname.startsWith(`${s.to}/`),
+  );
+  return match?.phase ?? 0;
+}
+
 function EicShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  const activePhase = useEicActivePhase(pathname);
+  const phaseSections = EIC_SECTIONS.filter((s) => s.phase === activePhase);
+
   return (
     <ImplementationEngineProvider>
       <Header
         title={title}
-        subtitle={subtitle ?? 'Centro de Implementación'}
+        subtitle={subtitle ?? 'Asistente de implementación'}
         description="Configure, verifique y certifique que la empresa está lista para operar."
         showExperience={false}
       />
       <PageLayout
         toolbar={
-          <nav className="eic-enterprise-tabs" aria-label="Secciones de implementación">
-            {EIC_SECTIONS.map((s) => {
-              const Icon = s.icon;
-              return (
-                <NavLink
-                  key={s.to}
-                  to={s.to}
-                  end={s.end}
-                  className={({ isActive }) => `eic-tab${isActive ? ' is-active' : ''}`}
-                >
-                  <Icon size={15} strokeWidth={1.75} className="eic-tab-icon" aria-hidden />
-                  <span className="eic-tab-label">{s.label}</span>
-                </NavLink>
-              );
-            })}
-          </nav>
+          <div className="eic-assistant">
+            <ol className="eic-phases" aria-label="Fases de implementación">
+              {EIC_PHASES.map((phase) => {
+                const first = EIC_SECTIONS.find((s) => s.phase === phase.id);
+                const isActive = phase.id === activePhase;
+                return (
+                  <li key={phase.id} className={`eic-phase${isActive ? ' is-active' : ''}`}>
+                    {first ? (
+                      <Link to={first.to} className="eic-phase-link">
+                        <span className="eic-phase-step">Paso {phase.id + 1}</span>
+                        <span className="eic-phase-label">{phase.label}</span>
+                        <span className="eic-phase-meta">{phase.meta}</span>
+                      </Link>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ol>
+            <nav className="eic-step-nav" aria-label="Secciones de la fase">
+              {phaseSections.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <NavLink
+                    key={s.to}
+                    to={s.to}
+                    end={s.end}
+                    className={({ isActive }) => `eic-step-link${isActive ? ' is-active' : ''}`}
+                  >
+                    <Icon size={14} strokeWidth={1.75} aria-hidden />
+                    <span>{s.label}</span>
+                  </NavLink>
+                );
+              })}
+            </nav>
+          </div>
         }
       >
         {children}
@@ -106,7 +151,9 @@ function StatusBadge({ status }: { status: DomainStatus }) {
 
 function DomainHelpBlock({ domain }: { domain: ImplementationDomain }) {
   return (
-    <dl className="eic-help-dl">
+    <details className="eic-help-details">
+      <summary>¿Por qué importa este paso?</summary>
+      <dl className="eic-help-dl">
       <div>
         <dt>¿Por qué es necesaria?</dt>
         <dd>{domain.help.why}</dd>
@@ -123,7 +170,8 @@ function DomainHelpBlock({ domain }: { domain: ImplementationDomain }) {
         <dt>¿Cuánto tarda normalmente?</dt>
         <dd>{domain.help.duration}</dd>
       </div>
-    </dl>
+      </dl>
+    </details>
   );
 }
 

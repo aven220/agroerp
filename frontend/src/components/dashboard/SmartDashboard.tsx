@@ -429,19 +429,19 @@ function FrequentBlock({
 
   const favItems = favorites.slice(0, 5).map((f) => ({
     id: `f-${f.id}`,
-    label: `${f.icon} ${f.label}`,
+    label: f.label,
     meta: 'Favorito',
     to: f.to,
   }));
   const histItems = navHistory.slice(0, 5).map((h) => ({
     id: `h-${h.id}`,
-    label: `${h.icon} ${h.label}`,
+    label: h.label,
     meta: 'Reciente',
     to: h.to,
   }));
   const searchItems = recentSearches.slice(0, 3).map((q, i) => ({
     id: `s-${i}`,
-    label: `⌕ ${q}`,
+    label: q,
     meta: 'Búsqueda',
   }));
 
@@ -551,7 +551,7 @@ export function SmartDashboard({ forceRole }: { forceRole?: WorkspaceRole }) {
     <>
       <PageHeader
         title="Inicio"
-        subtitle={`${roleLabel} · su trabajo de hoy`}
+        subtitle={`${firstName}, aquí está su trabajo de hoy · ${roleLabel}`}
         description={guide.what}
         help={guide.next}
         nextStep={guide.primary}

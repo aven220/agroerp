@@ -19,8 +19,8 @@ export interface PageHeaderProps {
 }
 
 /**
- * PM-42 — Header de página (bajo el TopBar).
- * Breadcrumb · Título · Acciones. Sin hamburguesa. Sin ayuda fija.
+ * PM-50 — Frame de página enterprise.
+ * Breadcrumb · Título grande · Subtítulo · Acciones. Ayuda solo on-demand.
  */
 export function PageHeader({
   title,
@@ -38,7 +38,7 @@ export function PageHeader({
   const helpText = help ?? auto?.help;
   const step = nextStep ?? auto?.nextStep;
   const displayTitle = humanizeCopy(title);
-  const displaySubtitle = subtitle ? humanizeCopy(subtitle) : undefined;
+  const displaySubtitle = subtitle ? humanizeCopy(subtitle) : desc ? humanizeCopy(desc) : undefined;
   const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
@@ -47,9 +47,10 @@ export function PageHeader({
 
   const crumbs = useMemo(() => buildBreadcrumbs(pathname), [pathname]);
   const crumbNode = breadcrumb ?? (crumbs.length > 0 ? <Breadcrumbs /> : null);
+  const showHelp = showExperience && (helpText || step);
 
   return (
-    <header className="topbar page-topbar page-layout-header page-header-pm42">
+    <header className="topbar page-topbar page-layout-header page-header-pm42 page-header-pm50">
       {crumbNode ? <div className="page-header-breadcrumb">{crumbNode}</div> : null}
 
       <div className="page-topbar-main">
@@ -57,12 +58,23 @@ export function PageHeader({
           <div className="page-header-titles">
             <h1>{displayTitle}</h1>
             {displaySubtitle ? <p className="topbar-sub">{displaySubtitle}</p> : null}
-            {desc ? <p className="page-header-desc">{humanizeCopy(desc)}</p> : null}
           </div>
-          {actions ? <div className="topbar-right page-actions">{actions}</div> : null}
+          <div className="topbar-right page-actions">
+            {showHelp ? (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm page-header-help-toggle"
+                aria-expanded={helpOpen}
+                onClick={() => setHelpOpen((v) => !v)}
+              >
+                {helpOpen ? 'Cerrar ayuda' : 'Ayuda'}
+              </button>
+            ) : null}
+            {actions}
+          </div>
         </div>
 
-        {showExperience && (helpText || step) ? (
+        {helpOpen && showHelp ? (
           <div className="page-header-experience">
             {step ? (
               <p className="page-header-next">
@@ -70,24 +82,12 @@ export function PageHeader({
               </p>
             ) : null}
             {helpText ? (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm page-header-help-toggle"
-                  aria-expanded={helpOpen}
-                  onClick={() => setHelpOpen((v) => !v)}
-                >
-                  {helpOpen ? 'Ocultar ayuda' : 'Ayuda'}
-                </button>
-                {helpOpen ? (
-                  <div className="page-header-help-detail">
-                    <p>{humanizeCopy(helpText)}</p>
-                    <p>
-                      <Link to="/ayuda">Ir al Centro de ayuda</Link>
-                    </p>
-                  </div>
-                ) : null}
-              </>
+              <div className="page-header-help-detail">
+                <p>{humanizeCopy(helpText)}</p>
+                <p>
+                  <Link to="/ayuda">Ir al Centro de ayuda</Link>
+                </p>
+              </div>
             ) : null}
           </div>
         ) : null}

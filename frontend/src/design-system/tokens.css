@@ -93,7 +93,7 @@
   --ds-radius-full: 9999px;
 
   /* Typography */
-  --ds-font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --ds-font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --ds-font-mono: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
 
   --ds-text-xs: 0.75rem;
