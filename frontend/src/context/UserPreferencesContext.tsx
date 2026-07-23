@@ -22,6 +22,8 @@ export interface UserPreferences {
   numberFormat: NumberFormat;
   timezone: string;
   tipsEnabled: boolean;
+  /** PM-42 — Asistente / jornada guiada. Por defecto OFF. */
+  assistantEnabled: boolean;
   onboardingDone: boolean;
   reducedMotion: 'system' | 'reduce' | 'no-preference';
 }
@@ -33,7 +35,8 @@ const DEFAULTS: UserPreferences = {
   dateFormat: 'dd/MM/yyyy',
   numberFormat: 'es-CO',
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Bogota',
-  tipsEnabled: true,
+  tipsEnabled: false,
+  assistantEnabled: false,
   onboardingDone: false,
   reducedMotion: 'system',
 };

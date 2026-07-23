@@ -136,7 +136,7 @@
 
 .erp-main {
   flex: 1;
-  /* PM-46: sin sidebar fijo — contenido full-width */
+  /* Offset set by PM-42 shell flex layout; legacy margin unused */
   margin-left: 0;
   min-height: 100dvh;
   display: flex;

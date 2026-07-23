@@ -107,8 +107,20 @@ export function UserPreferencesDrawer() {
           <label className="ds-prefs-label ds-checkbox">
             <input
               type="checkbox"
+              checked={prefs.assistantEnabled}
+              onChange={(e) => prefs.setPreference('assistantEnabled', e.target.checked)}
+            />
+            Mostrar asistente
+          </label>
+          <p className="ds-prefs-hint muted">
+            Por defecto desactivado. La ayuda permanente está en el Centro de ayuda.
+          </p>
+          <label className="ds-prefs-label ds-checkbox">
+            <input
+              type="checkbox"
               checked={prefs.tipsEnabled}
               onChange={(e) => prefs.setPreference('tipsEnabled', e.target.checked)}
+              disabled={!prefs.assistantEnabled}
             />
             Mostrar consejos contextuales
           </label>

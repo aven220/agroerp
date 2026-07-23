@@ -7,7 +7,6 @@
   --nd-w: 380px;
   --nd-duration: 200ms;
   --nd-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --sidebar-w: 0px !important;
 }
 
 /* ─── Full-width shell ─── */

@@ -4,7 +4,7 @@
    ========================================================= */
 
 :root {
-  --sidebar-w: 0px;
+  --sidebar-w: 264px;
   --esb-item-h: 40px;
   --esb-group-h: 40px;
   --esb-pad-x: 12px;
@@ -15,13 +15,14 @@
   --esb-active-bg: color-mix(in srgb, var(--ds-sidebar-text) 10%, transparent);
 }
 
-/* PM-46: sidebar fijo retirado — no reservar columna */
+/* PM-42: layout vía flex en .erp-body — no forzar margin aquí */
 .erp-main {
   margin-left: 0;
   transition: none;
 }
 
-.sidebar.enterprise-sidebar {
+/* Legacy sidebar class oculto salvo PM-42 */
+.sidebar.enterprise-sidebar:not(.enterprise-sidebar-pm42) {
   display: none !important;
   pointer-events: none !important;
   width: 0 !important;
