@@ -112,10 +112,26 @@ class SyncEngine @Inject constructor(
             )
             localEventService.markAllPendingAsSynced()
 
+            val stillPending = submissionDao.getPending().size
+            val message = when {
+                stillPending > 0 && summary.submissionsSynced == 0 ->
+                    "Sync terminó pero $stillPending envío(s) siguen pendientes. Revise errores en la cola."
+                stillPending > 0 ->
+                    "Sincronizados ${summary.submissionsSynced}. Quedan $stillPending pendiente(s)."
+                else -> "Sincronización completada"
+            }
+            val error = if (stillPending > 0 && summary.submissionsSynced == 0) {
+                submissionDao.getPending().mapNotNull { it.lastError }.firstOrNull()
+                    ?: "Los envíos fueron rechazados por el servidor"
+            } else {
+                null
+            }
+
             _progress.value = SyncProgress(
                 isRunning = false,
                 phase = "done",
-                message = "Sincronización completada",
+                message = message,
+                lastError = error,
                 lastSyncAt = now,
             )
             return Result.success(summary)
@@ -189,15 +205,20 @@ class SyncEngine @Inject constructor(
 
         val resolved = pending.map { resolveMediaRefs(it) }
         val items = resolved.map { entity ->
+            val rawData: Map<String, Any?> = JsonHelper.fromJson(entity.dataJson)
+            // Quitar accuracy de geos en data: umbrales del formulario (p.ej. 50m)
+            // rechazaban GPS real de campo y dejaban envíos eternamente pendientes.
+            val data = stripGeoAccuracy(rawData)
+            val gpsFromEntity = entity.gpsLocationJson?.let {
+                JsonHelper.fromJson<Map<String, Any?>>(it)
+            }
             CaptureSyncSubmissionItem(
                 formId = entity.formId,
                 // Solo enviar formKey si existe: backends antiguos rechazan la propiedad.
                 formKey = entity.formKey.trim().takeIf { it.isNotEmpty() },
-                data = JsonHelper.fromJson(entity.dataJson),
+                data = data,
                 externalId = entity.externalId,
-                gpsLocation = entity.gpsLocationJson?.let {
-                    JsonHelper.fromJson(it)
-                },
+                gpsLocation = gpsFromEntity ?: firstGeoInData(rawData),
                 gpsTrack = entity.gpsTrackJson?.let {
                     JsonHelper.fromJson(it)
                 },
@@ -319,6 +340,58 @@ class SyncEngine @Inject constructor(
             }
         }
         return if (changed) entity.copy(dataJson = JsonHelper.toJson(data)) else entity
+    }
+
+    private fun stripGeoAccuracy(data: Map<String, Any?>): Map<String, Any?> {
+        val out = data.toMutableMap()
+        for ((key, value) in data) {
+            when (value) {
+                is Map<*, *> -> {
+                    if (value["lat"] is Number && value["lng"] is Number) {
+                        out[key] = value
+                            .mapKeys { it.key.toString() }
+                            .filterKeys { it != "accuracy" }
+                            .mapValues { it.value }
+                    }
+                }
+                is List<*> -> {
+                    out[key] = value.map { item ->
+                        val map = item as? Map<*, *> ?: return@map item
+                        if (map["lat"] is Number && map["lng"] is Number) {
+                            map.mapKeys { it.key.toString() }
+                                .filterKeys { it != "accuracy" }
+                                .mapValues { it.value }
+                        } else {
+                            item
+                        }
+                    }
+                }
+            }
+        }
+        return out
+    }
+
+    private fun firstGeoInData(data: Map<String, Any?>): Map<String, Any?>? {
+        for (value in data.values) {
+            val geo = asGeoMap(value)
+            if (geo != null) return geo
+            if (value is List<*>) {
+                for (item in value) {
+                    val nested = asGeoMap(item)
+                    if (nested != null) return nested
+                }
+            }
+        }
+        return null
+    }
+
+    private fun asGeoMap(value: Any?): Map<String, Any?>? {
+        val map = value as? Map<*, *> ?: return null
+        val lat = (map["lat"] as? Number)?.toDouble() ?: return null
+        val lng = (map["lng"] as? Number)?.toDouble() ?: return null
+        val out = mutableMapOf<String, Any?>("lat" to lat, "lng" to lng)
+        (map["accuracy"] as? Number)?.let { out["accuracy"] = it.toDouble() }
+        return out
     }
 
     private suspend fun resolveMediaId(localId: String): String {

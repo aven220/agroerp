@@ -249,11 +249,15 @@ export class FormValidationEngine {
     const result: { lat: number; lng: number; accuracy?: number } = { lat, lng };
     if (geo.accuracy !== undefined) {
       result.accuracy = Number(geo.accuracy);
+      // maxAccuracyMeters is advisory for field capture: outdoor GPS often
+      // reports 30–100m and rejecting it left Android sync permanently pending.
       const maxAcc = field.validation?.maxAccuracyMeters;
-      if (maxAcc && result.accuracy > maxAcc) {
-        throw new Error(
-          `Field "${field.key}" GPS accuracy exceeds ${maxAcc}m`,
-        );
+      if (
+        maxAcc &&
+        Number.isFinite(result.accuracy) &&
+        result.accuracy > maxAcc
+      ) {
+        // keep coordinates; do not fail the submission
       }
     }
     if (field.validation?.requireGps && !result.accuracy) {

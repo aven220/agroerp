@@ -143,7 +143,20 @@ class FormFillViewModel @Inject constructor(
         val form = _state.value.form ?: return
         viewModelScope.launch {
             _state.update { it.copy(isSubmitting = true, error = null) }
-            val gps = _state.value.currentGps
+            var gps = _state.value.currentGps
+            if (!draft && form.schema.settings.requireGps && gps == null) {
+                gps = locationService.getCurrentLocation()
+                _state.update { it.copy(currentGps = gps) }
+            }
+            if (!draft && form.schema.settings.requireGps && gps == null) {
+                _state.update {
+                    it.copy(
+                        isSubmitting = false,
+                        error = "Se requiere GPS. Active la ubicación e intente de nuevo.",
+                    )
+                }
+                return@launch
+            }
             val result = submissionRepository.submit(
                 form = form,
                 data = _state.value.values,

@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   ConflictException,
+  HttpException,
   Inject,
   Injectable,
   Logger,
@@ -451,7 +453,7 @@ export class FormSubmissionsService {
         results.push({
           externalId: item.externalId,
           status: 'error',
-          error: (err as Error).message,
+          error: this.extractSyncError(err),
         });
       }
     }
@@ -519,6 +521,25 @@ export class FormSubmissionsService {
       }
     }
     return refs;
+  }
+
+  private extractSyncError(err: unknown): string {
+    if (err instanceof BadRequestException || err instanceof HttpException) {
+      const response = err.getResponse();
+      if (typeof response === 'string') return response;
+      if (response && typeof response === 'object') {
+        const body = response as {
+          message?: string | string[];
+          errors?: string[];
+        };
+        if (Array.isArray(body.errors) && body.errors.length > 0) {
+          return body.errors.join('; ');
+        }
+        if (Array.isArray(body.message)) return body.message.join('; ');
+        if (typeof body.message === 'string') return body.message;
+      }
+    }
+    return err instanceof Error ? err.message : 'Unknown sync error';
   }
 
   private looksLikeUuid(value: string): boolean {

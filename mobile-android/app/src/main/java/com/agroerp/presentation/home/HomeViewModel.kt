@@ -25,15 +25,24 @@ data class HomeUiState(
     val isLoading: Boolean = true,
     val isOnline: Boolean = false,
     val pendingSubmissions: Int = 0,
+    val pendingItems: List<PendingSubmissionUi> = emptyList(),
     val isSyncing: Boolean = false,
     val syncMessage: String = "",
     val syncError: String? = null,
 )
 
+data class PendingSubmissionUi(
+    val externalId: String,
+    val formKey: String,
+    val status: String,
+    val error: String?,
+    val createdAt: Long,
+)
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val formRepository: FormRepository,
-    submissionRepository: SubmissionRepository,
+    private val submissionRepository: SubmissionRepository,
     networkMonitor: NetworkMonitor,
     private val authRepository: AuthRepository,
     private val syncEngine: SyncEngine,
@@ -50,18 +59,32 @@ class HomeViewModel @Inject constructor(
         FormRepository.mapDynamicFormsToDefinitions(dynamicForms, legacyForms)
     }
 
+    private val pendingItemsFlow = submissionRepository.submissionsFlow
+
     val uiState: StateFlow<HomeUiState> = combine(
         captureFormsFlow,
-        submissionRepository.pendingCountFlow,
+        pendingItemsFlow,
         networkMonitor.connectivityFlow,
         _syncState,
         _isLoading,
-    ) { forms, pending, online, sync, loading ->
+    ) { forms, submissions, online, sync, loading ->
+        val pending = submissions.filter {
+            it.syncState.name in setOf("PENDING", "FAILED", "SYNCING")
+        }
         HomeUiState(
             forms = forms,
             isLoading = loading,
             isOnline = online,
-            pendingSubmissions = pending,
+            pendingSubmissions = pending.size,
+            pendingItems = pending.map {
+                PendingSubmissionUi(
+                    externalId = it.externalId,
+                    formKey = it.formKey,
+                    status = it.syncState.name,
+                    error = it.errorMessage,
+                    createdAt = it.createdAt,
+                )
+            },
             isSyncing = sync.isRunning,
             syncMessage = sync.message,
             syncError = sync.lastError,

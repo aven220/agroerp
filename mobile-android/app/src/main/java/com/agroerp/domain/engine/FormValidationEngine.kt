@@ -166,7 +166,15 @@ class FormValidationEngine @Inject constructor(
         val lat = (map["lat"] as? Number)?.toDouble() ?: throw IllegalArgumentException("Invalid lat")
         val lng = (map["lng"] as? Number)?.toDouble() ?: throw IllegalArgumentException("Invalid lng")
         val result = mutableMapOf<String, Any?>("lat" to lat, "lng" to lng)
-        map["accuracy"]?.let { result["accuracy"] = (it as Number).toFloat() }
+        val accuracy = (map["accuracy"] as? Number)?.toFloat()
+        if (accuracy != null) {
+            result["accuracy"] = accuracy
+            val maxAcc = (field.validation?.get("maxAccuracyMeters") as? Number)?.toDouble()
+            // Advisory only: outdoor GPS often exceeds studio thresholds; still store the value.
+            if (maxAcc != null && accuracy > maxAcc) {
+                // do not block local submit — server accepts coordinates
+            }
+        }
         return result
     }
 
