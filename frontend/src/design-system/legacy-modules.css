@@ -2358,6 +2358,44 @@ a.ews-kpi:hover {
   overflow-y: auto;
 }
 
+.form-media-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form-media-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+.form-media-preview {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  background: #0f172a0a;
+  border-radius: 6px;
+}
+
+.form-media-preview-link {
+  display: block;
+}
+
+.form-media-missing {
+  font-size: 0.8rem;
+  color: var(--text-muted, #64748b);
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
 .form-submission-fields {
   font-size: 0.85rem;
 }

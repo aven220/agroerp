@@ -14,7 +14,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -25,18 +24,14 @@ data class HomeUiState(
     val isLoading: Boolean = true,
     val isOnline: Boolean = false,
     val pendingSubmissions: Int = 0,
-    val pendingItems: List<PendingSubmissionUi> = emptyList(),
+    val failedSubmissions: Int = 0,
     val isSyncing: Boolean = false,
     val syncMessage: String = "",
     val syncError: String? = null,
-)
-
-data class PendingSubmissionUi(
-    val externalId: String,
-    val formKey: String,
-    val status: String,
-    val error: String?,
-    val createdAt: Long,
+    val lastAttempted: Int = 0,
+    val lastSynced: Int = 0,
+    val lastFailed: Int = 0,
+    val lastRemaining: Int = 0,
 )
 
 @HiltViewModel
@@ -59,11 +54,9 @@ class HomeViewModel @Inject constructor(
         FormRepository.mapDynamicFormsToDefinitions(dynamicForms, legacyForms)
     }
 
-    private val pendingItemsFlow = submissionRepository.submissionsFlow
-
     val uiState: StateFlow<HomeUiState> = combine(
         captureFormsFlow,
-        pendingItemsFlow,
+        submissionRepository.submissionsFlow,
         networkMonitor.connectivityFlow,
         _syncState,
         _isLoading,
@@ -71,23 +64,20 @@ class HomeViewModel @Inject constructor(
         val pending = submissions.filter {
             it.syncState.name in setOf("PENDING", "FAILED", "SYNCING")
         }
+        val failed = pending.count { it.syncState.name == "FAILED" }
         HomeUiState(
             forms = forms,
             isLoading = loading,
             isOnline = online,
             pendingSubmissions = pending.size,
-            pendingItems = pending.map {
-                PendingSubmissionUi(
-                    externalId = it.externalId,
-                    formKey = it.formKey,
-                    status = it.syncState.name,
-                    error = it.errorMessage,
-                    createdAt = it.createdAt,
-                )
-            },
+            failedSubmissions = failed,
             isSyncing = sync.isRunning,
             syncMessage = sync.message,
             syncError = sync.lastError,
+            lastAttempted = sync.attempted,
+            lastSynced = sync.synced,
+            lastFailed = sync.failed,
+            lastRemaining = sync.remaining,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 

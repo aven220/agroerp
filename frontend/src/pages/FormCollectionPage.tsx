@@ -17,7 +17,11 @@ import {
   type SimpleColumn,
 } from '../components/page';
 import { listForms, listSubmissions, type FormSubmission } from '../api/forms';
-import { getResource } from '../api/files';
+import {
+  fetchFileContentObjectUrl,
+  getResource,
+  resourceHasContent,
+} from '../api/files';
 import { formatFormDate } from '../form-studio/form-lifecycle';
 import type { Resource } from '../types';
 import {
@@ -43,6 +47,7 @@ export function FormCollectionPage() {
   const [selected, setSelected] = useState<FormSubmission | null>(null);
   const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
   const [mediaResources, setMediaResources] = useState<Resource[]>([]);
+  const [mediaPreviews, setMediaPreviews] = useState<Record<string, string>>({});
   const [mediaLoading, setMediaLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -72,23 +77,46 @@ export function FormCollectionPage() {
   useEffect(() => {
     if (!selected) {
       setMediaResources([]);
+      setMediaPreviews((prev) => {
+        Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
+        return {};
+      });
       return;
     }
     const ids = collectMediaIds(selected);
     if (ids.length === 0) {
       setMediaResources([]);
+      setMediaPreviews((prev) => {
+        Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
+        return {};
+      });
       return;
     }
     let cancelled = false;
     setMediaLoading(true);
-    Promise.all(
-      ids.map((id) =>
-        getResource(id).catch(() => null),
-      ),
-    )
-      .then((rows) => {
+    Promise.all(ids.map((id) => getResource(id).catch(() => null)))
+      .then(async (rows) => {
+        const resources = rows.filter((r): r is Resource => Boolean(r));
+        if (cancelled) return;
+        setMediaResources(resources);
+        const previews: Record<string, string> = {};
+        await Promise.all(
+          resources.map(async (r) => {
+            if (!resourceHasContent(r)) return;
+            try {
+              previews[r.id] = await fetchFileContentObjectUrl(r.id);
+            } catch {
+              /* sin bytes aún */
+            }
+          }),
+        );
         if (!cancelled) {
-          setMediaResources(rows.filter((r): r is Resource => Boolean(r)));
+          setMediaPreviews((prev) => {
+            Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
+            return previews;
+          });
+        } else {
+          Object.values(previews).forEach((url) => URL.revokeObjectURL(url));
         }
       })
       .finally(() => {
@@ -302,14 +330,13 @@ export function FormCollectionPage() {
                     </div>
                   ))}
                 </dl>
-                <h4>Fotografías / archivos</h4>
+                <h4>Evidencias (fotos / firmas)</h4>
                 {mediaLoading ? (
                   <p className="muted">Cargando evidencias…</p>
                 ) : mediaResources.length === 0 ? (
                   <p className="muted">
-                    Sin archivos registrados en este envío. Hoy Android registra la
-                    referencia del archivo; la vista previa de la imagen (bytes)
-                    aún no está disponible en la plataforma.
+                    Sin evidencias en este envío. Si capturó foto o firma en Android,
+                    sincronice con la app actualizada (0.1.5+) y pulse Actualizar.
                   </p>
                 ) : (
                   <ul className="form-media-list">
@@ -323,19 +350,44 @@ export function FormCollectionPage() {
                           r.id.slice(0, 8),
                       );
                       const mime = String(
-                        meta.mimeType ?? data.mimeType ?? r.resourceType ?? 'archivo',
+                        meta.mimeType ?? data.mimeType ?? 'application/octet-stream',
                       );
-                      const fieldKey = meta.fieldKey ? String(meta.fieldKey) : null;
+                      const fieldKey = meta.fieldKey
+                        ? String(meta.fieldKey)
+                        : meta.mediaType
+                          ? String(meta.mediaType)
+                          : null;
+                      const preview = mediaPreviews[r.id];
+                      const hasContent = resourceHasContent(r);
                       return (
-                        <li key={r.id}>
-                          <strong>{filename}</strong>
-                          <span className="muted"> · {mime}</span>
-                          {fieldKey ? (
-                            <span className="muted"> · campo {fieldKey}</span>
-                          ) : null}
+                        <li key={r.id} className="form-media-item">
+                          {preview ? (
+                            <a href={preview} target="_blank" rel="noreferrer" className="form-media-preview-link">
+                              <img
+                                src={preview}
+                                alt={filename}
+                                className="form-media-preview"
+                              />
+                            </a>
+                          ) : (
+                            <div className="form-media-missing">
+                              {hasContent
+                                ? 'No se pudo cargar la vista previa'
+                                : 'Solo referencia — falta subir el archivo desde la app'}
+                            </div>
+                          )}
                           <div>
-                            <code>{r.id}</code>
+                            <strong>{filename}</strong>
+                            <span className="muted"> · {mime}</span>
+                            {fieldKey ? (
+                              <span className="muted"> · {fieldKey}</span>
+                            ) : null}
                           </div>
+                          {preview ? (
+                            <a className="btn btn-sm" href={preview} download={filename}>
+                              Descargar
+                            </a>
+                          ) : null}
                         </li>
                       );
                     })}

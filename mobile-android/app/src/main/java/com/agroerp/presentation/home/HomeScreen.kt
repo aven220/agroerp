@@ -147,11 +147,22 @@ private fun StatusBar(
                 if (isOnline) "En línea" else "Sin conexión — modo offline",
                 style = MaterialTheme.typography.labelMedium,
             )
-            if (pending > 0) {
-                Text("$pending envío(s) pendiente(s)", style = MaterialTheme.typography.bodySmall)
+            when {
+                isSyncing && message.isNotBlank() ->
+                    Text(message, style = MaterialTheme.typography.bodySmall)
+                message.isNotBlank() && (message.startsWith("Sincronizados") || message.startsWith("Todo")) ->
+                    Text(message, style = MaterialTheme.typography.bodySmall)
+                pending > 0 ->
+                    Text("$pending pendiente(s) por sincronizar", style = MaterialTheme.typography.bodySmall)
+                message.isNotBlank() ->
+                    Text(message, style = MaterialTheme.typography.bodySmall)
             }
-            if (message.isNotBlank()) Text(message, style = MaterialTheme.typography.bodySmall)
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            // Un solo resumen de error (no por envío)
+            if (!isSyncing) {
+                error?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
         }
         if (isSyncing) CircularProgressIndicator()
     }

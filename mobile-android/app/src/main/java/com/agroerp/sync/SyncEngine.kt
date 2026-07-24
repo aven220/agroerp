@@ -21,6 +21,9 @@ import com.agroerp.data.repository.CaptureRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,6 +36,14 @@ data class SyncProgress(
     val message: String = "",
     val lastError: String? = null,
     val lastSyncAt: Long? = null,
+    /** Envíos intentados en la última sincronización. */
+    val attempted: Int = 0,
+    /** Envíos OK (created/duplicate) en la última sincronización. */
+    val synced: Int = 0,
+    /** Envíos que fallaron en la última sincronización. */
+    val failed: Int = 0,
+    /** Envíos que siguen pendientes después de la última sincronización. */
+    val remaining: Int = 0,
 )
 
 @Singleton
@@ -78,16 +89,28 @@ class SyncEngine @Inject constructor(
             captureRepository.refreshMediaPendingQueue()
             captureRepository.refreshSubmissionQueue()
 
-            _progress.value = _progress.value.copy(phase = "media", message = "Subiendo archivos...")
+            _progress.value = _progress.value.copy(phase = "media", message = "Subiendo archivos…")
             summary.mediaUploaded = pushMediaFiles()
 
-            _progress.value = _progress.value.copy(phase = "submissions", message = "Sincronizando envíos...")
-            summary.submissionsSynced = pushSubmissions()
+            val pendingBefore = submissionDao.getPending().size
+            _progress.value = _progress.value.copy(
+                phase = "submissions",
+                message = if (pendingBefore > 0) {
+                    "Sincronizando $pendingBefore envío(s)…"
+                } else {
+                    "Sin envíos pendientes"
+                },
+                attempted = pendingBefore,
+            )
+            val push = pushSubmissions()
+            summary.submissionsAttempted = push.attempted
+            summary.submissionsSynced = push.synced
+            summary.submissionsFailed = push.failed
 
-            _progress.value = _progress.value.copy(phase = "pull", message = "Descargando eventos...")
+            _progress.value = _progress.value.copy(phase = "pull", message = "Descargando eventos…")
             summary.eventsPulled = pullEvents()
 
-            _progress.value = _progress.value.copy(phase = "forms", message = "Actualizando formularios...")
+            _progress.value = _progress.value.copy(phase = "forms", message = "Actualizando formularios…")
             captureRepository.downloadOfflinePackage(force = true)
                 .onSuccess { summary.formsDownloaded = it }
 
@@ -106,25 +129,31 @@ class SyncEngine @Inject constructor(
                 mapOf(
                     "mediaUploaded" to summary.mediaUploaded,
                     "submissionsSynced" to summary.submissionsSynced,
+                    "submissionsAttempted" to summary.submissionsAttempted,
+                    "submissionsFailed" to summary.submissionsFailed,
                     "eventsPulled" to summary.eventsPulled,
                     "formsDownloaded" to summary.formsDownloaded,
                 ),
             )
             localEventService.markAllPendingAsSynced()
 
-            val stillPending = submissionDao.getPending().size
+            val remaining = submissionDao.getPending().size
+            val attempted = summary.submissionsAttempted
+            val synced = summary.submissionsSynced
+            val failed = summary.submissionsFailed
             val message = when {
-                stillPending > 0 && summary.submissionsSynced == 0 ->
-                    "Sync terminó pero $stillPending envío(s) siguen pendientes. Revise errores en la cola."
-                stillPending > 0 ->
-                    "Sincronizados ${summary.submissionsSynced}. Quedan $stillPending pendiente(s)."
-                else -> "Sincronización completada"
+                attempted == 0 && remaining == 0 -> "Todo al día — nada pendiente"
+                attempted == 0 -> "$remaining pendiente(s). Pulse sincronizar para enviarlos."
+                failed == 0 && remaining == 0 -> "Sincronizados $synced de $attempted"
+                remaining > 0 -> "Sincronizados $synced de $attempted. Quedan $remaining. Al sincronizar de nuevo se reintentan."
+                else -> "Sincronizados $synced de $attempted"
             }
-            val error = if (stillPending > 0 && summary.submissionsSynced == 0) {
-                submissionDao.getPending().mapNotNull { it.lastError }.firstOrNull()
-                    ?: "Los envíos fueron rechazados por el servidor"
-            } else {
-                null
+            val error = when {
+                failed > 0 -> {
+                    val sample = submissionDao.getPending().mapNotNull { it.lastError }.firstOrNull()
+                    if (sample != null) "$failed con error. Ej.: $sample" else "$failed con error"
+                }
+                else -> null
             }
 
             _progress.value = SyncProgress(
@@ -133,12 +162,23 @@ class SyncEngine @Inject constructor(
                 message = message,
                 lastError = error,
                 lastSyncAt = now,
+                attempted = attempted,
+                synced = synced,
+                failed = failed,
+                remaining = remaining,
             )
             return Result.success(summary)
         } catch (e: Exception) {
+            val remaining = runCatching { submissionDao.getPending().size }.getOrDefault(0)
             _progress.value = SyncProgress(
                 isRunning = false,
                 lastError = e.message,
+                message = if (remaining > 0) {
+                    "Error de sincronización. Quedan $remaining pendiente(s)."
+                } else {
+                    e.message.orEmpty()
+                },
+                remaining = remaining,
             )
             return Result.failure(e)
         }
@@ -154,25 +194,48 @@ class SyncEngine @Inject constructor(
             captureRepository.updateMediaPending(syncing)
             try {
                 val file = File(media.localPath)
-                val response = api.registerFile(
-                    RegisterFileRequest(
-                        filename = media.filename,
-                        mimeType = media.mimeType,
-                        sizeBytes = file.length(),
-                        storageKey = "local://${media.id}",
-                        metadata = mapOf(
-                            "mediaType" to media.mediaType,
-                            "fieldKey" to media.fieldKey,
-                            "localPath" to media.localPath,
-                            "gps" to media.gpsLocationJson?.let {
-                                JsonHelper.fromJson<Map<String, Any?>>(it)
-                            },
+                if (!file.exists() || file.length() == 0L) {
+                    markMediaFailed(media, "Archivo local no encontrado")
+                    continue
+                }
+
+                // Reutilizar registro previo si el content falló antes
+                var resourceId = media.serverResourceId
+                if (resourceId.isNullOrBlank()) {
+                    val response = api.registerFile(
+                        RegisterFileRequest(
+                            filename = media.filename,
+                            mimeType = media.mimeType,
+                            sizeBytes = file.length(),
+                            storageKey = "pending://${media.id}",
+                            metadata = mapOf(
+                                "mediaType" to media.mediaType,
+                                "fieldKey" to media.fieldKey,
+                                "gps" to media.gpsLocationJson?.let {
+                                    JsonHelper.fromJson<Map<String, Any?>>(it)
+                                },
+                            ),
                         ),
-                    ),
+                    )
+                    if (!response.isSuccessful || response.body() == null) {
+                        markMediaFailed(media, "Register failed: ${response.code()}")
+                        continue
+                    }
+                    resourceId = response.body()!!.id
+                    mediaFileDao.update(media.copy(serverResourceId = resourceId))
+                }
+
+                val mediaType = media.mimeType.toMediaTypeOrNull()
+                    ?: "application/octet-stream".toMediaTypeOrNull()
+                val part = MultipartBody.Part.createFormData(
+                    "file",
+                    media.filename,
+                    file.asRequestBody(mediaType),
                 )
-                if (response.isSuccessful && response.body() != null) {
+                val upload = api.uploadFileContent(resourceId, part)
+                if (upload.isSuccessful) {
                     val synced = media.copy(
-                        serverResourceId = response.body()!!.id,
+                        serverResourceId = resourceId,
                         syncStatus = SyncQueueStatus.SYNCED,
                         lastError = null,
                     )
@@ -180,7 +243,10 @@ class SyncEngine @Inject constructor(
                     captureRepository.updateMediaPending(synced)
                     count++
                 } else {
-                    markMediaFailed(media, "Register failed: ${response.code()}")
+                    markMediaFailed(
+                        media.copy(serverResourceId = resourceId),
+                        "Upload content failed: ${upload.code()}",
+                    )
                 }
             } catch (e: Exception) {
                 markMediaFailed(media, e.message ?: "Upload error")
@@ -199,9 +265,15 @@ class SyncEngine @Inject constructor(
         captureRepository.updateMediaPending(failed)
     }
 
-    private suspend fun pushSubmissions(): Int {
+    private suspend fun pushSubmissions(): SubmissionPushResult {
         val pending = submissionDao.getPending()
-        if (pending.isEmpty()) return 0
+        if (pending.isEmpty()) return SubmissionPushResult()
+
+        val attempted = pending.size
+        _progress.value = _progress.value.copy(
+            message = "Sincronizando $attempted envío(s)…",
+            attempted = attempted,
+        )
 
         val resolved = pending.map { resolveMediaRefs(it) }
         val items = resolved.map { entity ->
@@ -269,6 +341,7 @@ class SyncEngine @Inject constructor(
         }
 
         var synced = 0
+        var failed = 0
         val resultsByExternal = syncResult.getOrThrow().results.associateBy { it.externalId }
         for (entity in resolved) {
             val result = resultsByExternal[entity.externalId]
@@ -285,17 +358,18 @@ class SyncEngine @Inject constructor(
                     synced++
                 }
                 else -> {
-                    val failed = entity.copy(
+                    val failedEntity = entity.copy(
                         syncStatus = SyncQueueStatus.FAILED,
                         retryCount = entity.retryCount + 1,
                         lastError = result?.error ?: "Unknown error",
                     )
-                    submissionDao.update(failed)
-                    captureRepository.updateSubmissionQueue(failed)
+                    submissionDao.update(failedEntity)
+                    captureRepository.updateSubmissionQueue(failedEntity)
+                    failed++
                 }
             }
         }
-        return synced
+        return SubmissionPushResult(attempted = attempted, synced = synced, failed = failed)
     }
 
     private suspend fun buildCaptureFileRefs(
@@ -438,9 +512,17 @@ class SyncEngine @Inject constructor(
     )
 }
 
+data class SubmissionPushResult(
+    val attempted: Int = 0,
+    val synced: Int = 0,
+    val failed: Int = 0,
+)
+
 data class SyncSummary(
     var mediaUploaded: Int = 0,
+    var submissionsAttempted: Int = 0,
     var submissionsSynced: Int = 0,
+    var submissionsFailed: Int = 0,
     var eventsPulled: Int = 0,
     var formsDownloaded: Int = 0,
 )

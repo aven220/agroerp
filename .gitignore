@@ -9,6 +9,10 @@ coverage/
 .turbo/
 *.tsbuildinfo
 
+# File evidence storage (local/dev)
+backend/storage/
+storage/
+
 # Prisma
 backend/prisma/*.db
 # Clientes Prisma empaquetados para build Docker (generar con: pnpm docker:stage-prisma)

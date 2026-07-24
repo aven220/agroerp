@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudQueue
@@ -29,7 +27,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.agroerp.presentation.components.EmptyIllustration
 import com.agroerp.presentation.components.EmptyState
 import com.agroerp.presentation.home.HomeViewModel
-import com.agroerp.presentation.home.PendingSubmissionUi
 
 @Composable
 fun SyncQueueScreen(viewModel: HomeViewModel = hiltViewModel()) {
@@ -41,106 +38,112 @@ fun SyncQueueScreen(viewModel: HomeViewModel = hiltViewModel()) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Cola de sincronización", style = MaterialTheme.typography.headlineSmall)
-        SyncStatusHeader(
-            isOnline = state.isOnline,
-            pendingCount = state.pendingSubmissions,
-            isSyncing = state.isSyncing,
-        )
-        if (state.syncMessage.isNotBlank()) {
-            Text(state.syncMessage, style = MaterialTheme.typography.bodySmall)
+        Text("Sincronización", style = MaterialTheme.typography.headlineSmall)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = if (state.isOnline) Icons.Default.CloudQueue else Icons.Default.CloudOff,
+                contentDescription = null,
+                tint = if (state.isOnline) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
+            )
+            Text(
+                if (state.isOnline) "Conectado" else "Sin conexión",
+                modifier = Modifier.weight(1f),
+            )
+            if (state.isSyncing) {
+                CircularProgressIndicator()
+            }
         }
-        state.syncError?.let { err ->
-            Text(err, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-        }
-        if (state.pendingSubmissions == 0) {
+
+        if (state.pendingSubmissions == 0 && !state.isSyncing && state.lastAttempted == 0) {
             EmptyState(
-                title = "Cola vacía",
+                title = "Todo al día",
                 illustration = EmptyIllustration.INBOX,
                 description = "No hay envíos pendientes de sincronización.",
-                hint = "Los formularios capturados offline aparecerán aquí.",
+                hint = "Los formularios capturados offline aparecerán aquí como un resumen.",
             )
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f, fill = false),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
             ) {
-                items(state.pendingItems, key = { it.externalId }) { item ->
-                    PendingSubmissionCard(item)
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        if (state.isSyncing) {
+                            state.syncMessage.ifBlank { "Sincronizando…" }
+                        } else if (state.lastAttempted > 0) {
+                            "Sincronizados ${state.lastSynced} de ${state.lastAttempted}"
+                        } else {
+                            "${state.pendingSubmissions} pendiente(s) por enviar"
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    if (!state.isSyncing && state.lastAttempted > 0) {
+                        Text(
+                            buildString {
+                                append("OK: ${state.lastSynced}")
+                                if (state.lastFailed > 0) append(" · Fallaron: ${state.lastFailed}")
+                                if (state.lastRemaining > 0) {
+                                    append(" · Quedan: ${state.lastRemaining}")
+                                }
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    } else if (!state.isSyncing && state.pendingSubmissions > 0) {
+                        Text(
+                            if (state.failedSubmissions > 0) {
+                                "${state.failedSubmissions} con error previo — se reintentan al sincronizar"
+                            } else {
+                                "Listos para enviar al servidor"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    state.syncError?.let { err ->
+                        Text(
+                            err,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    if (!state.isSyncing && state.lastRemaining > 0) {
+                        Text(
+                            "Al sincronizar de nuevo solo se reintentan los que faltan.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
+
         Button(
             onClick = { viewModel.syncNow() },
             enabled = state.isOnline && !state.isSyncing,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(Icons.Default.Sync, contentDescription = null)
-            Text("Sincronizar ahora", modifier = Modifier.padding(start = 8.dp))
-        }
-        Text(
-            "Si un envío falla, el error aparece arriba. Corrija GPS/datos o vuelva a sincronizar tras actualizar la app.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun SyncStatusHeader(
-    isOnline: Boolean,
-    pendingCount: Int,
-    isSyncing: Boolean,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Icon(
-            imageVector = if (isOnline) Icons.Default.CloudQueue else Icons.Default.CloudOff,
-            contentDescription = null,
-            tint = if (isOnline) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(if (isOnline) "Conectado" else "Sin conexión")
             Text(
-                "$pendingCount pendiente(s)",
-                style = MaterialTheme.typography.bodySmall,
+                when {
+                    state.isSyncing -> "Sincronizando…"
+                    state.pendingSubmissions > 0 -> "Sincronizar ${state.pendingSubmissions} pendiente(s)"
+                    else -> "Sincronizar ahora"
+                },
+                modifier = Modifier.padding(start = 8.dp),
             )
-        }
-        if (isSyncing) {
-            CircularProgressIndicator()
-        }
-    }
-}
-
-@Composable
-private fun PendingSubmissionCard(item: PendingSubmissionUi) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(item.formKey, style = MaterialTheme.typography.titleSmall)
-            Text(
-                "Estado: ${item.status}",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            item.error?.let { err ->
-                Text(
-                    err,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
         }
     }
 }

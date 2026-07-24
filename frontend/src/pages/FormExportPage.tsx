@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { FormsPlatformNav } from '../components/forms/FormsPlatformNav';
 import { useToast } from '../context/ToastContext';
@@ -47,8 +48,9 @@ export function FormExportPage() {
 
       <section className="panel form-export-intro">
         <p className="muted">
-          Exporte resultados de recolección para análisis externo, auditoría o integración.
-          Para archivos adjuntos (fotos, firmas) use el JSON completo; el paquete ZIP con medios requiere sincronización desde la app móvil.
+          CSV y JSON exportan los <strong>datos del formulario</strong>. Las fotos y firmas
+          no van dentro del CSV: se ven y descargan en <strong>Recolección → detalle del envío</strong>
+          (sección Evidencias), después de sincronizar con la app de campo actualizada.
         </p>
         <label>
           Filtrar por formulario (opcional)
@@ -130,23 +132,14 @@ export function FormExportPage() {
         </article>
 
         <article className="panel form-export-card">
-          <h3>📦 ZIP (medios)</h3>
+          <h3>🖼 Evidencias (fotos / firmas)</h3>
           <p className="muted">
-            Incluya <code>photo</code>, <code>signature</code> y <code>file</code> en el JSON exportado.
-            Descarga masiva de archivos desde almacenamiento se habilitará en sincronización móvil avanzada.
+            No se descargan en el CSV. Ábralas en <strong>Recolección</strong> seleccionando
+            cada envío → sección Evidencias (vista previa y Descargar).
           </p>
-          <button
-            type="button"
-            className="btn btn-sm"
-            disabled={busy != null}
-            onClick={() => run('json-media', async () => {
-              const subs = await listSubmissions(formId ? { formId } : undefined);
-              const withMedia = subs.filter((s) => JSON.stringify(s.data).match(/photo|signature|file|gallery/i));
-              downloadJson(withMedia, `recoleccion-medios-${new Date().toISOString().slice(0, 10)}.json`);
-            })}
-          >
-            JSON con referencias a medios
-          </button>
+          <Link to="/formularios/recoleccion" className="btn btn-sm">
+            Ir a Recolección
+          </Link>
         </article>
       </div>
     </>

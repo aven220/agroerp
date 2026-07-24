@@ -85,10 +85,13 @@ services:
       DATABASE_URL_EACE: postgresql://${POSTGRES_USER:-agroerp}:${POSTGRES_PASSWORD:-agroerp_secret}@postgres:5432/${POSTGRES_DB:-agroerp}?schema=eace
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
+      FILE_STORAGE_ROOT: /data/files
       CORS_ORIGIN: ${CORS_ORIGIN:-https://20.231.96.53}
       FRONTEND_URL: ${FRONTEND_URL:-https://20.231.96.53}
       PUBLIC_URL: ${PUBLIC_URL:-https://20.231.96.53}
       SKIP_PRISMA_GENERATE: "1"
+    volumes:
+      - file_storage:/data/files
     depends_on:
       postgres:
         condition: service_healthy
@@ -133,3 +136,4 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
+  file_storage:

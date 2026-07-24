@@ -79,6 +79,7 @@ services:
       DATABASE_URL_EACE: postgresql://agroerp:agroerp_secret@postgres:5432/agroerp?schema=eace
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
+      FILE_STORAGE_ROOT: /data/files
       NODE_ENV: development
       PORT: 3080
       API_PREFIX: api/v1
@@ -93,6 +94,7 @@ services:
     volumes:
       - ../backend:/app/backend
       - ../shared:/app/shared
+      - file_storage:/data/files
       - /app/backend/node_modules
       - /app/shared/node_modules
 
@@ -100,3 +102,4 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
+  file_storage:
