@@ -191,7 +191,8 @@ class SyncEngine @Inject constructor(
         val items = resolved.map { entity ->
             CaptureSyncSubmissionItem(
                 formId = entity.formId,
-                formKey = entity.formKey.takeIf { it.isNotBlank() },
+                // Solo enviar formKey si existe: backends antiguos rechazan la propiedad.
+                formKey = entity.formKey.trim().takeIf { it.isNotEmpty() },
                 data = JsonHelper.fromJson(entity.dataJson),
                 externalId = entity.externalId,
                 gpsLocation = entity.gpsLocationJson?.let {
@@ -215,11 +216,22 @@ class SyncEngine @Inject constructor(
             captureRepository.updateSubmissionQueue(syncing)
         }
 
-        val syncResult = captureRepository.syncSubmissions(
+        var syncResult = captureRepository.syncSubmissions(
             submissions = items,
             files = fileRefs,
             deviceInfo = deviceInfo(),
         )
+
+        // Backends sin formKey en el DTO rechazan el body completo (HTTP 400).
+        // Reintentar sin formKey para no romper sync contra servidores aún sin redeploy.
+        val firstError = syncResult.exceptionOrNull()?.message.orEmpty()
+        if (syncResult.isFailure && firstError.contains("HTTP 400") && items.any { it.formKey != null }) {
+            syncResult = captureRepository.syncSubmissions(
+                submissions = items.map { it.copy(formKey = null) },
+                files = fileRefs,
+                deviceInfo = deviceInfo(),
+            )
+        }
 
         if (syncResult.isFailure) {
             val detail = syncResult.exceptionOrNull()?.message ?: "Error desconocido"

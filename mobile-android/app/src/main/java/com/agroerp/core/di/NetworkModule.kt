@@ -26,7 +26,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideGson(): Gson = GsonBuilder().serializeNulls().create()
+    fun provideGson(): Gson =
+        GsonBuilder()
+            // No serializar nulls: el API usa forbidNonWhitelisted y rechaza
+            // propiedades desconocidas (p. ej. formKey en backends aún sin redeploy).
+            .create()
 
     @Provides
     @Singleton

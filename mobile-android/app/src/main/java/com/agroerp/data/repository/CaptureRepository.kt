@@ -29,7 +29,7 @@ import javax.inject.Singleton
 
 sealed class CaptureError(message: String, cause: Throwable? = null) : Exception(message, cause) {
     class Offline(message: String) : CaptureError(message)
-    class Http(code: Int, body: String?) : CaptureError("HTTP $code: ${body?.take(200) ?: "sin detalle"}")
+    class Http(code: Int, body: String?) : CaptureError("HTTP $code: ${body?.take(500) ?: "sin detalle"}")
     class Network(cause: Throwable) : CaptureError("Error de red", cause)
     class EmptyCache : CaptureError("Sin conexión y sin paquete en caché")
     class Validation(message: String) : CaptureError(message)
