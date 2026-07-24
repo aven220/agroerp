@@ -1,7 +1,43 @@
-/* AGROERP — Enterprise UI (entry) */
-@import './design-system/index.css';
+/* AGROERP — Enterprise UI (entry)
+ * IMPORTANTE: todos los @import DEBEN ir antes de cualquier otra regla.
+ * Si hay CSS (p.ej. body{}) antes de un @import, el bundler de producción
+ * (LightningCSS/Vite) descarta ese import → el header/shell llegan sin estilos.
+ */
 
-* {
+@import './design-system/index.css';
+@import './design-system/login.css';
+@import './design-system/shell.css';
+@import './design-system/legacy-modules.css';
+
+/* Enterprise polish layers — after legacy module CSS */
+@import './design-system/enterprise-ui-polish.css';
+@import './design-system/enterprise-ui-phase4.css';
+@import './design-system/admin-experience.css';
+@import './design-system/flow-experience.css';
+@import './design-system/process-workspace.css';
+@import './design-system/guided-workspace.css';
+@import './design-system/command-palette.css';
+@import './design-system/form-studio-enterprise.css';
+@import './design-system/enterprise-ui-pm15b.css';
+@import './design-system/enterprise-ui-pm15c.css';
+@import './design-system/experience-centers.css';
+@import './design-system/enterprise-ui-pm27.css';
+@import './design-system/enterprise-ui-pm28.css';
+@import './design-system/enterprise-workspace-pm45.css';
+@import './design-system/enterprise-ux-pm48.css';
+@import './design-system/enterprise-visual-pm49.css';
+@import './design-system/enterprise-sidebar.css';
+@import './design-system/enterprise-shell-pm43.css';
+@import './design-system/enterprise-shell-pm45.css';
+@import './design-system/enterprise-nav-drawer-pm46.css';
+@import './design-system/enterprise-nav-pm42.css';
+@import './design-system/enterprise-nav-pm43.css';
+@import './design-system/enterprise-ux-pm50.css';
+
+/* Base document rules — SIEMPRE después de los @import */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -24,40 +60,3 @@ a {
 a:hover {
   color: var(--ds-primary-hover);
 }
-
-/* Module & shell styles — moved from monolithic index.css */
-@import './design-system/login.css';
-@import './design-system/shell.css';
-@import './design-system/legacy-modules.css';
-
-/* Enterprise polish layers — must load after legacy module CSS */
-@import './design-system/enterprise-ui-polish.css';
-@import './design-system/enterprise-ui-phase4.css';
-@import './design-system/admin-experience.css';
-@import './design-system/flow-experience.css';
-@import './design-system/process-workspace.css';
-@import './design-system/guided-workspace.css';
-@import './design-system/command-palette.css';
-@import './design-system/form-studio-enterprise.css';
-@import './design-system/enterprise-ui-pm15b.css';
-@import './design-system/enterprise-ui-pm15c.css';
-@import './design-system/experience-centers.css';
-@import './design-system/enterprise-ui-pm27.css';
-@import './design-system/enterprise-ui-pm28.css';
-@import './design-system/enterprise-workspace-pm45.css';
-@import './design-system/enterprise-ux-pm48.css';
-@import './design-system/enterprise-visual-pm49.css';
-/* PM-41B — Enterprise Sidebar (wins over legacy nav chrome) */
-@import './design-system/enterprise-sidebar.css';
-/* PM-43 — Enterprise Shell Redesign */
-@import './design-system/enterprise-shell-pm43.css';
-/* PM-45 — Enterprise Shell (única estructura, wins last) */
-@import './design-system/enterprise-shell-pm45.css';
-/* PM-46 — Navigation Drawer derecha (reemplaza sidebar fijo) */
-@import './design-system/enterprise-nav-drawer-pm46.css';
-/* PM-42 — Enterprise Navigation (TopBar + Sidebar fijo) — wins last */
-@import './design-system/enterprise-nav-pm42.css';
-/* PM-43 — Enterprise Navigation Rebuild (Header horizontal) */
-@import './design-system/enterprise-nav-pm43.css';
-/* PM-50 — Enterprise Experience Rebuild (wins last) */
-@import './design-system/enterprise-ux-pm50.css';

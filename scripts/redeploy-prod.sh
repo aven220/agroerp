@@ -20,7 +20,8 @@ else
   echo "WARN: sin pnpm en el host. Asegure infra/docker-prisma/ y backend/dist antes del build."
 fi
 
-echo "==> docker compose build + up"
+echo "==> docker compose build + up (sin cache del frontend)"
+docker compose -f infra/docker-compose.prod.yml build --no-cache frontend
 docker compose -f infra/docker-compose.prod.yml up -d --build
 
 echo "==> health"
