@@ -12,7 +12,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { memoryStorage } from 'multer';
 import { Response } from 'express';
 import { FilesService, RegisterFileDto } from '../application/files.service';
 import { JwtAuthGuard } from '@/shared/infrastructure/guards/jwt-auth.guard';
@@ -54,7 +53,7 @@ export class FilesController {
   @RequirePermissions('resource:create')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: memoryStorage(),
+      // Default Nest storage is memory (provides file.buffer)
       limits: { fileSize: 25 * 1024 * 1024 },
     }),
   )
