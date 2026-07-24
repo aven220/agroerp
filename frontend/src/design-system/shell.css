@@ -2,6 +2,7 @@
 
 .erp-shell {
   display: flex;
+  flex-direction: column; /* header arriba; el sidebar fijo ya no define el eje */
   min-height: 100dvh;
   width: 100%;
   overflow-x: hidden;
