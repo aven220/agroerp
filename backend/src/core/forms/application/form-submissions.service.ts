@@ -198,40 +198,48 @@ export class FormSubmissionsService {
       throw err;
     }
 
-    await this.core.emitResourceCreated(
-      organizationId,
-      resource.id,
-      {
-        resourceType: FORM_SUBMISSION_RESOURCE_TYPE,
-        formId: form.id,
-        formKey: form.formKey,
-        submissionId: submission.id,
-      },
-      {
-        ctx: { ...ctx, userId, organizationId },
-        newValues: {
-          id: resource.id,
-          type: FORM_SUBMISSION_RESOURCE_TYPE,
-          data: resource.data,
-          metadata: resource.metadata,
+    // Post-create side effects must not fail the sync response: Android would
+    // keep the row as FAILED even though the submission already exists.
+    try {
+      await this.core.emitResourceCreated(
+        organizationId,
+        resource.id,
+        {
+          resourceType: FORM_SUBMISSION_RESOURCE_TYPE,
+          formId: form.id,
+          formKey: form.formKey,
+          submissionId: submission.id,
         },
-      },
-    );
+        {
+          ctx: { ...ctx, userId, organizationId },
+          newValues: {
+            id: resource.id,
+            type: FORM_SUBMISSION_RESOURCE_TYPE,
+            data: resource.data,
+            metadata: resource.metadata,
+          },
+        },
+      );
 
-    await this.core.emitFormSubmitted(
-      organizationId,
-      submission.id,
-      {
-        formId: form.id,
-        formKey: form.formKey,
-        formVersion: form.version,
-        resourceId: resource.id,
-        externalId: dto.externalId,
-        fieldCount: Object.keys(validation.data).length,
-        draft: isDraft,
-      },
-      { ctx: { ...ctx, userId, organizationId } },
-    );
+      await this.core.emitFormSubmitted(
+        organizationId,
+        submission.id,
+        {
+          formId: form.id,
+          formKey: form.formKey,
+          formVersion: form.version,
+          resourceId: resource.id,
+          externalId: dto.externalId,
+          fieldCount: Object.keys(validation.data).length,
+          draft: isDraft,
+        },
+        { ctx: { ...ctx, userId, organizationId } },
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Post-create events failed for submission ${submission.id}: ${(err as Error).message}`,
+      );
+    }
 
     await this.runFormWorkflow({
       organizationId,
@@ -450,6 +458,22 @@ export class FormSubmissionsService {
           submissionId: result.submission.id,
         });
       } catch (err) {
+        // If the row was persisted (race / post-create failure), tell the device
+        // it is already synced so it stops showing "Form validation failed".
+        if (item.externalId) {
+          const existing = await this.submissionRepository.findByExternalId(
+            organizationId,
+            item.externalId,
+          );
+          if (existing) {
+            results.push({
+              externalId: item.externalId,
+              status: 'duplicate',
+              submissionId: existing.id,
+            });
+            continue;
+          }
+        }
         results.push({
           externalId: item.externalId,
           status: 'error',

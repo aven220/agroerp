@@ -15,6 +15,10 @@ export function registerFile(payload: {
   });
 }
 
+export function getResource(id: string) {
+  return apiRequest<Resource>(`/resources/${id}`);
+}
+
 export async function uploadDocument(
   file: File,
   organizationId: string,

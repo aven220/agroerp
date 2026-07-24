@@ -17,7 +17,9 @@ import {
   type SimpleColumn,
 } from '../components/page';
 import { listForms, listSubmissions, type FormSubmission } from '../api/forms';
+import { getResource } from '../api/files';
 import { formatFormDate } from '../form-studio/form-lifecycle';
+import type { Resource } from '../types';
 import {
   buildRecordExplorerPath,
   type UreRouteEntityType,
@@ -40,6 +42,8 @@ export function FormCollectionPage() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<FormSubmission | null>(null);
   const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
+  const [mediaResources, setMediaResources] = useState<Resource[]>([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,6 +68,36 @@ export function FormCollectionPage() {
   }, [load]);
 
   useOnEntityUpdated(load, ['capture', 'form']);
+
+  useEffect(() => {
+    if (!selected) {
+      setMediaResources([]);
+      return;
+    }
+    const ids = collectMediaIds(selected);
+    if (ids.length === 0) {
+      setMediaResources([]);
+      return;
+    }
+    let cancelled = false;
+    setMediaLoading(true);
+    Promise.all(
+      ids.map((id) =>
+        getResource(id).catch(() => null),
+      ),
+    )
+      .then((rows) => {
+        if (!cancelled) {
+          setMediaResources(rows.filter((r): r is Resource => Boolean(r)));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setMediaLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selected]);
 
   const filtered = useMemo(() => {
     return items.filter((s) => {
@@ -268,6 +302,45 @@ export function FormCollectionPage() {
                     </div>
                   ))}
                 </dl>
+                <h4>Fotografías / archivos</h4>
+                {mediaLoading ? (
+                  <p className="muted">Cargando evidencias…</p>
+                ) : mediaResources.length === 0 ? (
+                  <p className="muted">
+                    Sin archivos registrados en este envío. Hoy Android registra la
+                    referencia del archivo; la vista previa de la imagen (bytes)
+                    aún no está disponible en la plataforma.
+                  </p>
+                ) : (
+                  <ul className="form-media-list">
+                    {mediaResources.map((r) => {
+                      const meta = (r.metadata ?? {}) as Record<string, unknown>;
+                      const data = (r.data ?? {}) as Record<string, unknown>;
+                      const filename = String(
+                        meta.filename ??
+                          meta.originalName ??
+                          data.filename ??
+                          r.id.slice(0, 8),
+                      );
+                      const mime = String(
+                        meta.mimeType ?? data.mimeType ?? r.resourceType ?? 'archivo',
+                      );
+                      const fieldKey = meta.fieldKey ? String(meta.fieldKey) : null;
+                      return (
+                        <li key={r.id}>
+                          <strong>{filename}</strong>
+                          <span className="muted"> · {mime}</span>
+                          {fieldKey ? (
+                            <span className="muted"> · campo {fieldKey}</span>
+                          ) : null}
+                          <div>
+                            <code>{r.id}</code>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
                 {selectedEntityLink ? (
                   <Link
                     to={buildRecordExplorerPath(
@@ -304,18 +377,56 @@ function hasGpsInData(data: Record<string, unknown>): boolean {
 }
 
 function hasMediaInData(data: Record<string, unknown>): boolean {
-  return Object.values(data ?? {}).some((v) => {
-    if (typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)) return true;
-    if (Array.isArray(v) && v.some((x) => typeof x === 'string' && /^[0-9a-f-]{36}$/i.test(x))) {
-      return true;
+  return collectMediaIdsFromData(data).length > 0;
+}
+
+function collectMediaIds(submission: FormSubmission): string[] {
+  const fromData = collectMediaIdsFromData(submission.data ?? {});
+  const meta = submission.deviceInfo as Record<string, unknown> | undefined;
+  const attached = meta?.attachedFiles;
+  const fromMeta: string[] = [];
+  if (Array.isArray(attached)) {
+    for (const item of attached) {
+      if (typeof item === 'string' && isUuid(item)) fromMeta.push(item);
+      if (item && typeof item === 'object' && typeof (item as { resourceId?: string }).resourceId === 'string') {
+        fromMeta.push((item as { resourceId: string }).resourceId);
+      }
     }
-    return false;
-  });
+  }
+  return [...new Set([...fromData, ...fromMeta])];
+}
+
+function collectMediaIdsFromData(data: Record<string, unknown>): string[] {
+  const ids: string[] = [];
+  for (const value of Object.values(data ?? {})) {
+    if (typeof value === 'string' && isUuid(value)) ids.push(value);
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (typeof item === 'string' && isUuid(item)) ids.push(item);
+      }
+    }
+  }
+  return ids;
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 }
 
 function formatValue(val: unknown): string {
   if (val == null) return '—';
-  if (Array.isArray(val)) return val.join(', ');
+  if (typeof val === 'string' && isUuid(val)) return `Archivo/foto · ${val.slice(0, 8)}…`;
+  if (Array.isArray(val)) {
+    return val
+      .map((item) =>
+        typeof item === 'string' && isUuid(item)
+          ? `Archivo/foto · ${item.slice(0, 8)}…`
+          : String(item),
+      )
+      .join(', ');
+  }
   if (typeof val === 'object') return JSON.stringify(val);
   return String(val);
 }

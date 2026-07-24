@@ -272,11 +272,12 @@ class SyncEngine @Inject constructor(
         val resultsByExternal = syncResult.getOrThrow().results.associateBy { it.externalId }
         for (entity in resolved) {
             val result = resultsByExternal[entity.externalId]
-            when (result?.status) {
+            val status = result?.status?.lowercase().orEmpty()
+            when (status) {
                 "created", "duplicate" -> {
                     val updated = entity.copy(
                         syncStatus = SyncQueueStatus.SYNCED,
-                        serverSubmissionId = result.submissionId,
+                        serverSubmissionId = result?.submissionId,
                         lastError = null,
                     )
                     submissionDao.update(updated)
