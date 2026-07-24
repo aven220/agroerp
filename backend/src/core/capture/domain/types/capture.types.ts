@@ -46,6 +46,7 @@ export interface CaptureSyncFileRef {
 
 export interface CaptureSyncSubmissionInput {
   formId: string;
+  formKey?: string;
   data: Record<string, unknown>;
   externalId: string;
   gpsLocation?: { lat: number; lng: number; accuracy?: number };

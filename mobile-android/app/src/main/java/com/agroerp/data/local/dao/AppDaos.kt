@@ -51,8 +51,12 @@ interface FormSubmissionDao {
     @Query("SELECT * FROM form_submissions ORDER BY createdAt DESC")
     fun observeAll(): Flow<List<FormSubmissionEntity>>
 
-    @Query("SELECT * FROM form_submissions WHERE syncStatus IN ('PENDING', 'FAILED') ORDER BY createdAt ASC")
+    @Query("SELECT * FROM form_submissions WHERE syncStatus IN ('PENDING', 'FAILED', 'SYNCING') ORDER BY createdAt ASC")
     suspend fun getPending(): List<FormSubmissionEntity>
+
+    /** Recupera envíos que quedaron en SYNCING tras un crash o kill de la app. */
+    @Query("UPDATE form_submissions SET syncStatus = 'PENDING', updatedAt = :now WHERE syncStatus = 'SYNCING'")
+    suspend fun recoverStuckSyncing(now: Long): Int
 
     @Query("SELECT COUNT(*) FROM form_submissions WHERE syncStatus IN ('PENDING', 'FAILED', 'SYNCING')")
     fun observePendingCount(): Flow<Int>
@@ -102,8 +106,11 @@ interface LocalEventDao {
 
 @Dao
 interface MediaFileDao {
-    @Query("SELECT * FROM media_files WHERE syncStatus IN ('PENDING', 'FAILED') ORDER BY createdAt ASC")
+    @Query("SELECT * FROM media_files WHERE syncStatus IN ('PENDING', 'FAILED', 'SYNCING') ORDER BY createdAt ASC")
     suspend fun getPending(): List<MediaFileEntity>
+
+    @Query("UPDATE media_files SET syncStatus = 'PENDING' WHERE syncStatus = 'SYNCING'")
+    suspend fun recoverStuckSyncing(): Int
 
     @Query("SELECT * FROM media_files WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): MediaFileEntity?

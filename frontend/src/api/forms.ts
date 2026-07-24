@@ -229,6 +229,7 @@ export interface FormSubmission {
   formVersion: number;
   data: Record<string, unknown>;
   context?: Record<string, unknown>;
+  deviceInfo?: Record<string, unknown> | null;
   status: string;
   syncStatus: string;
   createdAt: string;

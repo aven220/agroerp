@@ -117,6 +117,7 @@ data class CaptureSyncRequest(
 
 data class CaptureSyncSubmissionItem(
     val formId: String,
+    val formKey: String? = null,
     val data: Map<String, Any?>,
     val externalId: String,
     val gpsLocation: Map<String, Any?>? = null,

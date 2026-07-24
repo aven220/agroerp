@@ -13,6 +13,11 @@ export class CaptureSyncSubmissionItemDto {
   @IsString()
   formId!: string;
 
+  @ApiPropertyOptional({ description: 'Fallback si formId local quedó desfasado' })
+  @IsOptional()
+  @IsString()
+  formKey?: string;
+
   @ApiProperty({ type: 'object', additionalProperties: true })
   @IsObject()
   data!: Record<string, unknown>;

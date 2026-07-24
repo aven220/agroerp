@@ -70,6 +70,7 @@ export const PRODUCT_MODULES: ProductModuleDef[] = [
     label: 'Formularios (UDFE)',
     description: 'Diseño, campañas y recolección de campo',
     routePrefixes: ['/formularios'],
+    inCoopPilot: true,
   },
   {
     id: 'iam',

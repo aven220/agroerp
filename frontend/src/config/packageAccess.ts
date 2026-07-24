@@ -32,6 +32,7 @@ const COOP_EXTRA_PREFIXES = [
   '/documentos',
   '/procesos',
   '/bi',
+  '/formularios',
   '/implementacion',
   '/operacion',
   '/gerencia',

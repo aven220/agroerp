@@ -39,6 +39,7 @@ export function FormCollectionPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<FormSubmission | null>(null);
+  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,6 +51,7 @@ export function FormCollectionPage() {
       ]);
       setItems(subs);
       setForms(formList.map((f) => ({ id: f.id, name: f.name })));
+      setLastLoadedAt(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar envíos');
     } finally {
@@ -57,7 +59,9 @@ export function FormCollectionPage() {
     }
   }, [formFilter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   useOnEntityUpdated(load, ['capture', 'form']);
 
@@ -74,14 +78,18 @@ export function FormCollectionPage() {
     });
   }, [items, syncFilter, search]);
 
-  const kpis = useMemo(() => ({
-    total: filtered.length,
-    synced: filtered.filter((s) => s.syncStatus === 'synced').length,
-    pending: filtered.filter((s) => s.syncStatus === 'pending').length,
-    failed: filtered.filter((s) => s.syncStatus === 'conflict').length,
-    withGps: filtered.filter((s) => s.gpsLocation || hasGpsInData(s.data)).length,
-    withMedia: filtered.filter((s) => hasMediaInData(s.data)).length,
-  }), [filtered]);
+  const kpis = useMemo(
+    () => ({
+      total: filtered.length,
+      synced: filtered.filter((s) => s.syncStatus === 'synced').length,
+      pending: filtered.filter((s) => s.syncStatus === 'pending').length,
+      failed: filtered.filter((s) => s.syncStatus === 'conflict').length,
+      withGps: filtered.filter((s) => s.gpsLocation || hasGpsInData(s.data)).length,
+      withMedia: filtered.filter((s) => hasMediaInData(s.data)).length,
+      fromAndroid: filtered.filter((s) => isAndroidSubmission(s)).length,
+    }),
+    [filtered],
+  );
 
   const selectedEntityLink = selected ? extractEntityLinkFromSubmission(selected) : null;
 
@@ -91,12 +99,24 @@ export function FormCollectionPage() {
       label: 'Formulario',
       getValue: (r) => r.form?.name ?? r.formId,
     },
+    {
+      key: 'origen',
+      label: 'Origen',
+      getValue: (r) => (isAndroidSubmission(r) ? 'Android' : 'Web'),
+      render: (r) => (
+        <span className={`badge${isAndroidSubmission(r) ? ' badge-teal' : ''}`}>
+          {isAndroidSubmission(r) ? 'Android' : 'Web'}
+        </span>
+      ),
+    },
     { key: 'status', label: 'Estado', getValue: (r) => r.status },
     {
       key: 'syncStatus',
       label: 'Sincronización',
       render: (r) => (
-        <span className={`badge sync-${r.syncStatus}`}>{SYNC_LABELS[r.syncStatus] ?? r.syncStatus}</span>
+        <span className={`badge sync-${r.syncStatus}`}>
+          {SYNC_LABELS[r.syncStatus] ?? r.syncStatus}
+        </span>
       ),
       getValue: (r) => SYNC_LABELS[r.syncStatus] ?? r.syncStatus,
     },
@@ -116,13 +136,30 @@ export function FormCollectionPage() {
     <PageLayout>
       <PageHeader
         title="Recolección"
-        subtitle="Cada envío es un registro con trazabilidad, evidencias y estado de sincronización"
+        subtitle="Registros enviados desde web o la app Android (misma organización y servidor)"
+        actions={
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => load()}
+            disabled={loading}
+          >
+            {loading ? 'Actualizando…' : 'Actualizar'}
+          </button>
+        }
       />
       <FormsPlatformNav />
 
       <FlowProgress flowId="forms" currentStepId="capture" />
 
       <ProcessWorkspacePanel flowId="forms" currentStepId="capture" showChecklist={false} />
+
+      <p className="muted form-collection-sync-hint">
+        Los envíos de la APK aparecen aquí solo después de sincronizar en el teléfono (misma empresa y
+        mismo servidor). Actualizar solo vuelve a consultar el servidor; no empuja datos desde el
+        dispositivo.
+        {lastLoadedAt ? <> Última consulta: {lastLoadedAt.toLocaleString('es-CO')}.</> : null}
+      </p>
 
       <FlowNextActions
         title="Después de capturar"
@@ -137,7 +174,7 @@ export function FormCollectionPage() {
           },
           {
             label: 'Bandeja de aprobaciones',
-            description: 'Si el proceso requiere revisión',
+            description: 'Si el flujo requiere revisión',
             to: '/procesos/bandeja',
             icon: '✅',
           },
@@ -152,9 +189,9 @@ export function FormCollectionPage() {
 
       <PageSummary>
         <MetricCard label="Diligenciados" value={kpis.total} />
+        <MetricCard label="Desde Android" value={kpis.fromAndroid} tone="teal" />
         <MetricCard label="Sincronizados" value={kpis.synced} tone="green" />
         <MetricCard label="Pendientes" value={kpis.pending} />
-        <MetricCard label="Errores" value={kpis.failed} />
         <MetricCard label="Con GPS" value={kpis.withGps} />
         <MetricCard label="Con multimedia" value={kpis.withMedia} />
       </PageSummary>
@@ -166,7 +203,11 @@ export function FormCollectionPage() {
           <input placeholder="Buscar…" value={search} onChange={(e) => setSearch(e.target.value)} />
           <select value={formFilter} onChange={(e) => setFormFilter(e.target.value)}>
             <option value="">Todos los formularios</option>
-            {forms.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            {forms.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
           </select>
           <select value={syncFilter} onChange={(e) => setSyncFilter(e.target.value)}>
             <option value="">Toda sincronización</option>
@@ -174,7 +215,9 @@ export function FormCollectionPage() {
             <option value="pending">Pendiente</option>
             <option value="conflict">Conflicto</option>
           </select>
-          <button type="button" className="btn btn-sm" onClick={() => load()}>Actualizar</button>
+          <button type="button" className="btn btn-sm" onClick={() => load()} disabled={loading}>
+            Actualizar
+          </button>
         </TableToolbar>
 
         <div className="form-collection-layout">
@@ -186,8 +229,8 @@ export function FormCollectionPage() {
               loading={loading}
               selectable={false}
               onRowClick={(s) => setSelected(s)}
-              emptyMessage="Sin envíos"
-              emptyDescription="No hay resultados con los filtros actuales."
+              emptyMessage="Sin envíos en el servidor"
+              emptyDescription="Si llenó formularios en Android, abra la app → Sincronizar y luego Actualizar aquí. Use la misma cuenta/organización y el mismo servidor (p. ej. https://20.231.96.53)."
             />
           </div>
 
@@ -201,14 +244,19 @@ export function FormCollectionPage() {
                   items={[
                     { term: 'ID', detail: <code>{selected.id.slice(0, 8)}…</code> },
                     { term: 'Formulario', detail: selected.form?.name },
+                    { term: 'Origen', detail: isAndroidSubmission(selected) ? 'Android' : 'Web' },
                     { term: 'Versión', detail: `v${selected.formVersion}` },
-                    { term: 'Sincronización', detail: SYNC_LABELS[selected.syncStatus] ?? selected.syncStatus },
+                    {
+                      term: 'Sincronización',
+                      detail: SYNC_LABELS[selected.syncStatus] ?? selected.syncStatus,
+                    },
                     { term: 'Fecha', detail: formatFormDate(selected.createdAt) },
                   ]}
                 />
                 {selected.gpsLocation ? (
                   <p className="form-gps-preview">
-                    GPS: {selected.gpsLocation.lat?.toFixed?.(5)}, {selected.gpsLocation.lng?.toFixed?.(5)}
+                    GPS: {selected.gpsLocation.lat?.toFixed?.(5)},{' '}
+                    {selected.gpsLocation.lng?.toFixed?.(5)}
                   </p>
                 ) : null}
                 <h4>Respuestas</h4>
@@ -222,13 +270,18 @@ export function FormCollectionPage() {
                 </dl>
                 {selectedEntityLink ? (
                   <Link
-                    to={buildRecordExplorerPath(selectedEntityLink.entityType, selectedEntityLink.recordId)}
+                    to={buildRecordExplorerPath(
+                      selectedEntityLink.entityType,
+                      selectedEntityLink.recordId,
+                    )}
                     className="btn btn-sm"
                   >
                     {selectedEntityLink.label}
                   </Link>
                 ) : null}
-                <Link to="/formularios/exportar" className="btn btn-sm">Exportar datos</Link>
+                <Link to="/formularios/exportar" className="btn btn-sm">
+                  Exportar datos
+                </Link>
               </>
             )}
           </aside>
@@ -238,6 +291,12 @@ export function FormCollectionPage() {
   );
 }
 
+function isAndroidSubmission(s: FormSubmission): boolean {
+  const info = s.deviceInfo as Record<string, unknown> | undefined;
+  const platform = String(info?.platform ?? info?.os ?? '').toLowerCase();
+  return platform.includes('android');
+}
+
 function hasGpsInData(data: Record<string, unknown>): boolean {
   return Object.values(data ?? {}).some(
     (v) => v && typeof v === 'object' && 'lat' in (v as object) && 'lng' in (v as object),
@@ -245,8 +304,13 @@ function hasGpsInData(data: Record<string, unknown>): boolean {
 }
 
 function hasMediaInData(data: Record<string, unknown>): boolean {
-  const s = JSON.stringify(data ?? {}).toLowerCase();
-  return s.includes('photo') || s.includes('image') || s.includes('signature') || s.includes('file');
+  return Object.values(data ?? {}).some((v) => {
+    if (typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)) return true;
+    if (Array.isArray(v) && v.some((x) => typeof x === 'string' && /^[0-9a-f-]{36}$/i.test(x))) {
+      return true;
+    }
+    return false;
+  });
 }
 
 function formatValue(val: unknown): string {

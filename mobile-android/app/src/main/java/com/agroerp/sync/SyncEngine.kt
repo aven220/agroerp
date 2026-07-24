@@ -71,6 +71,10 @@ class SyncEngine @Inject constructor(
         val summary = SyncSummary()
 
         try {
+            // Recuperar envíos/medios atrapados en SYNCING (crash durante sync anterior)
+            submissionDao.recoverStuckSyncing(System.currentTimeMillis())
+            mediaFileDao.recoverStuckSyncing()
+
             captureRepository.refreshMediaPendingQueue()
             captureRepository.refreshSubmissionQueue()
 
@@ -187,6 +191,7 @@ class SyncEngine @Inject constructor(
         val items = resolved.map { entity ->
             CaptureSyncSubmissionItem(
                 formId = entity.formId,
+                formKey = entity.formKey.takeIf { it.isNotBlank() },
                 data = JsonHelper.fromJson(entity.dataJson),
                 externalId = entity.externalId,
                 gpsLocation = entity.gpsLocationJson?.let {

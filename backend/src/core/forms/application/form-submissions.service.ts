@@ -423,9 +423,14 @@ export class FormSubmissionsService {
 
     for (const item of dto.submissions) {
       try {
-        const result = await this.submit(
+        const formId = await this.resolveFormIdForSync(
           organizationId,
           item.formId,
+          item.formKey,
+        );
+        const result = await this.submit(
+          organizationId,
+          formId,
           userId,
           {
             data: item.data,
@@ -463,6 +468,21 @@ export class FormSubmissionsService {
     );
 
     return { results };
+  }
+
+  private async resolveFormIdForSync(
+    organizationId: string,
+    formId: string,
+    formKey?: string,
+  ): Promise<string> {
+    try {
+      const form = await this.forms.findOne(organizationId, formId);
+      return form.id;
+    } catch {
+      if (!formKey?.trim()) throw new NotFoundException('Formulario no encontrado');
+      const published = await this.forms.findPublishedByKey(organizationId, formKey.trim());
+      return published.id;
+    }
   }
 
   private collectAttachedFiles(

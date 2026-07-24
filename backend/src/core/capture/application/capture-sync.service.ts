@@ -29,6 +29,7 @@ export class CaptureSyncService {
       {
         submissions: dto.submissions.map((item) => ({
           formId: item.formId,
+          formKey: item.formKey,
           data: item.data,
           externalId: item.externalId,
           gpsLocation: item.gpsLocation,

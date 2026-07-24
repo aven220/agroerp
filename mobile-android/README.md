@@ -53,14 +53,18 @@ app/src/main/java/com/agroerp/
 ## Flujo offline-first
 
 1. **Login** (requiere red la primera vez) → JWT encriptado + sesión en Room
-2. **Bootstrap** → `GET /forms/bootstrap` → formularios en SQLite
-3. **Captura** → validación local → submission en Room (PENDING)
+2. **Paquete offline** → `GET /capture/mobile/package` → formularios publicados en SQLite
+3. **Captura** → validación local → submission en Room (`PENDING`)
 4. **Media** → archivos en `files/media/` → registro local → sync después
-5. **Sync** → sube media → `POST /form-submissions/sync` → pull eventos
+5. **Sync** → sube media → `POST /capture/sync` → pull eventos → refresca paquete
+
+Los envíos sincronizados aparecen en web → **Formularios → Recolección** (misma org y mismo servidor).
 
 ## Estados de sincronización
 
 `PENDING` → `SYNCING` → `SYNCED` | `FAILED` (con retry y backoff)
+
+Si la app se cierra a mitad del sync, los registros en `SYNCING` se recuperan automáticamente al siguiente sync.
 
 ## Configuración API
 
