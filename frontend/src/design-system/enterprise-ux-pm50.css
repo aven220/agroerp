@@ -143,6 +143,7 @@
   border-bottom: 1px solid var(--ds-border);
   box-shadow: none;
   z-index: 140;
+  overflow: visible;
 }
 
 .enh.enh-pm50 .enh-chrome {
@@ -153,11 +154,12 @@
   width: 100%;
   height: 52px;
   min-height: 52px;
-  max-height: 52px;
+  /* no max-height: evita clip de dropdowns absolutos */
   padding: 0 20px;
   gap: 12px;
   border-bottom: none;
   box-sizing: border-box;
+  overflow: visible !important;
 }
 
 .enh.enh-pm50 .enh-nav {
@@ -172,8 +174,8 @@
   border: none;
   padding: 0;
   gap: 2px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  /* visible: overflow-x/y:hidden recortaba los menús desplegables */
+  overflow: visible !important;
   scrollbar-width: none;
   background: transparent;
 }
@@ -261,15 +263,40 @@
   box-shadow: var(--ds-shadow-xs);
 }
 
-.enh.enh-pm50 .enh-dropdown {
+.enh.enh-pm50 .enh-dropdown,
+.enh-dropdown-portal {
   top: calc(100% + 8px);
   min-width: 280px;
   max-width: 340px;
+  width: 300px;
   border-radius: 12px;
   border: 1px solid var(--ds-border);
   box-shadow: var(--ds-shadow-lg);
   padding: 8px;
+  background: var(--ds-surface, #fff);
   animation: pm50-pop 140ms ease-out;
+}
+
+.enh-dropdown-portal .enh-dropdown-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ds-text-muted);
+  margin-top: 2px;
+}
+
+.enh-dropdown-portal .enh-dropdown-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.enh-dropdown-portal .enh-dropdown-item:hover,
+.enh-dropdown-portal .enh-dropdown-item.is-active {
+  background: color-mix(in srgb, var(--ds-primary) 8%, var(--ds-surface));
 }
 
 @keyframes pm50-pop {
@@ -706,11 +733,12 @@
 }
 
 /* ─── Centro de Implementación — asistente ─── */
-.eic-assistant {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 20px;
+.eic-assistant-compact .eic-step-nav {
+  padding-top: 0;
+}
+
+.eic-assistant-compact {
+  gap: 8px;
 }
 
 .eic-phases {

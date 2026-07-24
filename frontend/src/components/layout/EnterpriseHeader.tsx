@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, PanelRight, Search } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -75,12 +76,37 @@ function NavDropdown({
 }) {
   const { pathname } = useLocation();
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const active = entries.some((e) => itemIsActive(pathname, e.item));
+
+  useEffect(() => {
+    if (!open || !btnRef.current) {
+      setCoords(null);
+      return;
+    }
+    const place = () => {
+      const r = btnRef.current!.getBoundingClientRect();
+      const width = 300;
+      const left = Math.min(Math.max(8, r.left), window.innerWidth - width - 8);
+      setCoords({ top: r.bottom + 6, left });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+      const t = e.target as Node;
+      if (ref.current?.contains(t) || menuRef.current?.contains(t)) return;
+      onClose();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -93,9 +119,50 @@ function NavDropdown({
     };
   }, [open, onClose]);
 
+  const menu =
+    open && coords
+      ? createPortal(
+          <div
+            ref={menuRef}
+            className="enh-dropdown enh-dropdown-portal"
+            role="menu"
+            style={{ position: 'fixed', top: coords.top, left: coords.left, zIndex: 400 }}
+          >
+            <div className="enh-dropdown-head">
+              <div className="enh-dropdown-title">{pillar.label}</div>
+              <p className="enh-dropdown-blurb">{pillar.blurb}</p>
+            </div>
+            <div className="enh-dropdown-list">
+              {entries.map((entry) => {
+                const activeItem = itemIsActive(pathname, entry.item);
+                return (
+                  <Link
+                    key={entry.id}
+                    to={entry.item.to}
+                    role="menuitem"
+                    className={`enh-dropdown-item${activeItem ? ' is-active' : ''}`}
+                    onClick={onClose}
+                  >
+                    <span className="enh-dropdown-icon" aria-hidden>
+                      <NavIcon name={entry.item.icon} size={16} />
+                    </span>
+                    <span className="enh-dropdown-copy">
+                      <span className="enh-dropdown-label">{entry.label}</span>
+                      <span className="enh-dropdown-hint">{entry.hint}</span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <div className={`enh-nav-item${active ? ' is-active' : ''}${open ? ' is-open' : ''}`} ref={ref}>
       <button
+        ref={btnRef}
         type="button"
         className="enh-nav-trigger"
         aria-expanded={open}
@@ -105,36 +172,7 @@ function NavDropdown({
         {pillar.label}
         <ChevronDown size={14} strokeWidth={1.75} className="enh-nav-caret" aria-hidden />
       </button>
-      {open ? (
-        <div className="enh-dropdown" role="menu">
-          <div className="enh-dropdown-head">
-            <div className="enh-dropdown-title">{pillar.label}</div>
-            <p className="enh-dropdown-blurb">{pillar.blurb}</p>
-          </div>
-          <div className="enh-dropdown-list">
-            {entries.map((entry) => {
-              const activeItem = itemIsActive(pathname, entry.item);
-              return (
-                <Link
-                  key={entry.id}
-                  to={entry.item.to}
-                  role="menuitem"
-                  className={`enh-dropdown-item${activeItem ? ' is-active' : ''}`}
-                  onClick={onClose}
-                >
-                  <span className="enh-dropdown-icon" aria-hidden>
-                    <NavIcon name={entry.item.icon} size={16} />
-                  </span>
-                  <span className="enh-dropdown-copy">
-                    <span className="enh-dropdown-label">{entry.label}</span>
-                    <span className="enh-dropdown-hint">{entry.hint}</span>
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
+      {menu}
     </div>
   );
 }

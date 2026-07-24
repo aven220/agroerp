@@ -24,6 +24,7 @@ import {
 import { LoadingState } from '../components/ux/LoadingState';
 import { useExperienceCenterOptional } from '../context/ExperienceCenterContext';
 import { useAuth } from '../context/AuthContext';
+import { useLearningTutorial } from '../hooks/useLearningTutorial';
 import { AdminPage } from './AdminPage';
 import { updateOrgProductLicense } from '../api/organization';
 import {
@@ -89,38 +90,50 @@ function useEicActivePhase(pathname: string): number {
 
 function EicShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   const { pathname } = useLocation();
+  const showTutorial = useLearningTutorial();
   const activePhase = useEicActivePhase(pathname);
-  const phaseSections = EIC_SECTIONS.filter((s) => s.phase === activePhase);
+  const phaseSections = showTutorial
+    ? EIC_SECTIONS.filter((s) => s.phase === activePhase)
+    : EIC_SECTIONS;
 
   return (
     <ImplementationEngineProvider>
       <Header
         title={title}
-        subtitle={subtitle ?? 'Asistente de implementación'}
-        description="Configure, verifique y certifique que la empresa está lista para operar."
+        subtitle={
+          subtitle ??
+          (showTutorial ? 'Asistente de implementación' : 'Configuración de la empresa')
+        }
+        description={
+          showTutorial
+            ? 'Configure, verifique y certifique que la empresa está lista para operar.'
+            : 'Datos, usuarios, roles y parámetros de su organización.'
+        }
         showExperience={false}
       />
       <PageLayout
         toolbar={
-          <div className="eic-assistant">
-            <ol className="eic-phases" aria-label="Fases de implementación">
-              {EIC_PHASES.map((phase) => {
-                const first = EIC_SECTIONS.find((s) => s.phase === phase.id);
-                const isActive = phase.id === activePhase;
-                return (
-                  <li key={phase.id} className={`eic-phase${isActive ? ' is-active' : ''}`}>
-                    {first ? (
-                      <Link to={first.to} className="eic-phase-link">
-                        <span className="eic-phase-step">Paso {phase.id + 1}</span>
-                        <span className="eic-phase-label">{phase.label}</span>
-                        <span className="eic-phase-meta">{phase.meta}</span>
-                      </Link>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ol>
-            <nav className="eic-step-nav" aria-label="Secciones de la fase">
+          <div className={`eic-assistant${showTutorial ? '' : ' eic-assistant-compact'}`}>
+            {showTutorial ? (
+              <ol className="eic-phases" aria-label="Fases de implementación">
+                {EIC_PHASES.map((phase) => {
+                  const first = EIC_SECTIONS.find((s) => s.phase === phase.id);
+                  const isActive = phase.id === activePhase;
+                  return (
+                    <li key={phase.id} className={`eic-phase${isActive ? ' is-active' : ''}`}>
+                      {first ? (
+                        <Link to={first.to} className="eic-phase-link">
+                          <span className="eic-phase-step">Paso {phase.id + 1}</span>
+                          <span className="eic-phase-label">{phase.label}</span>
+                          <span className="eic-phase-meta">{phase.meta}</span>
+                        </Link>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : null}
+            <nav className="eic-step-nav" aria-label="Secciones de configuración">
               {phaseSections.map((s) => {
                 const Icon = s.icon;
                 return (
@@ -150,6 +163,9 @@ function StatusBadge({ status }: { status: DomainStatus }) {
 }
 
 function DomainHelpBlock({ domain }: { domain: ImplementationDomain }) {
+  const showTutorial = useLearningTutorial();
+  if (!showTutorial) return null;
+
   return (
     <details className="eic-help-details">
       <summary>¿Por qué importa este paso?</summary>

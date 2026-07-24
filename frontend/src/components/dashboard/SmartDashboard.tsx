@@ -21,6 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useExperienceCenterOptional } from '../../context/ExperienceCenterContext';
 import { useCommandPaletteOptional } from '../../context/CommandProvider';
+import { useLearningTutorial } from '../../hooks/useLearningTutorial';
 import { resolveWorkspaceRole, WORKSPACE_ROLE_LABELS, type WorkspaceRole } from '../../config/workspaceRoles';
 import {
   SMART_DASH_WIDGETS,
@@ -469,6 +470,7 @@ export function SmartDashboard({ forceRole }: { forceRole?: WorkspaceRole }) {
   const { user } = useAuth();
   const experience = useExperienceCenterOptional();
   const command = useCommandPaletteOptional();
+  const showTutorial = useLearningTutorial();
   const {
     favorites,
     navHistory,
@@ -556,7 +558,7 @@ export function SmartDashboard({ forceRole }: { forceRole?: WorkspaceRole }) {
         help={guide.next}
         nextStep={guide.primary}
         lastUpdated={new Date().toISOString()}
-        showExperience
+        showExperience={showTutorial}
       />
       <PageLayout
         toolbar={
