@@ -636,7 +636,7 @@ export function FormDesignerPage() {
             };
         const processingCode = (displayMetadata as FormCaptureMetadata).processingType;
         return (
-          <div style={{ padding: '1rem' }}>
+          <div className="fs-preview-page">
             <UcemPreviewBanner
               fieldOrigins={displayUcem.fieldOrigins}
               targetEntity={displayUcem.entityMapping?.targetEntity}
@@ -663,22 +663,32 @@ export function FormDesignerPage() {
                 </span>
               </div>
             </div>
-            <FormStudioPreview device={previewDevice} onDeviceChange={setPreviewDevice}>
-              <FormStudioRenderer
-                fields={fields}
-                layout={layout}
-                data={previewRender?.resolvedData ?? previewData}
-                serverFields={serverFields.length ? serverFields : undefined}
-                onChange={(key, val) => setPreviewData((d) => ({ ...d, [key]: val }))}
-                onButtonAction={(action, field) => {
-                  if (action === 'reset') setPreviewData({});
-                  if (action === 'link') {
-                    const url = field.metadata?.url ?? field.description;
-                    if (url) window.open(String(url), '_blank', 'noopener,noreferrer');
-                  }
-                }}
-              />
-            </FormStudioPreview>
+            {fields.length === 0 ? (
+              <div className="fs-preview-empty" role="status">
+                <p>Este formulario aún no tiene campos.</p>
+                <p className="muted">Vuelva a Diseño, agregue campos y abra de nuevo Vista previa.</p>
+                <button type="button" className="btn btn-primary" onClick={() => setTab('design')}>
+                  Ir a Diseño
+                </button>
+              </div>
+            ) : (
+              <FormStudioPreview device={previewDevice} onDeviceChange={setPreviewDevice}>
+                <FormStudioRenderer
+                  fields={fields}
+                  layout={layout}
+                  data={previewRender?.resolvedData ?? previewData}
+                  serverFields={serverFields.length ? serverFields : undefined}
+                  onChange={(key, val) => setPreviewData((d) => ({ ...d, [key]: val }))}
+                  onButtonAction={(action, field) => {
+                    if (action === 'reset') setPreviewData({});
+                    if (action === 'link') {
+                      const url = field.metadata?.url ?? field.description;
+                      if (url) window.open(String(url), '_blank', 'noopener,noreferrer');
+                    }
+                  }}
+                />
+              </FormStudioPreview>
+            )}
           </div>
         );
       })()}

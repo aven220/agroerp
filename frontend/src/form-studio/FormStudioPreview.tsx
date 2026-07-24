@@ -87,7 +87,7 @@ export function FormStudioPreview({
   const frame = (
     <div
       className={`fs-preview-stage device-${effectiveDevice}`}
-      style={{ '--fs-preview-zoom': `${zoom}%` } as React.CSSProperties}
+      style={{ '--fs-preview-zoom': String(zoom / 100) } as React.CSSProperties}
     >
       <div className="fs-preview-frame">
         <div className="fs-preview-screen form-panel">{children}</div>
