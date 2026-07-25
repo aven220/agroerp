@@ -122,54 +122,54 @@ export const ENTERPRISE_NAV_CATEGORIES: NavCategory[] = [
     defaultCollapsed: true,
     hideCount: true,
     items: [
+      // Solo administración: un rol de consulta tiene *:read y no debe ver este menú.
       item('nav-cfg-empresa', '/implementacion/empresa', 'Empresa', 'building-2', {
-        permission: 'organization:read',
+        permission: 'organization:update',
         keywords: ['empresa', 'organización', 'nit', 'fiscal'],
         searchType: 'config',
       }),
       item('nav-cfg-usuarios', '/implementacion/usuarios', 'Usuarios', 'users', {
-        permission: 'user:read',
+        permission: 'user:update',
         keywords: ['usuarios', 'accesos', 'cuentas'],
         searchType: 'config',
       }),
       item('nav-cfg-roles', '/implementacion/roles', 'Roles', 'shield', {
-        permission: 'role:read',
+        permission: 'role:update',
         keywords: ['roles', 'permisos', 'perfiles'],
         searchType: 'config',
       }),
       item('nav-cfg-numeracion', '/implementacion/documentos', 'Numeraciones', 'clipboard-list', {
+        permission: 'organization:update',
         keywords: ['numeración', 'series', 'consecutivos'],
         searchType: 'config',
       }),
       item('nav-cfg-compras', '/compras/config', 'Compras', 'shopping-cart', {
-        permission: 'coffee:read',
+        permission: 'coffee:config:manage',
         keywords: ['configuración compras', 'parámetros', 'precios', 'centros'],
         searchType: 'config',
       }),
       item('nav-cfg-inventario', '/inventario/parametros', 'Inventario', 'boxes', {
-        permission: 'inventory:read',
+        permission: 'inventory:config',
         keywords: ['configuración inventario', 'parámetros', 'bodegas'],
         searchType: 'config',
       }),
       item('nav-cfg-workflow', '/procesos', 'Workflow', 'workflow', {
-        permission: 'workflow:read',
+        permission: 'workflow:update',
         keywords: ['workflow', 'flujos', 'definiciones', 'aprobaciones'],
         searchType: 'config',
       }),
       item('nav-cfg-documentos', '/implementacion/documentos', 'Documentos', 'file-text', {
+        permission: 'organization:update',
         keywords: ['documentos', 'plantillas', 'evidencias'],
         searchType: 'config',
       }),
       item('nav-cfg-integ', '/implementacion/integraciones', 'Integraciones', 'link', {
+        permission: 'organization:update',
         keywords: ['integraciones', 'balanzas', 'conexiones'],
         searchType: 'config',
       }),
-      item('nav-cfg-prefs', '/configuracion', 'Preferencias', 'settings', {
-        exact: true,
-        keywords: ['preferencias', 'configuración', 'resumen'],
-        searchType: 'config',
-      }),
       item('nav-cfg-paquete', '/implementacion/modulos', 'Paquete / Pro', 'package', {
+        permission: 'organization:update',
         keywords: ['paquete', 'pro', 'plataforma', 'piloto', 'licencia'],
         searchType: 'config',
       }),
@@ -187,6 +187,7 @@ export const ENTERPRISE_NAV_CATEGORIES: NavCategory[] = [
         searchType: 'screen',
       }),
       item('nav-help-prep', '/implementacion/estado', 'Documentación', 'folder-open', {
+        permission: 'organization:update',
         keywords: ['preparación', 'documentación', 'estado', 'go live', 'checklist'],
         searchType: 'config',
       }),

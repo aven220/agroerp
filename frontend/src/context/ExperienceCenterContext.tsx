@@ -53,9 +53,11 @@ function asPackageId(value: unknown): ProductPackageId {
 }
 
 export function ExperienceCenterProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
   const userId = user?.id;
+  const canManageOrg = hasPermission('organization:update');
+
 
   const [center, setCenterState] = useState<ExperienceCenterId>(() => {
     try {
@@ -152,12 +154,13 @@ export function ExperienceCenterProvider({ children }: { children: ReactNode }) 
 
   const setCenter = useCallback(
     (id: ExperienceCenterId, options?: { navigateHome?: boolean }) => {
+      if (id === 'implementation' && !hasPermission('organization:update')) return;
       setCenterState(id);
       if (options?.navigateHome !== false) {
         navigate(getCenterMeta(id).homePath);
       }
     },
-    [navigate],
+    [navigate, hasPermission],
   );
 
   /** Solo actualiza UI local; la persistencia real es updateOrgProductLicense. */
@@ -173,6 +176,23 @@ export function ExperienceCenterProvider({ children }: { children: ReactNode }) 
     [center, packageId],
   );
 
+  /** Implementación / puesta en marcha solo si puede administrar la empresa. */
+  const centers = useMemo(
+    () =>
+      EXPERIENCE_CENTERS.filter(
+        (c) => c.id !== 'implementation' || canManageOrg,
+      ),
+    [canManageOrg],
+  );
+
+  useEffect(() => {
+    if (center === 'implementation' && !canManageOrg) {
+      const fallback = resolveDefaultCenter(user?.roles ?? []);
+      const next = fallback === 'implementation' ? 'operation' : fallback;
+      setCenterState(next);
+    }
+  }, [center, canManageOrg, user?.roles]);
+
   const value = useMemo(
     () => ({
       center,
@@ -182,7 +202,7 @@ export function ExperienceCenterProvider({ children }: { children: ReactNode }) 
       applyOrgLicense,
       setPackageId,
       experienceNav,
-      centers: EXPERIENCE_CENTERS,
+      centers,
       centerMeta: getCenterMeta(center),
       licenseLoading,
     }),
@@ -194,6 +214,7 @@ export function ExperienceCenterProvider({ children }: { children: ReactNode }) 
       applyOrgLicense,
       setPackageId,
       experienceNav,
+      centers,
       licenseLoading,
     ],
   );

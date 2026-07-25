@@ -308,11 +308,11 @@ export const NAV_CATEGORIES: NavCategory[] = [
     defaultCollapsed: true,
     items: [
       item('adm-hub', '/administracion', 'Configuración de empresa', '⚙', {
-        permission: 'organization:read',
+        permission: 'organization:update',
         keywords: ['admin', 'roles', 'permisos', 'configuración'],
       }),
       item('adm-users', '/administracion/usuarios', 'Usuarios', '👥', {
-        permission: 'user:read',
+        permission: 'user:update',
         keywords: ['usuarios', 'cuentas', 'invitar'],
       }),
       item('adm-iam', '/iam', 'Seguridad y accesos', '🔐', {
@@ -581,10 +581,11 @@ export const EXTRA_SEARCH_ITEMS: NavItem[] = [
     keywords: ['clientes'],
   }),
   item('search-iam-users', '/administracion/usuarios', 'Usuarios del sistema', '👤', {
-    permission: 'user:read',
+    permission: 'user:update',
     searchType: 'config',
     keywords: ['usuarios'],
   }),
+
   item('search-bi-reports', '/bi/reportes', 'Reportes', '📊', {
     permission: 'analytics:read',
     searchType: 'report',

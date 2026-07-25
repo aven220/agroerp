@@ -308,38 +308,42 @@ const COOP_IMPLEMENTATION: NavCategory[] = [
     defaultCollapsed: false,
     items: [
       item('eic-empresa', '/implementacion/empresa', '1. Empresa', '🏢', {
-        permission: 'organization:read',
+        permission: 'organization:update',
         keywords: ['empresa', 'fiscal', 'nit'],
         searchType: 'config',
       }),
       item('eic-usuarios', '/implementacion/usuarios', '2. Usuarios', '👥', {
-        permission: 'user:read',
+        permission: 'user:update',
         keywords: ['usuarios', 'accesos'],
         searchType: 'config',
       }),
       item('eic-roles', '/implementacion/roles', '3. Roles', '🔐', {
-        permission: 'role:read',
+        permission: 'role:update',
         keywords: ['roles', 'permisos'],
         searchType: 'config',
       }),
       item('eic-config', '/implementacion/configuracion', '4. Configuración', '⚙', {
+        permission: 'organization:update',
         keywords: ['configuración', 'compras', 'inventario', 'precios'],
         searchType: 'config',
       }),
       item('eic-procesos', '/implementacion/procesos', '5. Procesos', '⚡', {
+        permission: 'workflow:update',
         keywords: ['procesos', 'aprobaciones', 'workflow'],
         searchType: 'config',
       }),
       item('eic-docs', '/implementacion/documentos', '6. Documentos', '📄', {
+        permission: 'organization:update',
         keywords: ['documentos', 'numeración'],
         searchType: 'config',
       }),
       item('eic-integ', '/implementacion/integraciones', '7. Integraciones', '🔗', {
+        permission: 'organization:update',
         keywords: ['integraciones', 'balanzas'],
         searchType: 'config',
       }),
       item('eic-modulos', '/implementacion/modulos', '8. Paquete', '▦', {
-        permission: 'organization:read',
+        permission: 'organization:update',
         keywords: ['paquete', 'alcance', 'cooperativa'],
         searchType: 'config',
       }),
@@ -352,10 +356,12 @@ const COOP_IMPLEMENTATION: NavCategory[] = [
     defaultCollapsed: false,
     items: [
       item('eic-estado', '/implementacion/estado', 'Estado', '📊', {
+        permission: 'organization:update',
         keywords: ['estado', 'semáforo', 'preparación'],
         searchType: 'config',
       }),
       item('eic-golive', '/implementacion/go-live', 'Go Live', '✓', {
+        permission: 'organization:update',
         keywords: ['go live', 'empresa lista', 'certificación'],
         searchType: 'config',
       }),

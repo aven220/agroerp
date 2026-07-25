@@ -66,9 +66,9 @@ const ACTION_COMMANDS: Array<{
   { id: 'action-quality', label: 'Ir a calidad', icon: '✓', to: '/compras/calidad', permission: 'coffee:read', keywords: ['evaluación'] },
   { id: 'action-settlements', label: 'Ir a liquidaciones', icon: '💵', to: '/compras/liquidaciones', permission: 'coffee:read', keywords: ['pago', 'liquidar'] },
   { id: 'action-documents', label: 'Documentos', icon: '📄', to: '/documentos', permission: 'document:read', keywords: ['firma', 'archivos'] },
-  { id: 'action-users', label: 'Usuarios', icon: '👥', to: '/implementacion/usuarios', keywords: ['usuarios', 'accesos'] },
+  { id: 'action-users', label: 'Usuarios', icon: '👥', to: '/implementacion/usuarios', permission: 'user:update', keywords: ['usuarios', 'accesos'] },
   { id: 'action-reports', label: 'Reportes', icon: '📊', to: '/bi/reportes', permission: 'analytics:read', keywords: ['reportes', 'informes'] },
-  { id: 'action-config', label: 'Configuración de empresa', icon: '⚙', to: '/implementacion/configuracion', keywords: ['configuración', 'parámetros'] },
+  { id: 'action-config', label: 'Configuración de empresa', icon: '⚙', to: '/implementacion/configuracion', permission: 'organization:update', keywords: ['configuración', 'parámetros'] },
   { id: 'action-help', label: 'Centro de ayuda', icon: '?', to: '/ayuda', keywords: ['ayuda', 'guía', 'qué hago'] },
   { id: 'action-notifications', label: 'Notificaciones', icon: '🔔', to: '/notificaciones', keywords: ['alertas', 'avisos'] },
 ];

@@ -181,7 +181,8 @@ function NavDropdown({
  * Header enterprise — navegación horizontal curada, una sola fila.
  */
 export function EnterpriseHeader() {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
+  const canManageOrg = hasPermission('organization:update');
   const { visibleCategories, setSearchOpen } = useNavigation();
   const command = useCommandPaletteOptional();
   const { setPrefsOpen } = useKeyboardShortcuts();
@@ -413,28 +414,32 @@ export function EnterpriseHeader() {
                     </label>
                   </div>
                 ) : null}
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="enh-user-item"
-                  onClick={() => {
-                    setUserOpen(false);
-                    navigate('/implementacion/modulos');
-                  }}
-                >
-                  Paquete ({packageLabel})
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="enh-user-item"
-                  onClick={() => {
-                    setUserOpen(false);
-                    navigate('/implementacion/empresa');
-                  }}
-                >
-                  Empresa
-                </button>
+                {canManageOrg ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="enh-user-item"
+                    onClick={() => {
+                      setUserOpen(false);
+                      navigate('/implementacion/modulos');
+                    }}
+                  >
+                    Paquete ({packageLabel})
+                  </button>
+                ) : null}
+                {canManageOrg ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="enh-user-item"
+                    onClick={() => {
+                      setUserOpen(false);
+                      navigate('/implementacion/empresa');
+                    }}
+                  >
+                    Empresa
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   role="menuitem"

@@ -300,8 +300,9 @@ export const QUICK_ACTIONS: Array<{
   { id: 'qa-capture', label: 'Nueva captura', to: '/formularios/recoleccion', icon: '📥', roles: ['agricultural', 'default'], permission: 'form:read' },
   { id: 'qa-inbox', label: 'Bandeja de tareas', to: '/procesos/bandeja', icon: '📥', roles: ['admin', 'default', 'executive', 'production'], permission: 'workflow:read' },
   { id: 'qa-purchase', label: 'Registrar compra', to: '/compras/wizard', icon: '☕', roles: ['purchasing', 'agricultural', 'admin'], permission: 'coffee:receive' },
-  { id: 'qa-user', label: 'Nuevo usuario', to: '/administracion/usuarios', icon: '👥', roles: ['admin'], permission: 'user:read' },
-  { id: 'qa-role', label: 'Configurar roles', to: '/administracion', icon: '🔐', roles: ['admin'], permission: 'organization:read' },
+  { id: 'qa-user', label: 'Nuevo usuario', to: '/administracion/usuarios', icon: '👥', roles: ['admin'], permission: 'user:update' },
+  { id: 'qa-role', label: 'Configurar roles', to: '/administracion', icon: '🔐', roles: ['admin'], permission: 'organization:update' },
+
   { id: 'qa-security', label: 'Seguridad y accesos', to: '/iam', icon: '🛡', roles: ['admin'], permission: 'iam:read' },
   { id: 'qa-sale', label: 'Nueva venta', to: '/comercial/pedidos', icon: '💼', roles: ['sales', 'crm', 'executive'], permission: 'sales:read' },
   { id: 'qa-customer', label: 'Nuevo cliente', to: '/comercial/clientes', icon: '👤', roles: ['sales', 'crm'], permission: 'sales:read' },

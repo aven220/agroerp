@@ -1,6 +1,9 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { PageLayout, PageSection } from '../components/page';
+import { canAccessPath } from '../config/routePermissions';
+import { useAuth } from '../context/AuthContext';
 import {
   CONSULTANT_JOURNEY,
   OPERATIONAL_JOURNEY,
@@ -62,6 +65,26 @@ const HELP_AREAS = [
  * PM-28/30 — Ayuda por experiencia + recorridos validados.
  */
 export function HelpCenterPage() {
+  const { hasPermission } = useAuth();
+  const canManageOrg = hasPermission('organization:update');
+
+  const helpAreas = useMemo(
+    () => HELP_AREAS.filter((area) => canAccessPath(area.to, hasPermission)),
+    [hasPermission],
+  );
+  const consultantJourney = useMemo(
+    () => CONSULTANT_JOURNEY.filter((step) => canAccessPath(step.path, hasPermission)),
+    [hasPermission],
+  );
+  const operationalJourney = useMemo(
+    () => OPERATIONAL_JOURNEY.filter((step) => canAccessPath(step.path, hasPermission)),
+    [hasPermission],
+  );
+  const entities = useMemo(
+    () => PRODUCT_ENTITIES.filter((e) => canAccessPath(e.listPath, hasPermission)),
+    [hasPermission],
+  );
+
   return (
     <>
       <Header
@@ -73,25 +96,27 @@ export function HelpCenterPage() {
       <PageLayout>
         <PageSection title="Cómo orientarse">
           <p className="help-intro">
-            Cada pantalla del ERP responde a un trabajo concreto. Use el selector de centro (Operación, Gerencia,
-            Implementación) y la búsqueda global (⌘K) para encontrar productores, fincas, lotes y documentos — no solo
-            menús.
+            Cada pantalla del ERP responde a un trabajo concreto. Use el selector de centro
+            {canManageOrg ? ' (Operación, Gerencia, Implementación)' : ' (Operación, Gerencia)'} y la
+            búsqueda global (⌘K) para encontrar productores, fincas, lotes y documentos — no solo menús.
           </p>
         </PageSection>
 
-        <PageSection title="Recorrido del consultor">
-          <ol className="eic-journey help-journey">
-            {CONSULTANT_JOURNEY.map((step) => (
-              <li key={step.path}>
-                <Link to={step.path}>{step.label}</Link>
-              </li>
-            ))}
-          </ol>
-        </PageSection>
+        {consultantJourney.length > 0 ? (
+          <PageSection title="Recorrido del consultor">
+            <ol className="eic-journey help-journey">
+              {consultantJourney.map((step) => (
+                <li key={step.path}>
+                  <Link to={step.path}>{step.label}</Link>
+                </li>
+              ))}
+            </ol>
+          </PageSection>
+        ) : null}
 
         <PageSection title="Recorrido operativo del día">
           <ol className="eic-journey help-journey">
-            {OPERATIONAL_JOURNEY.map((step) => (
+            {operationalJourney.map((step) => (
               <li key={step.path}>
                 <Link to={step.path}>{step.label}</Link>
               </li>
@@ -101,7 +126,7 @@ export function HelpCenterPage() {
 
         <PageSection title="Entidades del producto (nombre e ícono únicos)">
           <ul className="eoc-list help-entity-list">
-            {PRODUCT_ENTITIES.map((e) => (
+            {entities.map((e) => (
               <li key={e.id}>
                 <Link to={e.listPath}>
                   <span aria-hidden>{e.icon}</span> {e.label}
@@ -112,7 +137,7 @@ export function HelpCenterPage() {
         </PageSection>
 
         <div className="help-grid">
-          {HELP_AREAS.map((area) => (
+          {helpAreas.map((area) => (
             <article key={area.to} className="help-card">
               <header>
                 <h3>{area.title}</h3>
