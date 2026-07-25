@@ -123,14 +123,17 @@ export const ENTERPRISE_NAV_CATEGORIES: NavCategory[] = [
     hideCount: true,
     items: [
       item('nav-cfg-empresa', '/implementacion/empresa', 'Empresa', 'building-2', {
+        permission: 'organization:read',
         keywords: ['empresa', 'organización', 'nit', 'fiscal'],
         searchType: 'config',
       }),
       item('nav-cfg-usuarios', '/implementacion/usuarios', 'Usuarios', 'users', {
+        permission: 'user:read',
         keywords: ['usuarios', 'accesos', 'cuentas'],
         searchType: 'config',
       }),
       item('nav-cfg-roles', '/implementacion/roles', 'Roles', 'shield', {
+        permission: 'role:read',
         keywords: ['roles', 'permisos', 'perfiles'],
         searchType: 'config',
       }),

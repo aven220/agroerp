@@ -510,6 +510,8 @@ export function ImplementationEmpresaPage() {
 }
 
 function ImplementationEmpresaBody() {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('organization:update');
   const { refresh, signals, loaded } = useImplementationEngine();
   const [form, setForm] = useState<CompanyProfile>({ ...EMPTY_COMPANY_PROFILE });
   const [saving, setSaving] = useState(false);
@@ -525,11 +527,14 @@ function ImplementationEmpresaBody() {
   }, [signals.company]);
 
   const set =
-    (key: keyof CompanyProfile) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    (key: keyof CompanyProfile) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      if (!canEdit) return;
       setForm((prev) => ({ ...prev, [key]: e.target.value }));
+    };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) return;
     setSaving(true);
     setError('');
     setOk('');
@@ -541,7 +546,7 @@ function ImplementationEmpresaBody() {
       setError(
         err instanceof Error
           ? err.message
-          : 'No se pudo guardar. Se requiere permiso coffee:config:manage.',
+          : 'No se pudo guardar. Se requiere permiso organization:update.',
       );
     } finally {
       setSaving(false);
@@ -557,84 +562,97 @@ function ImplementationEmpresaBody() {
           Datos legales y operativos de la cooperativa. Se guardan en la organización (parámetro de
           configuración existente). La carga de logo por archivo no está disponible en esta versión.
         </p>
+        {!canEdit ? (
+          <div className="alert alert-error" role="status">
+            Su rol es de solo consulta. Puede ver la ficha, pero no modificarla. Se requiere permiso{' '}
+            <code>organization:update</code>.
+          </div>
+        ) : null}
         {error ? <div className="alert alert-error">{error}</div> : null}
         {ok ? <div className="alert alert-success">{ok}</div> : null}
         <form className="form-grid" onSubmit={save}>
-          <label>
-            Razón social *
-            <input required value={form.legalName} onChange={set('legalName')} />
-          </label>
-          <label>
-            NIT *
-            <input required value={form.taxId} onChange={set('taxId')} />
-          </label>
-          <label>
-            Dirección
-            <input value={form.address} onChange={set('address')} />
-          </label>
-          <label>
-            Ciudad
-            <input value={form.city} onChange={set('city')} />
-          </label>
-          <label>
-            Departamento
-            <input value={form.department} onChange={set('department')} />
-          </label>
-          <label>
-            País
-            <input value={form.country} onChange={set('country')} />
-          </label>
-          <label>
-            Teléfono
-            <input value={form.phone} onChange={set('phone')} />
-          </label>
-          <label>
-            Correo
-            <input type="email" value={form.email} onChange={set('email')} />
-          </label>
-          <label>
-            Moneda *
-            <select value={form.currency} onChange={set('currency')} required>
-              <option value="COP">COP — Peso colombiano</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
-          </label>
-          <label>
-            Zona horaria *
-            <select value={form.timezone} onChange={set('timezone')} required>
-              <option value="America/Bogota">America/Bogota</option>
-              <option value="America/Lima">America/Lima</option>
-              <option value="America/Guayaquil">America/Guayaquil</option>
-            </select>
-          </label>
-          <label>
-            Idioma
-            <select value={form.language} onChange={set('language')}>
-              <option value="es-CO">Español (Colombia)</option>
-              <option value="es">Español</option>
-              <option value="en">English</option>
-            </select>
-          </label>
-          <label>
-            Logo (URL)
-            <input
-              value={form.logoUrl}
-              onChange={set('logoUrl')}
-              placeholder="Opcional — pegue una URL"
-            />
-          </label>
-          <p className="muted">
-            Logo por archivo: <strong>No disponible en esta versión</strong>. Puede dejar URL vacía
-            (opcional para Go Live).
-          </p>
+          <fieldset disabled={!canEdit} style={{ border: 0, margin: 0, padding: 0 }}>
+            <label>
+              Razón social *
+              <input required value={form.legalName} onChange={set('legalName')} readOnly={!canEdit} />
+            </label>
+            <label>
+              NIT *
+              <input required value={form.taxId} onChange={set('taxId')} readOnly={!canEdit} />
+            </label>
+            <label>
+              Dirección
+              <input value={form.address} onChange={set('address')} readOnly={!canEdit} />
+            </label>
+            <label>
+              Ciudad
+              <input value={form.city} onChange={set('city')} readOnly={!canEdit} />
+            </label>
+            <label>
+              Departamento
+              <input value={form.department} onChange={set('department')} readOnly={!canEdit} />
+            </label>
+            <label>
+              País
+              <input value={form.country} onChange={set('country')} readOnly={!canEdit} />
+            </label>
+            <label>
+              Teléfono
+              <input value={form.phone} onChange={set('phone')} readOnly={!canEdit} />
+            </label>
+            <label>
+              Correo
+              <input type="email" value={form.email} onChange={set('email')} readOnly={!canEdit} />
+            </label>
+            <label>
+              Moneda *
+              <select value={form.currency} onChange={set('currency')} required disabled={!canEdit}>
+                <option value="COP">COP — Peso colombiano</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </label>
+            <label>
+              Zona horaria *
+              <select value={form.timezone} onChange={set('timezone')} required disabled={!canEdit}>
+                <option value="America/Bogota">America/Bogota</option>
+                <option value="America/Lima">America/Lima</option>
+                <option value="America/Guayaquil">America/Guayaquil</option>
+              </select>
+            </label>
+            <label>
+              Idioma
+              <select value={form.language} onChange={set('language')} disabled={!canEdit}>
+                <option value="es-CO">Español (Colombia)</option>
+                <option value="es">Español</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+            <label>
+              Logo (URL)
+              <input
+                value={form.logoUrl}
+                onChange={set('logoUrl')}
+                placeholder="Opcional — pegue una URL"
+                readOnly={!canEdit}
+              />
+            </label>
+            <p className="muted">
+              Logo por archivo: <strong>No disponible en esta versión</strong>. Puede dejar URL vacía
+              (opcional para Go Live).
+            </p>
+          </fieldset>
           <div className="row-actions">
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Guardando…' : 'Guardar empresa'}
-            </button>
-            <Link to="/implementacion/usuarios" className="btn">
-              Siguiente: Usuarios
-            </Link>
+            {canEdit ? (
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? 'Guardando…' : 'Guardar empresa'}
+              </button>
+            ) : null}
+            {canEdit ? (
+              <Link to="/implementacion/usuarios" className="btn">
+                Siguiente: Usuarios
+              </Link>
+            ) : null}
           </div>
         </form>
       </PageSection>

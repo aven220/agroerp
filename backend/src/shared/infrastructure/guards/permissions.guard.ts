@@ -36,13 +36,18 @@ export class PermissionsGuard implements CanActivate {
 
     if (this.authorization) {
       const accessContext = this.buildAccessContext(request, user);
+      // RBAC is authoritative: ABAC may only add denials, never bypass a failed RBAC check.
       const allowed = await this.authorization.authorize(accessContext, required);
-      if (allowed) return true;
+      if (!allowed) {
+        throw new ForbiddenException(`Access denied: ${required.join(', ')}`);
+      }
       if (this.iamGateway) {
         const abacAllowed = await this.iamGateway.authorize(accessContext, required);
-        if (abacAllowed) return true;
+        if (!abacAllowed) {
+          throw new ForbiddenException(`Access denied by policy: ${required.join(', ')}`);
+        }
       }
-      throw new ForbiddenException(`Access denied: ${required.join(', ')}`);
+      return true;
     }
 
     const userPermissions = user.permissions ?? [];

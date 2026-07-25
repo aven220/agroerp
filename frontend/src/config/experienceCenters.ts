@@ -308,14 +308,17 @@ const COOP_IMPLEMENTATION: NavCategory[] = [
     defaultCollapsed: false,
     items: [
       item('eic-empresa', '/implementacion/empresa', '1. Empresa', '🏢', {
+        permission: 'organization:read',
         keywords: ['empresa', 'fiscal', 'nit'],
         searchType: 'config',
       }),
       item('eic-usuarios', '/implementacion/usuarios', '2. Usuarios', '👥', {
+        permission: 'user:read',
         keywords: ['usuarios', 'accesos'],
         searchType: 'config',
       }),
       item('eic-roles', '/implementacion/roles', '3. Roles', '🔐', {
+        permission: 'role:read',
         keywords: ['roles', 'permisos'],
         searchType: 'config',
       }),
@@ -336,6 +339,7 @@ const COOP_IMPLEMENTATION: NavCategory[] = [
         searchType: 'config',
       }),
       item('eic-modulos', '/implementacion/modulos', '8. Paquete', '▦', {
+        permission: 'organization:read',
         keywords: ['paquete', 'alcance', 'cooperativa'],
         searchType: 'config',
       }),

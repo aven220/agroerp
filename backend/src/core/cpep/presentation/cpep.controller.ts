@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '@/shared/presentation/decorators/public.decorator';
 
@@ -953,7 +962,21 @@ export class CpepController {
 
   @Post('config/parameters')
   @RequirePermissions('coffee:config:manage')
-  upsertParameter(@CurrentUser() user: { id: string; organizationId: string }, @Body() dto: ParameterDto) {
+  upsertParameter(
+    @CurrentUser() user: { id: string; organizationId: string; permissions?: string[] },
+    @Body() dto: ParameterDto,
+  ) {
+    // Ficha empresarial: además de config café exige poder actualizar la organización.
+    if (dto.parameterKey === 'implementation.company') {
+      const perms = user.permissions ?? [];
+      const canUpdateOrg =
+        perms.includes('*:*') || perms.includes('organization:update');
+      if (!canUpdateOrg) {
+        throw new ForbiddenException(
+          'Access denied: organization:update required to edit company profile',
+        );
+      }
+    }
     return this.parameters.upsert(user.organizationId, user.id, dto as CpepParameterDefinition, dto.reason);
   }
 

@@ -30,6 +30,10 @@ const ACTION_PERMISSIONS: Array<{ pattern: RegExp; permission: string }> = [
   { pattern: /^\/record-explorer\/Farm\//i, permission: 'farm:read' },
   { pattern: /^\/record-explorer\/Lot\//i, permission: 'lot:read' },
   { pattern: /^\/administracion/, permission: 'organization:read' },
+  { pattern: /^\/implementacion\/empresa$/, permission: 'organization:read' },
+  { pattern: /^\/implementacion\/modulos$/, permission: 'organization:read' },
+  { pattern: /^\/implementacion\/usuarios/, permission: 'user:read' },
+  { pattern: /^\/implementacion\/roles/, permission: 'role:read' },
   { pattern: /^\/iam\//, permission: 'iam:read' },
   { pattern: /^\/procesos\/bandeja$/, permission: 'workflow:read' },
 ];
