@@ -670,6 +670,42 @@
 }
 
 /* Permission cards */
+.admin-perm-hint {
+  margin: 0 0 var(--ds-space-4);
+  font-size: var(--ds-text-sm);
+  line-height: 1.45;
+}
+
+.admin-perm-module {
+  margin-bottom: var(--ds-space-6);
+}
+
+.admin-perm-module-head {
+  margin-bottom: var(--ds-space-3);
+}
+
+.admin-perm-module-title {
+  margin: 0 0 0.25rem;
+  font-size: var(--ds-text-lg);
+}
+
+.admin-perm-module-desc {
+  margin: 0;
+  font-size: var(--ds-text-sm);
+  max-width: 52rem;
+}
+
+.admin-perm-tech {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-color-text-muted);
+}
+
+.admin-perm-tech code {
+  font-size: 0.85em;
+}
+
 .admin-perm-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

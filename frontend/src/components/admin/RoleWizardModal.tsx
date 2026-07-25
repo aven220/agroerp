@@ -161,7 +161,8 @@ export function RoleWizardModal({
             <div className="admin-wizard-perms-layout">
               <div className="admin-wizard-perms-matrix">
                 <p className="muted admin-wizard-intro">
-                  Marque lo que podrá hacer este rol. Agrupe por área de negocio y use la búsqueda para encontrar permisos específicos.
+                  Marque lo que podrá hacer este rol (nombres en español). Para Compras busque «café» o «compras» y active
+                  «Puede consultar compras de café» (<code>coffee:read</code>).
                 </p>
                 <PermissionMatrix
                   permissions={permissions}

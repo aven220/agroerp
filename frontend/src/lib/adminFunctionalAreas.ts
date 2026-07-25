@@ -1,4 +1,4 @@
-import { resourceLabel } from './adminPermissions';
+import { actionLabel, resourceLabel } from './adminPermissions';
 
 export const RESOURCE_ICONS: Record<string, string> = {
   producer: '👨‍🌾',
@@ -21,6 +21,20 @@ export const RESOURCE_ICONS: Record<string, string> = {
   sync: '🔄',
   gis: '🗺️',
   ai: '🤖',
+  coffee: '☕',
+  cpep: '☕',
+  sales: '🛒',
+  finance: '💰',
+  efm: '💰',
+  effm: '💰',
+  eint: '🔌',
+  integration: '🔌',
+  emfg: '🏭',
+  hcm: '👥',
+  eatp: '🌿',
+  eapp: '📡',
+  eiwp: '💧',
+  ephp: '🩺',
 };
 
 export function resourceIcon(resource: string): string {
@@ -48,11 +62,19 @@ export const ACTION_PHRASES: Record<string, (resource: string) => string> = {
   import: (r) => `Puede importar ${resourceLabel(r)}`,
   export: (r) => `Puede exportar ${resourceLabel(r)}`,
   design: (r) => `Puede diseñar ${resourceLabel(r)}`,
+  receive: (r) => `Puede recibir en ${resourceLabel(r)}`,
+  weigh: (r) => `Puede pesar en ${resourceLabel(r)}`,
+  quality: (r) => `Puede gestionar calidad en ${resourceLabel(r)}`,
+  settle: (r) => `Puede liquidar en ${resourceLabel(r)}`,
+  inventory: (r) => `Puede gestionar inventario de ${resourceLabel(r)}`,
+  'config:read': (r) => `Puede ver la configuración de ${resourceLabel(r)}`,
+  'config:manage': (r) => `Puede cambiar la configuración de ${resourceLabel(r)}`,
 };
 
 export function humanPermissionPhrase(resource: string, action: string): string {
   const fn = ACTION_PHRASES[action];
-  return fn ? fn(resource) : `Puede ${action.replace(/_/g, ' ')} ${resourceLabel(resource)}`;
+  if (fn) return fn(resource);
+  return `Puede ${actionLabel(action)} ${resourceLabel(resource)}`;
 }
 
 /** Capacidades sensibles para el resumen «No podrá». */

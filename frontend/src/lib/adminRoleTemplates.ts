@@ -67,6 +67,57 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
       return act === 'read' || act === 'export';
     },
   },
+  {
+    id: 'compras',
+    name: 'Compras',
+    icon: '☕',
+    color: '#92400e',
+    description:
+      'Acceso al módulo Compras de café: consulta, recepción, pesaje, calidad y liquidación. Incluye coffee:read (obligatorio para entrar).',
+    matchPermission: (key) => {
+      const [res, act] = key.split(':');
+      if (res !== 'coffee' && !res.startsWith('coffee')) return false;
+      const acts = [
+        'read',
+        'receive',
+        'weigh',
+        'weigh:manual',
+        'quality',
+        'quality:decide',
+        'settle',
+        'inventory',
+        'config:read',
+        'audit:read',
+      ];
+      return acts.includes(act);
+    },
+  },
+  {
+    id: 'inventario',
+    name: 'Inventario',
+    icon: '📦',
+    color: '#0f766e',
+    description: 'Consulta y operación de inventario general y de café.',
+    matchPermission: (key) => {
+      const [res, act] = key.split(':');
+      if (res === 'inventory' || res === 'eims') {
+        return ['read', 'item', 'warehouse', 'catalog', 'config', 'audit'].includes(act);
+      }
+      if (res === 'coffee') return act === 'read' || act === 'inventory';
+      return false;
+    },
+  },
+  {
+    id: 'consulta',
+    name: 'Consulta',
+    icon: '👁',
+    color: '#64748b',
+    description: 'Solo lectura en operación: puede ver, no crear ni editar.',
+    matchPermission: (key) => {
+      const [, act] = key.split(':');
+      return act === 'read' || act === 'export' || act === 'config:read' || act === 'audit:read';
+    },
+  },
 ];
 
 export function permissionsForTemplate(

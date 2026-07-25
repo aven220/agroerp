@@ -21,7 +21,7 @@ export function PermissionMatrix({
   selected,
   onChange,
   readOnly = false,
-  showTechnicalKeys = false,
+  showTechnicalKeys = true,
 }: PermissionMatrixProps) {
   const [search, setSearch] = useState('');
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});

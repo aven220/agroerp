@@ -391,8 +391,10 @@ export function RoleWizard({
               <div className="admin-wizard-perms-cards-layout">
                 <div>
                   <p className="muted admin-wizard-intro">
-                    Elija qué podrá hacer este rol. Use lenguaje claro — no necesita conocer códigos
-                    técnicos.
+                    Elija qué podrá hacer este rol. Los permisos se muestran en español. Para el rol{' '}
+                    <strong>Compras</strong>, use la plantilla «Compras» o busque «café» y active{' '}
+                    <strong>Puede consultar compras de café</strong> (código <code>coffee:read</code>
+                    ).
                   </p>
                   <PermissionCards
                     permissions={permissions}
