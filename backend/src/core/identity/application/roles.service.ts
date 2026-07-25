@@ -79,17 +79,21 @@ export class RolesService {
       throw new ConflictException('Cannot change system role slug');
     }
 
-    if (dto.slug && dto.slug !== role.slug) {
+    // Solo validar colisión si el slug realmente cambia.
+    const nextSlug = dto.slug !== undefined ? dto.slug : role.slug;
+    if (nextSlug !== role.slug) {
       const clash = await this.prisma.role.findFirst({
-        where: { organizationId, slug: dto.slug, NOT: { id } },
+        where: { organizationId, slug: nextSlug, NOT: { id } },
       });
       if (clash) throw new ConflictException('Role slug already exists');
     }
 
     const data: Prisma.RoleUpdateInput = {};
-    if (dto.name !== undefined) data.name = dto.name;
-    if (dto.slug !== undefined) data.slug = dto.slug;
-    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.name !== undefined && dto.name !== role.name) data.name = dto.name;
+    if (dto.slug !== undefined && dto.slug !== role.slug) data.slug = dto.slug;
+    if (dto.description !== undefined && dto.description !== (role.description ?? undefined)) {
+      data.description = dto.description;
+    }
 
     try {
       if (Object.keys(data).length > 0) {

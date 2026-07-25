@@ -16,6 +16,8 @@ import { PermissionSummary } from './PermissionSummary';
 import { WizardSuccess } from './WizardSuccess';
 
 export interface RoleWizardSaveData {
+  /** Si viene, es edición (PATCH); si no, es alta (POST). */
+  id?: string;
   name: string;
   slug: string;
   description?: string;
@@ -79,10 +81,12 @@ export function RoleWizard({
   }, [open, editingRole]);
 
   useEffect(() => {
-    if (!slugManual && !editingRole?.isSystem) {
+    // Nunca regenerar slug al editar: evita colisiones y que el backend lo trate como alta.
+    if (editingRole) return;
+    if (!slugManual) {
       setSlug(slugifyRoleName(name));
     }
-  }, [name, slugManual, editingRole?.isSystem]);
+  }, [name, slugManual, editingRole]);
 
   if (!open) return null;
 
@@ -111,6 +115,7 @@ export function RoleWizard({
   }
 
   function applyTemplate(templateId: string) {
+    if (editingRole) return;
     const template = ROLE_TEMPLATES.find((t) => t.id === templateId);
     if (!template) return;
     setName(template.name);
@@ -133,8 +138,9 @@ export function RoleWizard({
 
     try {
       await onSave({
+        id: editingRole?.id,
         name: name.trim(),
-        slug: slug.trim(),
+        slug: editingRole ? editingRole.slug : slug.trim(),
         description: description.trim() || undefined,
         permissionKeys: selectedPerms,
       });

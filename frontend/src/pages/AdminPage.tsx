@@ -178,6 +178,7 @@ export function AdminPage({
   }
 
   async function saveRole(data: {
+    id?: string;
     name: string;
     slug: string;
     description?: string;
@@ -185,17 +186,27 @@ export function AdminPage({
   }) {
     setRoleSaving(true);
     setRoleError(null);
+    const roleId = data.id ?? editingRole?.id;
     try {
-      if (editingRole) {
-        await updateRole(editingRole.id, data);
+      if (roleId) {
+        // En edición solo enviamos campos seguros: no reenviar slug (evita falso "ya existe").
+        await updateRole(roleId, {
+          name: data.name,
+          description: data.description,
+          permissionKeys: data.permissionKeys,
+        });
       } else {
-        await createRole(data);
+        await createRole({
+          name: data.name,
+          slug: data.slug,
+          description: data.description,
+          permissionKeys: data.permissionKeys,
+        });
       }
       await load();
-      // Si el rol editado es el del usuario actual, refrescar permisos en sesión
-      // sin cerrar sesión (el JWT se revalida; el perfil UI también).
       const roleSlugs = currentUser?.roles ?? [];
-      if (editingRole && roleSlugs.includes(editingRole.slug)) {
+      const editedSlug = editingRole?.slug ?? data.slug;
+      if (roleId && roleSlugs.includes(editedSlug)) {
         try {
           await refreshProfile();
         } catch {
@@ -205,7 +216,7 @@ export function AdminPage({
     } catch (err) {
       const msg = friendlyAdminError(
         err,
-        editingRole ? 'No se pudo actualizar el rol' : 'No se pudo crear el rol',
+        roleId ? 'No se pudo actualizar el rol' : 'No se pudo crear el rol',
       );
       setRoleError(msg);
       throw err;

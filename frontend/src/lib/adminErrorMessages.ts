@@ -1,5 +1,6 @@
 const FRIENDLY_PATTERNS: Array<{ test: RegExp; message: string }> = [
   { test: /slug already exists|identificador.*existe|ya existe un rol/i, message: 'Ya existe un rol con ese nombre.' },
+
   { test: /slug|identificador interno/i, message: 'El identificador interno no es válido. Use solo letras y números.' },
   { test: /forbidden|403|missing permissions|access denied|no tiene permiso/i, message: 'No tiene permisos para realizar esta acción.' },
   { test: /unauthorized|401|sesión expiró|invalid refresh|invalid token/i, message: 'Su sesión expiró. Vuelva a iniciar sesión.' },
