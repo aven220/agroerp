@@ -16,7 +16,9 @@ export class IamAuthorizationGatewayService {
 
   async authorize(context: AccessContext, required: string[], attributes?: Record<string, unknown>) {
     for (const perm of required) {
-      const [resource, action] = perm.split(':');
+      const sep = perm.indexOf(':');
+      const resource = sep > 0 ? perm.slice(0, sep) : perm;
+      const action = sep > 0 ? perm.slice(sep + 1) : '';
       const abacResult = await this.abac.evaluate(context, resource, action, attributes);
       if (!abacResult.allowed) {
         await this.audit.record(context.organizationId, 'access_denied', {

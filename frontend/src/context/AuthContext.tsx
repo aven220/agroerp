@@ -145,7 +145,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!user?.permissions) return false;
       if (user.permissions.includes('*:*')) return true;
       if (user.permissions.includes(perm)) return true;
-      const [resource] = perm.split(':');
+      const sep = perm.indexOf(':');
+      if (sep <= 0) return false;
+      const resource = perm.slice(0, sep);
       return user.permissions.includes(`${resource}:*`);
     },
     [user],

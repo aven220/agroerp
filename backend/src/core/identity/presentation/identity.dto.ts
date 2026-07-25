@@ -27,13 +27,28 @@ export class CreatePolicyDto {
 export class UpdatePolicyDto extends CreatePolicyDto {}
 
 export class CreateRoleDto {
-  @ApiProperty() @IsString() name!: string;
-  @ApiProperty() @IsString() slug!: string;
+  @ApiProperty() @IsString() @MaxLength(100) name!: string;
+  @ApiProperty() @IsString() @MaxLength(100) slug!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
-  @ApiPropertyOptional({ type: [String] }) @IsOptional() @IsArray() permissionKeys?: string[];
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(120, { each: true })
+  permissionKeys?: string[];
 }
 
-export class UpdateRoleDto extends CreateRoleDto {}
+export class UpdateRoleDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) name?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) slug?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(120, { each: true })
+  permissionKeys?: string[];
+}
 
 export class AssignRoleDto {
   @ApiProperty() @IsUUID() userId!: string;

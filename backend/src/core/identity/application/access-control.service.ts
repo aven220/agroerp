@@ -142,9 +142,12 @@ export class AccessControlService implements AuthorizationService {
   hasPermission(permissions: string[], required: string): boolean {
     if (permissions.includes('*:*')) return true;
     if (permissions.includes(required)) return true;
-    const [resource, action] = required.split(':');
+    const sep = required.indexOf(':');
+    if (sep <= 0) return false;
+    const resource = required.slice(0, sep);
+    const action = required.slice(sep + 1);
     if (permissions.includes(`${resource}:*`)) return true;
-    if (permissions.includes(`*:${action}`)) return true;
+    if (action && permissions.includes(`*:${action}`)) return true;
     return false;
   }
 
@@ -155,7 +158,9 @@ export class AccessControlService implements AuthorizationService {
     if (!rbacOk) return false;
 
     for (const perm of required) {
-      const [resource, action] = perm.split(':');
+      const sep = perm.indexOf(':');
+      const resource = sep > 0 ? perm.slice(0, sep) : perm;
+      const action = sep > 0 ? perm.slice(sep + 1) : '';
       const policyResult = await this.policyEngine.evaluate(
         context.organizationId,
         { ...context, resource, action },

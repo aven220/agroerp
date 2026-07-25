@@ -53,7 +53,7 @@ export function AdminPage({
   basePath = '/administracion',
   embedded = false,
 }: AdminPageProps) {
-  const { user: currentUser, hasPermission } = useAuth();
+  const { user: currentUser, hasPermission, refreshProfile } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const usersRoute = location.pathname.endsWith('/usuarios');
@@ -192,6 +192,16 @@ export function AdminPage({
         await createRole(data);
       }
       await load();
+      // Si el rol editado es el del usuario actual, refrescar permisos en sesión
+      // sin cerrar sesión (el JWT se revalida; el perfil UI también).
+      const roleSlugs = currentUser?.roles ?? [];
+      if (editingRole && roleSlugs.includes(editingRole.slug)) {
+        try {
+          await refreshProfile();
+        } catch {
+          /* no expulsar: el guardado ya se completó */
+        }
+      }
     } catch (err) {
       const msg = friendlyAdminError(
         err,

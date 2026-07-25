@@ -23,16 +23,63 @@ export function setToken(token: string | null) {
   }
 }
 
+type ApiRequestOptions = RequestInit & {
+  /** Evita reintentar refresh en bucle. */
+  skipAuthRefresh?: boolean;
+};
+
+let refreshInFlight: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = localStorage.getItem('agroerp_refresh');
+  if (!refreshToken) return null;
+
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (!res.ok) return null;
+        const data = (await res.json()) as {
+          accessToken?: string;
+          refreshToken?: string;
+        };
+        if (!data.accessToken) return null;
+        setToken(data.accessToken);
+        if (data.refreshToken) {
+          localStorage.setItem('agroerp_refresh', data.refreshToken);
+        }
+        return data.accessToken;
+      } catch {
+        return null;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+  }
+
+  return refreshInFlight;
+}
+
+function clearSessionAndNotify() {
+  setToken(null);
+  window.dispatchEvent(new Event('agroerp:unauthorized'));
+}
+
 export async function apiRequest<T>(
   path: string,
-  options: RequestInit = {},
+  options: ApiRequestOptions = {},
 ): Promise<T> {
+  const { skipAuthRefresh, ...fetchOptions } = options;
   const token = getToken();
   const headers: Record<string, string> = {
-    ...(options.headers as Record<string, string>),
+    ...(fetchOptions.headers as Record<string, string>),
   };
 
-  if (options.body && !headers['Content-Type']) {
+  if (fetchOptions.body && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -42,7 +89,7 @@ export async function apiRequest<T>(
 
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    res = await fetch(`${API_BASE}${path}`, { ...fetchOptions, headers });
   } catch (err) {
     // Safari/iOS: TypeError "Load failed" when API/proxy/DB is unreachable
     const raw = err instanceof Error ? err.message : String(err);
@@ -57,9 +104,19 @@ export async function apiRequest<T>(
     );
   }
 
-  if (res.status === 401) {
-    setToken(null);
-    window.dispatchEvent(new Event('agroerp:unauthorized'));
+  const isAuthHandshake =
+    path.startsWith('/auth/login') ||
+    path.startsWith('/auth/register') ||
+    path.startsWith('/auth/refresh');
+
+  if (res.status === 401 && !isAuthHandshake) {
+    if (!skipAuthRefresh) {
+      const nextToken = await refreshAccessToken();
+      if (nextToken) {
+        return apiRequest<T>(path, { ...options, skipAuthRefresh: true });
+      }
+    }
+    clearSessionAndNotify();
   }
 
   const text = await res.text();

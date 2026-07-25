@@ -104,10 +104,14 @@ export class SessionsService {
   }
 
   async touch(sessionId: string) {
-    await this.prisma.session.update({
-      where: { id: sessionId },
-      data: { lastActivityAt: new Date() },
-    });
+    try {
+      await this.prisma.session.update({
+        where: { id: sessionId },
+        data: { lastActivityAt: new Date() },
+      });
+    } catch {
+      /* sesión ya no existe o fue rotada — validateSession decide si es válida */
+    }
   }
 
   async revoke(

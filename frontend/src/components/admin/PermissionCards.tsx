@@ -10,7 +10,6 @@ import {
   ADMIN_MODULES,
   permKey,
   resolveAdminModule,
-  resourceLabel,
 } from '../../lib/adminPermissions';
 
 interface PermissionCardsProps {
@@ -31,6 +30,18 @@ type ResourceBucket = {
   moduleLabel: string;
 };
 
+/** Módulos del día a día de la cooperativa; el resto queda detrás de «avanzados». */
+const ESSENTIAL_MODULE_IDS = new Set([
+  'coffee',
+  'agriculture',
+  'forms',
+  'iam',
+  'workflow',
+  'inventory',
+  'intel',
+  'ops',
+]);
+
 export function PermissionCards({
   permissions,
   selected,
@@ -39,6 +50,7 @@ export function PermissionCards({
 }: PermissionCardsProps) {
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
 
@@ -88,6 +100,8 @@ export function PermissionCards({
     for (const mod of ADMIN_MODULES) {
       const buckets = filtered.filter((b) => b.moduleId === mod.id);
       if (buckets.length === 0) continue;
+      const isEssential = ESSENTIAL_MODULE_IDS.has(mod.id);
+      if (!showAdvanced && !isEssential && !search.trim()) continue;
       groups.push({
         id: mod.id,
         label: mod.label,
@@ -97,7 +111,7 @@ export function PermissionCards({
       seen.add(mod.id);
     }
     const other = filtered.filter((b) => !seen.has(b.moduleId));
-    if (other.length > 0) {
+    if (other.length > 0 && (showAdvanced || search.trim())) {
       groups.push({
         id: 'other',
         label: 'Otros',
@@ -106,7 +120,7 @@ export function PermissionCards({
       });
     }
     return groups;
-  }, [filtered]);
+  }, [filtered, showAdvanced, search]);
 
   function toggleKeys(keys: string[], enabled: boolean) {
     if (readOnly) return;
@@ -136,7 +150,7 @@ export function PermissionCards({
         <input
           type="search"
           className="admin-perm-search"
-          placeholder="Buscar: compras, café, inventario, eint…"
+          placeholder="Buscar: compras, café, usuarios, inventarios…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           aria-label="Buscar permisos"
@@ -144,12 +158,20 @@ export function PermissionCards({
         <span className="muted admin-perm-search-count">
           {selected.length} seleccionado{selected.length === 1 ? '' : 's'}
         </span>
+        <button
+          type="button"
+          className="btn btn-sm btn-ghost"
+          onClick={() => setShowAdvanced((v) => !v)}
+          aria-pressed={showAdvanced}
+        >
+          {showAdvanced ? 'Ocultar avanzados' : 'Mostrar permisos avanzados'}
+        </button>
       </div>
 
       <p className="muted admin-perm-hint">
-        Los nombres aparecen en español. El código técnico (ej. <code>coffee:read</code>) se muestra
-        debajo por si el sistema lo pide. Para entrar a <strong>Compras</strong> active al menos{' '}
-        <strong>Puede consultar compras de café</strong>.
+        Marque lo que <strong>sí podrá hacer</strong> esta persona. Cada casilla está en español
+        (ej. «Puede consultar compras de café»). Para que vea el menú de Compras, active al menos esa
+        consulta. Use plantillas arriba si prefiere un punto de partida.
       </p>
 
       {byModule.map((group) => (
@@ -288,20 +310,21 @@ function ActionRow({
 
   const help =
     action === 'read'
-      ? 'Consultar información / entrar al módulo (obligatorio para ver la sección)'
+      ? 'Al activarlo, podrá ver esta sección en el menú y consultar datos.'
       : action === 'create'
-        ? 'Registrar nuevos elementos'
+        ? 'Al activarlo, podrá registrar elementos nuevos.'
         : action === 'update'
-          ? 'Modificar registros existentes'
+          ? 'Al activarlo, podrá modificar registros existentes.'
           : action === 'delete'
-            ? 'Eliminar de forma permanente'
+            ? 'Al activarlo, podrá eliminar de forma permanente.'
             : action === 'admin'
-              ? 'Control total sobre esta área'
-              : actionLabel(action);
+              ? 'Al activarlo, tendrá control total sobre esta área.'
+              : `Al activarlo: ${actionLabel(action)}.`;
 
   return (
     <label
       className={`admin-perm-action${on ? ' admin-perm-action--on' : ''}${partial ? ' admin-perm-action--partial' : ''}`}
+      title={`Código técnico: ${tech}`}
     >
       <input
         type="checkbox"
@@ -315,15 +338,6 @@ function ActionRow({
       <span className="admin-perm-action-body">
         <strong>{humanPermissionPhrase(resource, action)}</strong>
         <span className="muted">{help}</span>
-        <span className="admin-perm-tech">
-          Código: <code>{tech}</code>
-          {resourceLabel(resource) !== resource ? (
-            <>
-              {' '}
-              · área: {resourceLabel(resource)}
-            </>
-          ) : null}
-        </span>
       </span>
     </label>
   );

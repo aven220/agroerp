@@ -1,4 +1,12 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  HttpException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/shared/infrastructure/database/prisma.service';
 import { CoreEngineService } from '@/core/engine/application/core-engine.service';
 import { EVENT_TYPES } from '@agroerp/shared';
@@ -40,47 +48,62 @@ export class RolesService {
     });
     if (existing) throw new ConflictException('Role slug already exists');
 
-    const role = await this.prisma.role.create({
-      data: {
-        organizationId,
-        name: dto.name,
-        slug: dto.slug,
-        description: dto.description,
-      },
-    });
+    try {
+      const role = await this.prisma.role.create({
+        data: {
+          organizationId,
+          name: dto.name,
+          slug: dto.slug,
+          description: dto.description,
+        },
+      });
 
-    if (dto.permissionKeys?.length) {
-      await this.syncPermissions(role.id, dto.permissionKeys);
+      if (dto.permissionKeys?.length) {
+        await this.syncPermissions(role.id, dto.permissionKeys);
+      }
+
+      return this.findOne(organizationId, role.id);
+    } catch (err) {
+      this.rethrowPrisma(err, 'No se pudo crear el rol');
     }
-
-    return this.findOne(organizationId, role.id);
   }
 
   async update(
     organizationId: string,
     id: string,
     dto: UpdateRoleDto,
-    userId: string,
+    _userId: string,
   ) {
     const role = await this.findOne(organizationId, id);
     if (role.isSystem && dto.slug && dto.slug !== role.slug) {
       throw new ConflictException('Cannot change system role slug');
     }
 
-    await this.prisma.role.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        slug: dto.slug,
-        description: dto.description,
-      },
-    });
-
-    if (dto.permissionKeys) {
-      await this.syncPermissions(id, dto.permissionKeys);
+    if (dto.slug && dto.slug !== role.slug) {
+      const clash = await this.prisma.role.findFirst({
+        where: { organizationId, slug: dto.slug, NOT: { id } },
+      });
+      if (clash) throw new ConflictException('Role slug already exists');
     }
 
-    return this.findOne(organizationId, id);
+    const data: Prisma.RoleUpdateInput = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.slug !== undefined) data.slug = dto.slug;
+    if (dto.description !== undefined) data.description = dto.description;
+
+    try {
+      if (Object.keys(data).length > 0) {
+        await this.prisma.role.update({ where: { id }, data });
+      }
+
+      if (dto.permissionKeys !== undefined) {
+        await this.syncPermissions(id, dto.permissionKeys);
+      }
+
+      return this.findOne(organizationId, id);
+    } catch (err) {
+      this.rethrowPrisma(err, 'No se pudo actualizar el rol');
+    }
   }
 
   async assignToUser(
@@ -140,16 +163,62 @@ export class RolesService {
   }
 
   private async syncPermissions(roleId: string, keys: string[]) {
-    const permissions = await this.prisma.permission.findMany();
-    const matched = permissions.filter((p) =>
-      keys.includes(`${p.resource}:${p.action}`),
-    );
+    const uniqueKeys = [...new Set(keys.map((k) => k.trim()).filter(Boolean))];
 
-    await this.prisma.rolePermission.deleteMany({ where: { roleId } });
-    if (matched.length > 0) {
-      await this.prisma.rolePermission.createMany({
-        data: matched.map((p) => ({ roleId, permissionId: p.id })),
-      });
+    const permissions = await this.prisma.permission.findMany();
+    const byKey = new Map<string, { id: string }[]>();
+    for (const p of permissions) {
+      const key = `${p.resource}:${p.action}`;
+      const list = byKey.get(key) ?? [];
+      list.push(p);
+      byKey.set(key, list);
     }
+
+    const matchedIds = new Set<string>();
+    const unknown: string[] = [];
+    for (const key of uniqueKeys) {
+      const rows = byKey.get(key);
+      if (!rows?.length) {
+        unknown.push(key);
+        continue;
+      }
+      for (const row of rows) matchedIds.add(row.id);
+    }
+
+    if (unknown.length > 0 && matchedIds.size === 0 && uniqueKeys.length > 0) {
+      throw new BadRequestException(
+        `Ningún permiso es válido. Revise la selección (ej.: ${unknown.slice(0, 3).join(', ')}).`,
+      );
+    }
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.rolePermission.deleteMany({ where: { roleId } });
+        if (matchedIds.size > 0) {
+          await tx.rolePermission.createMany({
+            data: [...matchedIds].map((permissionId) => ({ roleId, permissionId })),
+            skipDuplicates: true,
+          });
+        }
+      });
+    } catch (err) {
+      this.rethrowPrisma(err, 'No se pudieron guardar los permisos del rol');
+    }
+  }
+
+  private rethrowPrisma(err: unknown, fallback: string): never {
+    if (err instanceof HttpException) throw err;
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === 'P2002') {
+        throw new ConflictException('Ya existe un rol con ese identificador.');
+      }
+      if (err.code === 'P2003') {
+        throw new BadRequestException('Hay permisos inválidos o referencias rotas. Intente de nuevo.');
+      }
+      if (err.code === 'P2025') {
+        throw new NotFoundException('El rol ya no existe.');
+      }
+    }
+    throw new InternalServerErrorException(fallback);
   }
 }
