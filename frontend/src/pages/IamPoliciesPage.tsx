@@ -1,33 +1,103 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
-import { EmptyState } from '../components/ui/EmptyState';
 import { useAuth } from '../context/AuthContext';
 import { getIamSecurityPolicy, updateIamSecurityPolicy, setupIamMfa, verifyIamMfa } from '../api/iam';
 
+type PolicyForm = {
+  minPasswordLength: number | '';
+  maxFailedAttempts: number | '';
+  lockoutMinutes: number | '';
+  mfaRequired: boolean;
+};
+
+const POLICY_DEFAULTS: PolicyForm = {
+  minPasswordLength: 8,
+  maxFailedAttempts: 5,
+  lockoutMinutes: 30,
+  mfaRequired: false,
+};
+
+function toForm(raw: Record<string, unknown> | null): PolicyForm {
+  if (!raw) return { ...POLICY_DEFAULTS };
+  return {
+    minPasswordLength: numOrEmpty(raw.minPasswordLength, POLICY_DEFAULTS.minPasswordLength as number),
+    maxFailedAttempts: numOrEmpty(raw.maxFailedAttempts, POLICY_DEFAULTS.maxFailedAttempts as number),
+    lockoutMinutes: numOrEmpty(raw.lockoutMinutes, POLICY_DEFAULTS.lockoutMinutes as number),
+    mfaRequired: Boolean(raw.mfaRequired),
+  };
+}
+
+function numOrEmpty(value: unknown, fallback: number): number | '' {
+  if (value === '' || value === null || value === undefined) return '';
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function parsePositive(value: number | '', label: string, min: number): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n) || n < min) {
+    throw new Error(`${label} debe ser al menos ${min}.`);
+  }
+  return Math.floor(n);
+}
+
 export function IamPoliciesPage() {
   const { hasPermission } = useAuth();
-  const canManagePolicy = hasPermission('iam:policy:manage');
-  const canManageMfa = hasPermission('iam:mfa:manage');
-  const [policy, setPolicy] = useState<Record<string, unknown> | null>(null);
+  const canManagePolicy = hasPermission('iam:policy:manage') || hasPermission('iam:admin');
+  const canManageMfa = hasPermission('iam:mfa:manage') || canManagePolicy;
+  const [form, setForm] = useState<PolicyForm>(POLICY_DEFAULTS);
   const [mfaCode, setMfaCode] = useState('');
   const [mfaMessage, setMfaMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     if (!canManagePolicy && !canManageMfa) return;
-    getIamSecurityPolicy().then(setPolicy).catch((err) => {
-      setError(err instanceof Error ? err.message : 'No se pudo cargar la política');
-    });
+    getIamSecurityPolicy()
+      .then((policy) => {
+        setForm(toForm(policy));
+        setLoaded(true);
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'No se pudo cargar la política');
+        setLoaded(true);
+      });
   }, [canManagePolicy, canManageMfa]);
 
+  function setNumberField(key: keyof Pick<PolicyForm, 'minPasswordLength' | 'maxFailedAttempts' | 'lockoutMinutes'>, raw: string) {
+    if (raw === '') {
+      setForm((prev) => ({ ...prev, [key]: '' }));
+      return;
+    }
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return;
+    setForm((prev) => ({ ...prev, [key]: n }));
+  }
+
   async function save() {
-    if (!policy || !canManagePolicy) return;
-    await updateIamSecurityPolicy(policy);
-    setSaved(true);
-    getIamSecurityPolicy().then(setPolicy);
-    window.setTimeout(() => setSaved(false), 3000);
+    if (!canManagePolicy) return;
+    setError(null);
+    setSaved(false);
+    setSaving(true);
+    try {
+      const payload = {
+        minPasswordLength: parsePositive(form.minPasswordLength, 'La longitud mínima', 6),
+        maxFailedAttempts: parsePositive(form.maxFailedAttempts, 'Los intentos fallidos', 1),
+        lockoutMinutes: parsePositive(form.lockoutMinutes, 'La duración del bloqueo', 1),
+        mfaRequired: Boolean(form.mfaRequired),
+      };
+      const updated = (await updateIamSecurityPolicy(payload)) as Record<string, unknown>;
+      setForm(toForm(updated));
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudieron guardar las políticas');
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!canManagePolicy && !canManageMfa) {
@@ -57,8 +127,14 @@ export function IamPoliciesPage() {
       {error ? <div className="alert alert-error">{error}</div> : null}
       {saved ? <div className="alert alert-success">Políticas guardadas correctamente.</div> : null}
 
-      {canManagePolicy && policy ? (
-        <form className="panel form-panel" onSubmit={(e) => { e.preventDefault(); save(); }}>
+      {canManagePolicy && loaded ? (
+        <form
+          className="panel form-panel"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void save();
+          }}
+        >
           <h3>Contraseñas y bloqueo</h3>
           <div className="form-grid">
             <label>
@@ -66,18 +142,20 @@ export function IamPoliciesPage() {
               <input
                 type="number"
                 min={6}
-                value={Number(policy.minPasswordLength)}
-                onChange={(e) => setPolicy({ ...policy, minPasswordLength: Number(e.target.value) })}
+                inputMode="numeric"
+                value={form.minPasswordLength === '' ? '' : form.minPasswordLength}
+                onChange={(e) => setNumberField('minPasswordLength', e.target.value)}
               />
-              <span className="ds-field-hint">Recomendado: 10 o más caracteres.</span>
+              <span className="ds-field-hint">Mínimo 6. Recomendado: 10 o más.</span>
             </label>
             <label>
               Intentos fallidos antes de bloquear
               <input
                 type="number"
                 min={1}
-                value={Number(policy.maxFailedAttempts)}
-                onChange={(e) => setPolicy({ ...policy, maxFailedAttempts: Number(e.target.value) })}
+                inputMode="numeric"
+                value={form.maxFailedAttempts === '' ? '' : form.maxFailedAttempts}
+                onChange={(e) => setNumberField('maxFailedAttempts', e.target.value)}
               />
               <span className="ds-field-hint">Tras superar este número, la cuenta se bloquea temporalmente.</span>
             </label>
@@ -86,22 +164,25 @@ export function IamPoliciesPage() {
               <input
                 type="number"
                 min={1}
-                value={Number(policy.lockoutMinutes)}
-                onChange={(e) => setPolicy({ ...policy, lockoutMinutes: Number(e.target.value) })}
+                inputMode="numeric"
+                value={form.lockoutMinutes === '' ? '' : form.lockoutMinutes}
+                onChange={(e) => setNumberField('lockoutMinutes', e.target.value)}
               />
             </label>
             <label className="admin-field" style={{ alignSelf: 'end' }}>
               <span>Exigir autenticación en dos pasos</span>
               <input
                 type="checkbox"
-                checked={Boolean(policy.mfaRequired)}
-                onChange={(e) => setPolicy({ ...policy, mfaRequired: e.target.checked })}
+                checked={form.mfaRequired}
+                onChange={(e) => setForm((prev) => ({ ...prev, mfaRequired: e.target.checked }))}
               />
               <span className="ds-field-hint">Todos los usuarios deberán configurar una app autenticadora.</span>
             </label>
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary">Guardar políticas</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? 'Guardando…' : 'Guardar políticas'}
+            </button>
           </div>
         </form>
       ) : null}

@@ -1,17 +1,29 @@
-import { IsArray, IsBoolean, IsIn, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 import { IAM_ANOMALY_SEVERITIES, IAM_MFA_TYPES, IAM_SECURITY_EVENT_TYPES } from '@agroerp/shared';
 
 export class UpdateSecurityPolicyDto {
-  @IsOptional() minPasswordLength?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(6) @Max(128) minPasswordLength?: number;
   @IsOptional() @IsBoolean() requireUppercase?: boolean;
   @IsOptional() @IsBoolean() requireLowercase?: boolean;
   @IsOptional() @IsBoolean() requireNumbers?: boolean;
   @IsOptional() @IsBoolean() requireSymbols?: boolean;
-  @IsOptional() passwordExpiryDays?: number;
-  @IsOptional() passwordHistoryCount?: number;
-  @IsOptional() maxFailedAttempts?: number;
-  @IsOptional() lockoutMinutes?: number;
-  @IsOptional() sessionTimeoutMinutes?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) passwordExpiryDays?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) passwordHistoryCount?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(50) maxFailedAttempts?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(24 * 60) lockoutMinutes?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) sessionTimeoutMinutes?: number;
   @IsOptional() @IsBoolean() mfaRequired?: boolean;
   @IsOptional() @IsArray() allowedCountries?: string[];
   @IsOptional() @IsArray() allowedIpRanges?: string[];

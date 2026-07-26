@@ -110,9 +110,22 @@ export function AdminPage({
     status: 'active',
   });
 
+  function scrollToAdminPanel(next: AdminTab) {
+    const id = next === 'users' ? 'admin-users-panel' : 'admin-roles-panel';
+    window.requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
   function switchTab(next: AdminTab) {
     setTab(next);
-    navigate(next === 'users' ? usersPath : rolesPath);
+    const path = next === 'users' ? usersPath : rolesPath;
+    const hash = next === 'users' ? 'admin-users-panel' : 'admin-roles-panel';
+    if (location.pathname !== path) {
+      navigate(`${path}#${hash}`);
+      return;
+    }
+    scrollToAdminPanel(next);
   }
 
   function openUserCreate(roleSlug?: string) {
@@ -164,6 +177,16 @@ export function AdminPage({
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    const hash = location.hash.replace(/^#/, '');
+    if (hash === 'admin-users-panel' || hash === 'admin-roles-panel') {
+      window.requestAnimationFrame(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, [loading, location.hash, tab]);
 
   function openRoleCreate() {
     setEditingRole(null);
@@ -425,7 +448,7 @@ export function AdminPage({
                 }}
               />
 
-              <div className="tabs admin-tabs">
+              <div className="tabs admin-tabs" id="admin-tabs">
                 {canReadRoles ? (
                   <button
                     type="button"
@@ -447,59 +470,63 @@ export function AdminPage({
               </div>
 
               {tab === 'roles' ? (
-                roles.length === 0 ? (
-                  <EmptyState
-                    illustration="permissions"
-                    title="Todavía no ha creado ningún rol."
-                    description="Los roles permiten controlar qué puede hacer cada usuario. Comience definiendo su primer perfil de acceso."
-                    action={
-                      canCreateRole
-                        ? { label: 'Crear primer rol', onClick: openRoleCreate }
-                        : undefined
-                    }
-                  />
-                ) : (
-                  <DataTable<Role>
-                    gridId="admin-roles"
-                    data={roles}
-                    columns={[
-                      { key: 'name', label: 'Rol', render: (r) => r.name },
-                      {
-                        key: 'perms',
-                        label: 'Permisos',
-                        render: (r) => `${r.rolePermissions?.length ?? 0} permisos`,
-                      },
-                      {
-                        key: 'users',
-                        label: 'Usuarios asignados',
-                        render: (r) => r._count?.userRoles ?? 0,
-                      },
-                      {
-                        key: 'type',
-                        label: 'Tipo',
-                        render: (r) => (r.isSystem ? 'Sistema' : 'Personalizado'),
-                      },
-                      {
-                        key: 'actions',
-                        label: '',
-                        render: (r) =>
-                          canUpdateRole ? (
-                            <button
-                              type="button"
-                              className="btn btn-sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openRoleEdit(r);
-                              }}
-                            >
-                              Configurar permisos
-                            </button>
-                          ) : null,
-                      },
-                    ]}
-                  />
-                )
-              ) : users.length === 0 ? (
+                <div id="admin-roles-panel">
+                  {roles.length === 0 ? (
+                    <EmptyState
+                      illustration="permissions"
+                      title="Todavía no ha creado ningún rol."
+                      description="Los roles permiten controlar qué puede hacer cada usuario. Comience definiendo su primer perfil de acceso."
+                      action={
+                        canCreateRole
+                          ? { label: 'Crear primer rol', onClick: openRoleCreate }
+                          : undefined
+                      }
+                    />
+                  ) : (
+                    <DataTable<Role>
+                      gridId="admin-roles"
+                      data={roles}
+                      columns={[
+                        { key: 'name', label: 'Rol', render: (r) => r.name },
+                        {
+                          key: 'perms',
+                          label: 'Permisos',
+                          render: (r) => `${r.rolePermissions?.length ?? 0} permisos`,
+                        },
+                        {
+                          key: 'users',
+                          label: 'Usuarios asignados',
+                          render: (r) => r._count?.userRoles ?? 0,
+                        },
+                        {
+                          key: 'type',
+                          label: 'Tipo',
+                          render: (r) => (r.isSystem ? 'Sistema' : 'Personalizado'),
+                        },
+                        {
+                          key: 'actions',
+                          label: '',
+                          render: (r) =>
+                            canUpdateRole ? (
+                              <button
+                                type="button"
+                                className="btn btn-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openRoleEdit(r);
+                                }}
+                              >
+                                Configurar permisos
+                              </button>
+                            ) : null,
+                        },
+                      ]}
+                    />
+                  )}
+                </div>
+              ) : (
+                <div id="admin-users-panel">
+                  {users.length === 0 ? (
                 <EmptyState
                   illustration="permissions"
                   title="Todavía no hay usuarios registrados."
@@ -574,6 +601,8 @@ export function AdminPage({
                       : []),
                   ]}
                 />
+                  )}
+                </div>
               )}
             </>
           )}
