@@ -34,9 +34,13 @@ import {
 import { labelTicketStatus } from '../lib/productLabels';
 import { notifyEntityUpdated, useOnEntityUpdated } from '../lib/entitySync';
 import { useIsMounted } from '../hooks/useIsMounted';
+import { useAuth } from '../context/AuthContext';
 
 export function CoffeeWeighingPage() {
   const mounted = useIsMounted();
+  const { hasPermission } = useAuth();
+  const canWeighIot = hasPermission('coffee:weigh') || hasPermission('coffee:admin');
+  const canWeighManual = hasPermission('coffee:weigh:manual') || hasPermission('coffee:admin') || canWeighIot;
   const [searchParams] = useSearchParams();
   const [pending, setPending] = useState<CoffeeTicket[]>([]);
   const [monitor, setMonitor] = useState<Record<string, unknown> | null>(null);
@@ -45,6 +49,7 @@ export function CoffeeWeighingPage() {
   const [manualTare, setManualTare] = useState('');
   const [reason, setReason] = useState('Balanza desconectada — contingencia operativa');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [busy, setBusy] = useState(false);
 
   const reload = async () => {
@@ -58,21 +63,28 @@ export function CoffeeWeighingPage() {
     reload().catch(() => undefined);
   }, ['purchase', 'inventory']);
 
+  const openSession = async (ticketKey: string, contingency: boolean) => {
+    const s = await startWeighingSession(ticketKey, contingency ? { contingency: true } : {});
+    try {
+      await verifyWeighingScale(String(s.sessionKey));
+    } catch {
+      if (!contingency) {
+        setInfo(
+          'No hay báscula IoT verificada. Use pesaje manual abajo o reinicie con «Iniciar pesaje manual».',
+        );
+      }
+    }
+    return getWeighingSession(String(s.sessionKey));
+  };
+
   useEffect(() => {
     let cancelled = false;
     reload().catch(() => undefined);
     const ticketFromQuery = searchParams.get('ticket');
     if (ticketFromQuery) {
-      startWeighingSession(ticketFromQuery)
-        .then(async (s) => {
-          if (cancelled || !mounted.current) return;
-          try {
-            await verifyWeighingScale(String(s.sessionKey));
-          } catch {
-            // allow contingency path if scale verify fails
-          }
-          if (cancelled || !mounted.current) return;
-          setSession(await getWeighingSession(String(s.sessionKey)));
+      openSession(ticketFromQuery, false)
+        .then((s) => {
+          if (!cancelled && mounted.current) setSession(s);
         })
         .catch((e) => {
           if (!cancelled && mounted.current) {
@@ -122,11 +134,10 @@ export function CoffeeWeighingPage() {
     }
   };
 
-  const start = (ticketKey: string) =>
+  const start = (ticketKey: string, contingency = false) =>
     run(async () => {
-      const s = await startWeighingSession(ticketKey);
-      await verifyWeighingScale(String(s.sessionKey));
-      return getWeighingSession(String(s.sessionKey));
+      setInfo(contingency ? 'Sesión de pesaje manual iniciada.' : '');
+      return openSession(ticketKey, contingency);
     });
 
   const captureGross = () =>
@@ -156,7 +167,9 @@ export function CoffeeWeighingPage() {
   const contingencyManual = () =>
     run(async () => {
       const key = String(session?.sessionKey);
-      await enableWeighingContingency(key, reason);
+      if (!session?.contingency) {
+        await enableWeighingContingency(key, reason);
+      }
       await manualWeighingCapture(key, {
         weighingType: 'gross',
         weightKg: Number(manualGross),
@@ -179,6 +192,8 @@ export function CoffeeWeighingPage() {
   const flow = (session?.flow ?? []) as Array<Record<string, unknown>>;
   const ticket = session?.ticket as Record<string, unknown> | undefined;
   const scale = session?.scale as Record<string, unknown> | undefined;
+  const isManualSession =
+    Boolean(session?.contingency) || String(scale?.scaleKey ?? '') === 'MANUAL-SCALE';
 
   const gridRows = pending.map((t) => ({ ...t, id: t.id || t.ticketKey }));
 
@@ -190,21 +205,37 @@ export function CoffeeWeighingPage() {
   ];
 
   const rowActions: RowAction<CoffeeTicket>[] = [
-    {
-      id: 'start-weighing',
-      label: 'Iniciar pesaje',
-      onAction: (r) => {
-        if (busy) return;
-        start(r.ticketKey);
-      },
-    },
+    ...(canWeighIot || canWeighManual
+      ? [
+          {
+            id: 'start-weighing',
+            label: 'Iniciar pesaje',
+            onAction: (r: CoffeeTicket) => {
+              if (busy) return;
+              start(r.ticketKey, false);
+            },
+          } satisfies RowAction<CoffeeTicket>,
+        ]
+      : []),
+    ...(canWeighManual
+      ? [
+          {
+            id: 'start-manual',
+            label: 'Pesaje manual',
+            onAction: (r: CoffeeTicket) => {
+              if (busy) return;
+              start(r.ticketKey, true);
+            },
+          } satisfies RowAction<CoffeeTicket>,
+        ]
+      : []),
   ];
 
   return (
     <PageLayout>
       <PageHeader
         title="Pesaje de café"
-        subtitle="Flujo guiado, balanzas IoT y contingencia"
+        subtitle="Báscula IoT o pesaje manual sin dispositivo"
         actions={
           <PageActions>
             <Link to="/compras/balanzas" className="btn">Balanzas</Link>
@@ -222,7 +253,12 @@ export function CoffeeWeighingPage() {
         <MetricCard label="Alertas" value={summary.openAlerts ?? 0} />
       </PageSummary>
 
+      <p className="muted page-help">
+        Si no tiene báscula IoT conectada, use <strong>Pesaje manual</strong> en la cola e ingrese bruto y tara.
+      </p>
+
       {error ? <PageState variant="error" message={error} /> : null}
+      {info ? <div className="alert alert-warning">{info}</div> : null}
 
       <PageSection title="Cola de pesaje">
         {pending.length === 0 ? (
@@ -251,6 +287,7 @@ export function CoffeeWeighingPage() {
             <strong>{String(ticket?.producerName ?? '')}</strong> · Balanza:{' '}
             <strong>{String(scale?.name ?? scale?.scaleKey ?? '—')}</strong> · Estado:{' '}
             <strong>{String(session.status)}</strong>
+            {isManualSession ? ' · Modo manual' : ''}
           </p>
           <div className="kpi-grid">
             {flow.map((s) => (
@@ -267,27 +304,40 @@ export function CoffeeWeighingPage() {
             <div><strong>Tara:</strong> {session.tareWeightKg != null ? `${session.tareWeightKg} kg` : '—'}</div>
             <div><strong>Neto:</strong> {session.netWeightKg != null ? `${session.netWeightKg} kg` : '—'}</div>
             <div><strong>Fuente:</strong> {String(session.source)}</div>
-            <div><strong>Estable:</strong> {session.stabilityOk ? 'Sí' : 'No'}</div>
+            <div><strong>Estable:</strong> {session.stabilityMark ? 'Sí' : session.stabilityOk ? 'Sí' : 'No'}</div>
           </div>
-          <FormActions sticky={false}>
-            <button className="btn" disabled={busy} onClick={captureGross}>Capturar bruto IoT</button>
-            <button className="btn" disabled={busy} onClick={captureTare}>Capturar tara IoT</button>
-            <button className="btn" disabled={busy} onClick={finish}>Validar y enviar a calidad</button>
-          </FormActions>
+          {!isManualSession ? (
+            <FormActions sticky={false}>
+              <button type="button" className="btn" disabled={busy || !canWeighIot} onClick={captureGross}>
+                Capturar bruto IoT
+              </button>
+              <button type="button" className="btn" disabled={busy || !canWeighIot} onClick={captureTare}>
+                Capturar tara IoT
+              </button>
+              <button type="button" className="btn" disabled={busy} onClick={finish}>
+                Validar y enviar a calidad
+              </button>
+            </FormActions>
+          ) : null}
           <PageToolbar>
-            <FieldGroup label="Bruto manual">
-              <input value={manualGross} onChange={(e) => setManualGross(e.target.value)} />
+            <FieldGroup label="Bruto manual (kg)">
+              <input value={manualGross} onChange={(e) => setManualGross(e.target.value)} inputMode="decimal" />
             </FieldGroup>
-            <FieldGroup label="Tara manual">
-              <input value={manualTare} onChange={(e) => setManualTare(e.target.value)} />
+            <FieldGroup label="Tara manual (kg)">
+              <input value={manualTare} onChange={(e) => setManualTare(e.target.value)} inputMode="decimal" />
             </FieldGroup>
-            <FieldGroup label="Justificación contingencia">
+            <FieldGroup label="Justificación">
               <input value={reason} onChange={(e) => setReason(e.target.value)} />
             </FieldGroup>
           </PageToolbar>
           <FormActions sticky={false}>
-            <button className="btn" disabled={busy} onClick={contingencyManual}>
-              Pesaje contingencia
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={busy || !canWeighManual || !manualGross || !manualTare}
+              onClick={contingencyManual}
+            >
+              Guardar pesaje manual y enviar a calidad
             </button>
           </FormActions>
         </PageSection>

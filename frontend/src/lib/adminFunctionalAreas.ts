@@ -75,10 +75,13 @@ export const ACTION_PHRASES: Record<string, (resource: string) => string> = {
   inventory: (r) =>
     r === 'coffee' ? 'Puede gestionar inventario de café' : `Puede gestionar inventario de ${resourceLabel(r)}`,
   'config:read': (r) => `Puede ver la configuración de ${resourceLabel(r)}`,
-  'config:manage': (r) => `Puede cambiar la configuración de ${resourceLabel(r)}`,
-  'catalog:manage': (r) => `Puede gestionar catálogos de ${resourceLabel(r)}`,
+  'config:manage': (r) => `Puede crear, editar y desactivar la configuración de ${resourceLabel(r)}`,
+  'catalog:manage': (r) => `Puede crear, editar y desactivar catálogos de ${resourceLabel(r)}`,
   'audit:read': (r) => `Puede ver la auditoría de ${resourceLabel(r)}`,
-  config: (r) => `Puede configurar ${resourceLabel(r)}`,
+  config: (r) => `Puede configurar parámetros de ${resourceLabel(r)}`,
+  item: () => 'Puede crear, editar y desactivar artículos de inventario',
+  warehouse: () => 'Puede gestionar bodegas de inventario',
+  catalog: (r) => `Puede gestionar catálogos de ${resourceLabel(r)}`,
 };
 
 export function humanPermissionPhrase(resource: string, action: string): string {

@@ -14,6 +14,8 @@ import {
   type SimpleColumn,
 } from '../components/page';
 import { addEimsItemPhoto, getEimsItemByCode, listEimsItems, upsertEimsItem } from '../api/eims';
+import { useAuth } from '../context/AuthContext';
+import type { RowAction } from '../lib/data-grid/types';
 
 type ItemRow = Record<string, unknown> & { id: string };
 
@@ -30,33 +32,118 @@ const columns: SimpleColumn<ItemRow>[] = [
   { key: 'valuationMethod', label: 'Valoración', getValue: (r) => String(r.valuationMethod ?? '') },
 ];
 
+const emptyForm = {
+  itemKey: '',
+  name: '',
+  itemTypeKey: 'coffee_parchment',
+  uomKey: 'kg',
+  categoryKey: 'coffee',
+  trackLot: true,
+  trackSerial: false,
+  trackExpiry: false,
+};
+
 export function EimsItemsPage() {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('inventory:item') || hasPermission('inventory:admin');
   const [items, setItems] = useState<ItemRow[]>([]);
   const [q, setQ] = useState('');
   const [scan, setScan] = useState('');
-  const [form, setForm] = useState({
-    itemKey: '',
-    name: '',
-    itemTypeKey: 'coffee_parchment',
-    uomKey: 'kg',
-    categoryKey: 'coffee',
-    trackLot: true,
-    trackSerial: false,
-    trackExpiry: false,
-  });
+  const [form, setForm] = useState(emptyForm);
+  const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
 
   const reload = () =>
     listEimsItems({ q: q || undefined }).then((r) =>
       setItems((r as Array<Record<string, unknown>>).map((row) => withRowId(row, 'id', 'itemKey'))),
     );
-  useEffect(() => { reload(); }, []);
+  useEffect(() => {
+    reload().catch((e) => setError(e instanceof Error ? e.message : 'No se pudo cargar'));
+  }, []);
+
+  function loadIntoForm(row: ItemRow) {
+    setForm({
+      itemKey: String(row.itemKey ?? ''),
+      name: String(row.name ?? ''),
+      itemTypeKey: String(row.itemTypeKey ?? 'coffee_parchment'),
+      uomKey: String(row.uomKey ?? 'kg'),
+      categoryKey: String(row.categoryKey ?? 'coffee'),
+      trackLot: Boolean(row.trackLot),
+      trackSerial: Boolean(row.trackSerial),
+      trackExpiry: Boolean(row.trackExpiry),
+    });
+    setEditing(true);
+    setError('');
+    setSaved(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function save() {
+    if (!canEdit) {
+      setError('No tiene permiso para crear o editar artículos (inventory:item).');
+      return;
+    }
+    setError('');
+    try {
+      await upsertEimsItem({ ...form, isActive: true });
+      if (!editing) {
+        try {
+          await addEimsItemPhoto(form.itemKey, {
+            photoKey: `photo-${Date.now()}`,
+            caption: 'Principal',
+            isPrimary: true,
+          });
+        } catch {
+          /* foto opcional */
+        }
+      }
+      setSaved(true);
+      setEditing(false);
+      setForm(emptyForm);
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo guardar');
+    }
+  }
+
+  async function deactivate(row: ItemRow) {
+    if (!canEdit) return;
+    if (!window.confirm(`¿Desactivar el artículo «${String(row.name)}»? Dejará de aparecer en el listado.`)) {
+      return;
+    }
+    setError('');
+    try {
+      await upsertEimsItem({
+        itemKey: String(row.itemKey),
+        name: String(row.name),
+        itemTypeKey: String(row.itemTypeKey ?? 'other'),
+        uomKey: String(row.uomKey ?? 'kg'),
+        categoryKey: row.categoryKey,
+        trackLot: Boolean(row.trackLot),
+        trackSerial: Boolean(row.trackSerial),
+        trackExpiry: Boolean(row.trackExpiry),
+        isActive: false,
+        statusKey: 'inactive',
+      });
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo desactivar');
+    }
+  }
+
+  const rowActions: RowAction<ItemRow>[] = canEdit
+    ? [
+        { id: 'edit', label: 'Editar', onAction: loadIntoForm },
+        { id: 'deactivate', label: 'Desactivar', onAction: deactivate },
+      ]
+    : [];
 
   return (
     <PageLayout>
       <PageHeader
         title="Artículos de inventario"
-        subtitle="Registre productos, unidades de medida y códigos de barras"
+        subtitle="Registre, edite o desactive productos y unidades de medida"
         actions={
           <PageActions>
             <Link to="/inventario" className="btn">Inventario</Link>
@@ -64,13 +151,15 @@ export function EimsItemsPage() {
         }
       />
       {error ? <PageState variant="error" message={error} /> : null}
+      {saved ? <div className="alert alert-success">Artículo guardado.</div> : null}
 
       <PageSection title="Búsqueda">
         <TableToolbar>
           <input placeholder="Buscar" value={q} onChange={(e) => setQ(e.target.value)} />
-          <button className="btn" onClick={reload}>Buscar</button>
+          <button type="button" className="btn" onClick={() => reload()}>Buscar</button>
           <input placeholder="Código de barras o QR" value={scan} onChange={(e) => setScan(e.target.value)} />
           <button
+            type="button"
             className="btn"
             onClick={() =>
               getEimsItemByCode(scan)
@@ -83,13 +172,25 @@ export function EimsItemsPage() {
         </TableToolbar>
       </PageSection>
 
-      <PageSection title="Registrar / actualizar artículo">
+      <PageSection title={editing ? `Editar artículo «${form.itemKey}»` : 'Registrar artículo'}>
+        {!canEdit ? (
+          <p className="muted">Solo lectura: su rol no incluye permiso para modificar artículos.</p>
+        ) : null}
         <div className="form-grid">
           <FieldGroup label="Código del artículo">
-            <input placeholder="Código del artículo" value={form.itemKey} onChange={(e) => setForm({ ...form, itemKey: e.target.value })} />
+            <input
+              placeholder="Código del artículo"
+              value={form.itemKey}
+              disabled={editing}
+              onChange={(e) => setForm({ ...form, itemKey: e.target.value })}
+            />
           </FieldGroup>
           <FieldGroup label="Nombre del artículo">
-            <input placeholder="Nombre del artículo" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <input
+              placeholder="Nombre del artículo"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
           </FieldGroup>
           <FieldGroup label="Tipo">
             <select value={form.itemTypeKey} onChange={(e) => setForm({ ...form, itemTypeKey: e.target.value })}>
@@ -109,29 +210,58 @@ export function EimsItemsPage() {
             </select>
           </FieldGroup>
           <FieldGroup label="Unidad">
-            <input placeholder="Unidad (ej. kg, litro, unidad)" value={form.uomKey} onChange={(e) => setForm({ ...form, uomKey: e.target.value })} />
+            <input
+              placeholder="Unidad (ej. kg, litro, unidad)"
+              value={form.uomKey}
+              onChange={(e) => setForm({ ...form, uomKey: e.target.value })}
+            />
           </FieldGroup>
           <FieldGroup label="Control por lote">
-            <label><input type="checkbox" checked={form.trackLot} onChange={(e) => setForm({ ...form, trackLot: e.target.checked })} /> Control por lote</label>
+            <label>
+              <input
+                type="checkbox"
+                checked={form.trackLot}
+                onChange={(e) => setForm({ ...form, trackLot: e.target.checked })}
+              />{' '}
+              Control por lote
+            </label>
           </FieldGroup>
           <FieldGroup label="Control por serie">
-            <label><input type="checkbox" checked={form.trackSerial} onChange={(e) => setForm({ ...form, trackSerial: e.target.checked })} /> Control por serie</label>
+            <label>
+              <input
+                type="checkbox"
+                checked={form.trackSerial}
+                onChange={(e) => setForm({ ...form, trackSerial: e.target.checked })}
+              />{' '}
+              Control por serie
+            </label>
           </FieldGroup>
           <FieldGroup label="Control de vencimiento">
-            <label><input type="checkbox" checked={form.trackExpiry} onChange={(e) => setForm({ ...form, trackExpiry: e.target.checked })} /> Control de vencimiento</label>
+            <label>
+              <input
+                type="checkbox"
+                checked={form.trackExpiry}
+                onChange={(e) => setForm({ ...form, trackExpiry: e.target.checked })}
+              />{' '}
+              Control de vencimiento
+            </label>
           </FieldGroup>
         </div>
         <FormActions sticky={false}>
-          <button
-            className="btn btn-primary"
-            onClick={() =>
-              upsertEimsItem(form)
-                .then(() => addEimsItemPhoto(form.itemKey, { photoKey: `photo-${Date.now()}`, caption: 'Principal', isPrimary: true }))
-                .then(reload)
-                .catch((e) => setError(e.message))
-            }
-          >
-            Guardar artículo
+          {editing ? (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setEditing(false);
+                setForm(emptyForm);
+              }}
+            >
+              Cancelar edición
+            </button>
+          ) : null}
+          <button type="button" className="btn btn-primary" disabled={!canEdit} onClick={() => void save()}>
+            {editing ? 'Guardar cambios' : 'Guardar artículo'}
           </button>
         </FormActions>
       </PageSection>
@@ -142,6 +272,8 @@ export function EimsItemsPage() {
           columns={columns}
           data={items}
           selectable={false}
+          rowActions={rowActions}
+          onRowClick={canEdit ? loadIntoForm : undefined}
           emptyMessage="Sin artículos"
         />
       </PageSection>

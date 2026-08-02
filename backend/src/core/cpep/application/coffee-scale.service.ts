@@ -223,6 +223,26 @@ export class CoffeeScaleService {
     });
   }
 
+  /** Balanza virtual para pesaje manual cuando no hay IoT / báscula física. */
+  async ensureManualScale(organizationId: string, userId: string, purchaseCenterId?: string) {
+    const scale = await this.upsert(organizationId, userId, {
+      scaleKey: 'MANUAL-SCALE',
+      name: 'Pesaje manual (sin IoT)',
+      connectionType: 'iot_gateway',
+      certified: true,
+      purchaseCenterId,
+      locationLabel: 'Contingencia operativa',
+      minWeightKg: 0,
+      maxWeightKg: 50_000,
+      precisionKg: 0.1,
+      metadata: { virtual: true, manualOnly: true },
+    });
+    return this.prisma.cpepScale.update({
+      where: { id: scale.id },
+      data: { status: 'available', lastSeenAt: new Date(), certified: true },
+    });
+  }
+
   async markStatus(
     organizationId: string,
     scaleKey: string,

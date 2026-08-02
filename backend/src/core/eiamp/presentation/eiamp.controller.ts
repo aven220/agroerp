@@ -247,7 +247,7 @@ export class EiampController {
   }
 
   @Get('permissions/effective')
-  @RequirePermissions('iam:read')
+  @ApiOperation({ summary: 'Permisos efectivos del usuario autenticado' })
   effectivePermissions(@CurrentUser() user: { id: string; organizationId: string }) {
     return this.accessControl.resolveUserAccess(user.id, user.organizationId);
   }

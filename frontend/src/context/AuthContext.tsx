@@ -45,22 +45,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     const profile = await authApi.getMe();
-    let effective = { permissions: [] as string[], roles: [] as string[] };
+    const profileRoles = (Array.isArray(profile.roles) ? profile.roles : []).map((r) =>
+      typeof r === 'string' ? r : (r as { slug: string }).slug,
+    );
+    let permissions: string[] = Array.isArray((profile as { permissions?: string[] }).permissions)
+      ? ((profile as { permissions?: string[] }).permissions ?? [])
+      : [];
+    let roles = profileRoles;
     try {
-      effective = await getEffectivePermissions() as { permissions: string[]; roles: string[] };
+      const effective = (await getEffectivePermissions()) as {
+        permissions?: string[];
+        roles?: string[];
+      };
+      if (effective.permissions?.length) permissions = effective.permissions;
+      if (effective.roles?.length) roles = effective.roles;
     } catch {
-      /* fallback below */
+      /* conservar permisos/roles del perfil; no vaciar la sesión */
     }
 
     setUser({
       ...profile,
-      permissions: effective.permissions?.length ? effective.permissions : [],
-      roles:
-        effective.roles?.length
-          ? effective.roles
-          : (Array.isArray(profile.roles) ? profile.roles : []).map((r) =>
-              typeof r === 'string' ? r : (r as { slug: string }).slug,
-            ),
+      permissions,
+      roles,
     });
   }, []);
 
@@ -145,10 +151,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!user?.permissions) return false;
       if (user.permissions.includes('*:*')) return true;
       if (user.permissions.includes(perm)) return true;
+      const roles = user.roles ?? [];
+      if (
+        roles.some((r) => {
+          const s = r.toLowerCase().replace(/[\s-]+/g, '_');
+          return s === 'admin' || s === 'administrator' || s === 'administrador' || s === 'system_admin';
+        })
+      ) {
+        return true;
+      }
       const sep = perm.indexOf(':');
       if (sep <= 0) return false;
       const resource = perm.slice(0, sep);
-      return user.permissions.includes(`${resource}:*`);
+      if (user.permissions.includes(`${resource}:*`)) return true;
+      if (user.permissions.includes(`${resource}:admin`)) return true;
+      return false;
     },
     [user],
   );

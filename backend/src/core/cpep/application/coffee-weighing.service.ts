@@ -131,9 +131,20 @@ export class CoffeeWeighingService {
     const weighingNumber = generateWeighingNumber(ticketKey, count + 1);
     const sessionKey = `WS-${ticketKey}-${Date.now()}`;
 
-    let scale = options?.scaleKey
-      ? await this.scales.findOne(organizationId, options.scaleKey)
-      : await this.scales.selectAvailable(organizationId, options?.purchaseCenterId ?? ticket.purchaseCenterId ?? undefined);
+    const centerId = options?.purchaseCenterId ?? ticket.purchaseCenterId ?? undefined;
+    let scale;
+    try {
+      scale = options?.scaleKey
+        ? await this.scales.findOne(organizationId, options.scaleKey)
+        : await this.scales.selectAvailable(organizationId, centerId);
+    } catch (err) {
+      // Sin balanza IoT: permitir pesaje manual / contingencia con balanza virtual.
+      if (options?.contingency || err instanceof BadRequestException) {
+        scale = await this.scales.ensureManualScale(organizationId, userId, centerId);
+      } else {
+        throw err;
+      }
+    }
 
     const session = await this.prisma.cpepWeighingSession.create({
       data: {
@@ -146,8 +157,8 @@ export class CoffeeWeighingService {
         step: 2,
         operatorId: userId,
         purchaseCenterId: options?.purchaseCenterId ?? ticket.purchaseCenterId,
-        source: options?.contingency ? 'manual_contingency' : 'iot',
-        contingency: !!options?.contingency,
+        source: options?.contingency ? 'manual_contingency' : scale.scaleKey === 'MANUAL-SCALE' ? 'manual_contingency' : 'iot',
+        contingency: !!options?.contingency || scale.scaleKey === 'MANUAL-SCALE',
         iotDeviceKey: scale.iotDeviceKey,
         firmwareVersion: scale.firmwareVersion,
         locationLabel: scale.locationLabel,
@@ -161,7 +172,7 @@ export class CoffeeWeighingService {
       data: { status: 'receiving', wizardStep: Math.max(ticket.wizardStep, 10) },
     });
 
-    if (!options?.contingency) {
+    if (!options?.contingency && scale.scaleKey !== 'MANUAL-SCALE') {
       await this.scales.markStatus(organizationId, scale.scaleKey, 'busy', userId);
     }
 

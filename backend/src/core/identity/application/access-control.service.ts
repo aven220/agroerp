@@ -10,6 +10,19 @@ export interface EffectivePermissions {
   scopes: { scopeType: string; scopeId: string }[];
 }
 
+function isAdminRoleSlug(slug: string): boolean {
+  const s = slug.toLowerCase().replace(/[\s-]+/g, '_');
+  return (
+    s === 'admin' ||
+    s === 'administrator' ||
+    s === 'administrador' ||
+    s === 'system_admin' ||
+    s === 'sysadmin' ||
+    s === 'org_admin' ||
+    s === 'tenant_admin'
+  );
+}
+
 @Injectable()
 export class AccessControlService implements AuthorizationService {
   constructor(
@@ -124,7 +137,8 @@ export class AccessControlService implements AuthorizationService {
 
     let permissions = [...new Set([...rolePerms, ...groupPerms, ...delegatedPerms])];
 
-    if (roles.includes('admin')) {
+    // Admin total: slug canónico o nombres habituales de rol administrador.
+    if (roles.some((r) => isAdminRoleSlug(r))) {
       permissions = ['*:*', ...permissions];
     }
 
@@ -147,6 +161,8 @@ export class AccessControlService implements AuthorizationService {
     const resource = required.slice(0, sep);
     const action = required.slice(sep + 1);
     if (permissions.includes(`${resource}:*`)) return true;
+    // coffee:admin / inventory:admin cubren todas las acciones de ese recurso
+    if (permissions.includes(`${resource}:admin`)) return true;
     if (action && permissions.includes(`*:${action}`)) return true;
     return false;
   }

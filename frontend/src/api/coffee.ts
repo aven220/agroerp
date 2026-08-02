@@ -605,6 +605,23 @@ export function upsertCoffeeParameter(data: Record<string, unknown>) {
   return apiRequest<unknown>('/cpep/config/parameters', { method: 'POST', body: JSON.stringify(data) });
 }
 
+export function deactivateCoffeeParameter(id: string, reason = 'Desactivado desde UI') {
+  return apiRequest<unknown>(`/cpep/config/parameters/${encodeURIComponent(id)}/deactivate`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export function deactivateCoffeeCatalog(catalogKey: string, entryKey: string, reason = 'Desactivado desde UI') {
+  return apiRequest<unknown>(
+    `/cpep/config/catalogs/${encodeURIComponent(catalogKey)}/${encodeURIComponent(entryKey)}/deactivate`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    },
+  );
+}
+
 export function listCoffeeReceptionRules() {
   return apiRequest<unknown[]>('/cpep/config/reception-rules');
 }
